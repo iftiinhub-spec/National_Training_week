@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-hu-green: #1a6b3c;
+    --color-hu-green-dark: #124d2a;
+    --color-hu-green-light: #238c50;
+    --color-hu-blue: #1d70b8;
+    --color-hu-blue-dark: #155289;
+    --color-hu-blue-light: #388de0;
+  }
+  
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased selection:bg-emerald-600 selection:text-white min-h-screen flex flex-col;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Pattern Overlay */
+.bg-grid-pattern {
+  background-size: 30px 30px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+}
+
+.bg-hu-gradient {
+  background: linear-gradient(135deg, #1a6b3c 0%, #155289 100%);
+}
+
+.bg-hu-gradient-subtle {
+  background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%);
+}
