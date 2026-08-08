@@ -48,30 +48,36 @@ export const SignUp = () => {
     }
   };
 
+  const inputClass = "w-full px-3.5 py-2.5 rounded-lg border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1da156]/40 text-black bg-white";
+
   return (
-    <div className="py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 min-h-[85vh] flex items-center justify-center">
+    <div className="py-12 px-4 sm:px-6 lg:px-8 bg-white min-h-[85vh] flex items-center justify-center">
       <div className="max-w-2xl w-full space-y-6">
         
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#1a6b3c] to-[#155289] text-white flex items-center justify-center mx-auto font-black text-xl shadow-md">
-            HU
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+        {/* Header with Logo */}
+        <div className="text-center space-y-3">
+          <Link to="/" className="inline-block">
+            <img
+              src="/logo.png"
+              alt="National Training Week Logo"
+              className="h-30 w-auto mx-auto object-contain"
+            />
+          </Link>
+          <h2 className="text-2xl font-black text-black tracking-tight">
             Participant Account Registration
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-black/70">
             Create an account to browse, register for sessions, receive invitations, and earn verified certificates.
           </p>
         </div>
 
         {/* Card Form */}
-        <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-xl">
+        <div className="bg-white p-8 rounded-2xl border border-black/10 shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-4">
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-black uppercase mb-1">
                   Full Name *
                 </label>
                 <input
@@ -80,13 +86,13 @@ export const SignUp = () => {
                   value={form.fullName}
                   onChange={handleChange}
                   placeholder="e.g. Abdi Mohamed Hassan"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={inputClass}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-black uppercase mb-1">
                   Email Address *
                 </label>
                 <input
@@ -95,7 +101,7 @@ export const SignUp = () => {
                   value={form.email}
                   onChange={handleChange}
                   placeholder="abdi@example.com"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={inputClass}
                   required
                 />
               </div>
@@ -103,7 +109,7 @@ export const SignUp = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-black uppercase mb-1">
                   Password *
                 </label>
                 <input
@@ -112,13 +118,13 @@ export const SignUp = () => {
                   value={form.password}
                   onChange={handleChange}
                   placeholder="At least 6 characters"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={inputClass}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-black uppercase mb-1">
                   Confirm Password *
                 </label>
                 <input
@@ -127,7 +133,7 @@ export const SignUp = () => {
                   value={form.confirmPassword}
                   onChange={handleChange}
                   placeholder="Re-enter password"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={inputClass}
                   required
                 />
               </div>
@@ -135,7 +141,7 @@ export const SignUp = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-black uppercase mb-1">
                   Phone Number
                 </label>
                 <input
@@ -144,19 +150,19 @@ export const SignUp = () => {
                   value={form.phone}
                   onChange={handleChange}
                   placeholder="+252 61..."
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-black uppercase mb-1">
                   Gender
                 </label>
                 <select
                   name="gender"
                   value={form.gender}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                  className={inputClass}
                 >
                   <option value="">Select Gender</option>
                   <option value="male">Male</option>
@@ -166,7 +172,7 @@ export const SignUp = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-black uppercase mb-1">
                   Region
                 </label>
                 <input
@@ -175,21 +181,21 @@ export const SignUp = () => {
                   value={form.region}
                   onChange={handleChange}
                   placeholder="e.g. Banadir"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={inputClass}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-black uppercase mb-1">
                   Participant Type *
                 </label>
                 <select
                   name="participantType"
                   value={form.participantType}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                  className={inputClass}
                   required
                 >
                   <option value="university_student">University Student</option>
@@ -202,7 +208,7 @@ export const SignUp = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-black uppercase mb-1">
                   University / School
                 </label>
                 <input
@@ -210,13 +216,13 @@ export const SignUp = () => {
                   name="organization"
                   value={form.organization}
                   onChange={handleChange}
-                  placeholder="e.g. Hormuud University"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="e.g. University / Institution"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-black uppercase mb-1">
                   Profession
                 </label>
                 <input
@@ -225,7 +231,7 @@ export const SignUp = () => {
                   value={form.profession}
                   onChange={handleChange}
                   placeholder="e.g. Student / Software Eng"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={inputClass}
                 />
               </div>
             </div>
@@ -233,15 +239,15 @@ export const SignUp = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold text-sm rounded-xl shadow-md transition-all disabled:opacity-50 mt-4"
+              className="w-full py-3.5 bg-[#1da156] hover:bg-black text-white font-bold text-sm rounded-xl shadow-md transition-all disabled:opacity-50 mt-4"
             >
               {submitting ? 'Creating Account...' : 'Complete Registration'}
             </button>
           </form>
 
-          <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-500 mt-4">
+          <div className="pt-4 border-t border-black/10 text-center text-xs text-black/70 mt-4">
             Already have an account?{' '}
-            <Link to="/signin" className="font-bold text-[#1a6b3c] hover:underline">
+            <Link to="/signin" className="font-bold text-[#1da156] hover:underline">
               Sign In
             </Link>
           </div>

@@ -1,6 +1,7 @@
 import express from 'express';
 import { getPublicTrainings, getPublicTraining, getPublicEvents, getPublicEvent, getPublicProgram, getFeaturedTrainings } from '../controllers/public/training.controller.js';
 import { getPublicRecordings } from '../controllers/admin/recording.controller.js';
+import { getPublicTrainers } from '../controllers/admin/trainer.controller.js';
 import { verifyCertificate } from '../controllers/admin/certificate.controller.js';
 import { createContactMessage } from '../controllers/admin/contact.controller.js';
 import { body } from 'express-validator';
@@ -8,10 +9,11 @@ import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
 
-// Trainings
+// Trainings & Trainers
 router.get('/trainings', getPublicTrainings);
 router.get('/trainings/:id', getPublicTraining);
 router.get('/featured-trainings', getFeaturedTrainings);
+router.get('/trainers', getPublicTrainers);
 
 // Events & Program
 router.get('/events', getPublicEvents);

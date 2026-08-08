@@ -15,6 +15,13 @@ export const getTrainers = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const getPublicTrainers = async (req, res, next) => {
+  try {
+    const trainers = await Trainer.find({ isActive: true }).sort({ name: 1 });
+    return successResponse(res, { trainers });
+  } catch (err) { next(err); }
+};
+
 export const getTrainer = async (req, res, next) => {
   try {
     const trainer = await Trainer.findById(req.params.id);

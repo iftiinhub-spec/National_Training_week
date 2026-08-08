@@ -2,16 +2,14 @@
 
 @layer base {
   :root {
-    --color-hu-green: #1a6b3c;
-    --color-hu-green-dark: #124d2a;
-    --color-hu-green-light: #238c50;
-    --color-hu-blue: #1d70b8;
-    --color-hu-blue-dark: #155289;
-    --color-hu-blue-light: #388de0;
+    --color-hu-green: #1da156;
+    --color-hu-green-dark: #1da156;
+    --color-hu-green-light: #1da156;
+    --color-hu-green-subtle: #ffffff;
   }
   
   body {
-    @apply bg-slate-50 text-slate-900 font-sans antialiased selection:bg-emerald-600 selection:text-white min-h-screen flex flex-col;
+    @apply bg-white text-black antialiased selection:bg-[#1da156] selection:text-white min-h-screen flex flex-col;
     font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   }
 }
@@ -22,30 +20,47 @@
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #ffffff;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #1da156;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #1da156;
+}
+
+/* UI UX Pro Max — Micro-Interactions & Cards */
+.card-hover-lift {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -8px rgba(29, 161, 86, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+}
+
+/* Clean Solid Backgrounds (No Gradients) */
+.bg-hu-primary {
+  background-color: #1da156;
+}
+.bg-hu-dark {
+  background-color: #1da156;
+}
+.bg-hu-subtle {
+  background-color: #ffffff;
 }
 
 /* Pattern Overlay */
 .bg-grid-pattern {
   background-size: 30px 30px;
   background-image: 
-    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
 }
 
-.bg-hu-gradient {
-  background: linear-gradient(135deg, #1a6b3c 0%, #155289 100%);
-}
-
-.bg-hu-gradient-subtle {
-  background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%);
+.bg-dot-pattern {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.2) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
 /* ── TheEvent design utilities ────────────────── */
@@ -57,22 +72,16 @@ html {
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Dot grid overlay used on hero sections */
-.bg-dot-pattern {
-  background-image: radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px);
-  background-size: 30px 30px;
-}
-
-/* Subtle fade-up animation for sections */
+/* Fade-up animation for sections */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
+  from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-up {
-  animation: fadeUp 0.55s ease both;
+  animation: fadeUp 0.45s ease both;
 }
 
-/* Tab active underline transition */
+/* Active tab underline */
 .tab-underline {
   position: relative;
 }
@@ -80,8 +89,8 @@ html {
   content: '';
   position: absolute;
   bottom: -2px; left: 0; right: 0;
-  height: 2px;
-  background: #1a6b3c;
+  height: 2.5px;
+  background: #1da156;
   transform: scaleX(0);
   transition: transform 0.2s ease;
   border-radius: 2px;
