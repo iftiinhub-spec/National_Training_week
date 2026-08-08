@@ -2,15 +2,8 @@ import Training from '../../models/Training.js';
 import Registration from '../../models/Registration.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 
-const VALID_TRANSITIONS = {
-  draft: ['published', 'cancelled'],
-  published: ['registration_open', 'cancelled', 'draft'],
-  registration_open: ['registration_closed', 'cancelled'],
-  registration_closed: ['ongoing', 'cancelled'],
-  ongoing: ['completed', 'cancelled'],
-  completed: [],
-  cancelled: [],
-};
+// All status values — admin can freely transition between any of these
+const ALL_STATUSES = ['draft', 'published', 'registration_open', 'registration_closed', 'ongoing', 'completed', 'cancelled'];
 
 // GET /api/admin/trainings
 export const getTrainings = async (req, res, next) => {
@@ -82,9 +75,8 @@ export const updateTrainingStatus = async (req, res, next) => {
     const training = await Training.findById(req.params.id);
     if (!training) return errorResponse(res, 'Training not found.', 404);
 
-    const allowed = VALID_TRANSITIONS[training.status] || [];
-    if (!allowed.includes(status)) {
-      return errorResponse(res, `Cannot transition from '${training.status}' to '${status}'.`, 400);
+    if (!ALL_STATUSES.includes(status)) {
+      return errorResponse(res, `Invalid status '${status}'. Valid values: ${ALL_STATUSES.join(', ')}.`, 400);
     }
 
     training.status = status;

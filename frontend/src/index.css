@@ -12,7 +12,7 @@
   
   body {
     @apply bg-slate-50 text-slate-900 font-sans antialiased selection:bg-emerald-600 selection:text-white min-h-screen flex flex-col;
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   }
 }
 
@@ -46,4 +46,47 @@
 
 .bg-hu-gradient-subtle {
   background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%);
+}
+
+/* ── TheEvent design utilities ────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar (used on day-tab rows) */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Dot grid overlay used on hero sections */
+.bg-dot-pattern {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+/* Subtle fade-up animation for sections */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.55s ease both;
+}
+
+/* Tab active underline transition */
+.tab-underline {
+  position: relative;
+}
+.tab-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 0; right: 0;
+  height: 2px;
+  background: #1a6b3c;
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+  border-radius: 2px;
+}
+.tab-underline.active::after,
+.tab-underline:hover::after {
+  transform: scaleX(1);
 }

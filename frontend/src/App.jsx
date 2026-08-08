@@ -64,18 +64,20 @@ const PublicLayout = () => {
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <Navbar />
+      {/* pt-[72px] offsets the fixed navbar height for non-hero pages;
+          Home.jsx handles its own hero offset via min-h-screen */}
       <div className="flex-1">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/program" element={<Program />} />
-          <Route path="/trainings" element={<Trainings />} />
-          <Route path="/trainings/:id" element={<TrainingDetails />} />
-          <Route path="/recordings" element={<Recordings />} />
-          <Route path="/verify-certificate" element={<VerifyCertificate />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
+          <Route path="/"                    element={<Home />} />
+          <Route path="/about"               element={<div className="pt-[72px]"><About /></div>} />
+          <Route path="/program"             element={<div className="pt-[72px]"><Program /></div>} />
+          <Route path="/trainings"           element={<div className="pt-[72px]"><Trainings /></div>} />
+          <Route path="/trainings/:id"       element={<div className="pt-[72px]"><TrainingDetails /></div>} />
+          <Route path="/recordings"          element={<div className="pt-[72px]"><Recordings /></div>} />
+          <Route path="/verify-certificate"  element={<div className="pt-[72px]"><VerifyCertificate /></div>} />
+          <Route path="/contact"             element={<div className="pt-[72px]"><Contact /></div>} />
+          <Route path="/signin"              element={<div className="pt-[72px]"><SignIn /></div>} />
+          <Route path="/signup"              element={<div className="pt-[72px]"><SignUp /></div>} />
         </Routes>
       </div>
       <Footer />
