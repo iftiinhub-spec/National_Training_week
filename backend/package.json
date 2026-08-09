@@ -10,6 +10,7 @@
     "clean:admin-only": "node src/clean_admin_only.js",
     "seed": "node src/seed.js",
     "seed:full": "node src/seed_full.js",
+    "seed:roles": "node allrole.js",
     "check:deps": "node -e \"require('mongodb/lib/resource_management'); require('mongoose'); console.log('backend dependencies ok')\""
   },
   "keywords": [],
