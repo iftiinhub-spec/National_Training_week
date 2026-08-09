@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import ThemeToggle from '../common/ThemeToggle';
 import {
   Bars3Icon,
   XMarkIcon,
@@ -44,16 +45,16 @@ export const Navbar = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-black/10 shadow-xs">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-[72px]">
+        <div className="flex h-[88px] items-center justify-between">
 
           {/* Brand */}
           <Link to="/" className="flex items-center gap-2 group shrink-0">
             <img
               src="/logo.png"
               alt="National Training Week Logo"
-              className="h-30 w-auto object-contain group-hover:scale-105 transition-transform mt-3"
+              className="h-20 w-auto object-contain transition-transform group-hover:scale-[1.03]"
             />
           </Link>
 
@@ -82,6 +83,7 @@ export const Navbar = () => {
 
           {/* Desktop Auth */}
           <div className="hidden lg:flex items-center gap-2">
+            <ThemeToggle />
             {isAuthenticated ? (
               <div className="relative">
                 <button
@@ -155,12 +157,17 @@ export const Navbar = () => {
           </div>
 
           {/* Mobile toggle */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-lg text-black hover:bg-white transition-colors"
-          >
-            {mobileMenuOpen ? <XMarkIcon className="w-6 h-6" /> : <Bars3Icon className="w-6 h-6" />}
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <ThemeToggle />
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-black hover:bg-slate-100 transition-colors"
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <XMarkIcon className="w-6 h-6" /> : <Bars3Icon className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </div>
 

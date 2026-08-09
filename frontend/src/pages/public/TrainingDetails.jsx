@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
@@ -8,7 +8,6 @@ import toast from 'react-hot-toast';
 import {
   CalendarIcon,
   ClockIcon,
-  UserIcon,
   BuildingOfficeIcon,
   LanguageIcon,
   UserGroupIcon,
@@ -19,7 +18,7 @@ import {
 export const TrainingDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated, isParticipant } = useAuth();
+  const { isAuthenticated, isParticipant } = useAuth();
 
   const [training, setTraining] = useState(null);
   const [registeredCount, setRegisteredCount] = useState(0);
@@ -27,7 +26,7 @@ export const TrainingDetails = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchDetails = async () => {
+  const fetchDetails = useCallback(async () => {
     try {
       const res = await api.get(`/public/trainings/${id}`);
       if (res.success && res.data) {
@@ -39,9 +38,9 @@ export const TrainingDetails = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const checkUserRegistration = async () => {
+  const checkUserRegistration = useCallback(async () => {
     if (isAuthenticated && isParticipant) {
       try {
         const res = await api.get('/participant/registrations');
@@ -53,12 +52,12 @@ export const TrainingDetails = () => {
         // ignore
       }
     }
-  };
+  }, [id, isAuthenticated, isParticipant]);
 
   useEffect(() => {
     fetchDetails();
     checkUserRegistration();
-  }, [id, isAuthenticated]);
+  }, [fetchDetails, checkUserRegistration]);
 
   const handleRegister = async () => {
     if (!isAuthenticated) {
@@ -166,7 +165,7 @@ export const TrainingDetails = () => {
             </h1>
 
             <p className="text-sm text-black/70 font-medium">
-              Event Edition: <strong className="text-black">{event?.name || 'National Training Week 2026'}</strong>
+              Event Edition: <strong className="text-black">{event?.name || 'National Training Week'}</strong>
             </p>
           </div>
 

@@ -1,10 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
-import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { PlusIcon, PencilIcon, TrashIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+
+const TRAINING_STATUSES = [
+  ['draft', 'Draft'],
+  ['published', 'Published'],
+  ['registration_open', 'Registration Open'],
+  ['registration_closed', 'Registration Closed'],
+  ['ongoing', 'Ongoing / Live'],
+  ['completed', 'Completed'],
+  ['cancelled', 'Cancelled'],
+];
+
+const statusControlClass = (status) => {
+  if (status === 'published' || status === 'registration_open' || status === 'ongoing') {
+    return 'border-emerald-200 bg-emerald-50 text-[#1a6b3c]';
+  }
+  if (status === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-700';
+  if (status === 'completed') return 'border-slate-300 bg-slate-100 text-slate-700';
+  return 'border-amber-200 bg-amber-50 text-amber-800';
+};
 
 export const TrainingsManagement = () => {
   const [trainings, setTrainings] = useState([]);
@@ -263,19 +282,18 @@ export const TrainingsManagement = () => {
                     <span className="text-[11px] text-slate-400">{tr.startTime} - {tr.endTime}</span>
                   </td>
                   <td className="p-4">
-                    <select
-                      value={tr.status}
-                      onChange={(e) => handleStatusChange(tr._id, e.target.value)}
-                      className="p-1 rounded border border-slate-300 text-xs font-semibold bg-white"
-                    >
-                      <option value="draft">Draft</option>
-                      <option value="published">Published</option>
-                      <option value="registration_open">Registration Open</option>
-                      <option value="registration_closed">Registration Closed</option>
-                      <option value="ongoing">Ongoing / Live</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
+                    <div className={`relative inline-flex min-w-44 items-center rounded-full border ${statusControlClass(tr.status)}`}>
+                      <span className="pointer-events-none ml-3 h-2 w-2 shrink-0 rounded-full bg-current" />
+                      <select
+                        value={tr.status}
+                        onChange={(e) => handleStatusChange(tr._id, e.target.value)}
+                        aria-label={`Change status for ${tr.title}`}
+                        className="admin-status-select w-full cursor-pointer appearance-none bg-transparent py-2 pl-2 pr-9 text-xs font-bold"
+                      >
+                        {TRAINING_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      </select>
+                      <ChevronDownIcon className="pointer-events-none absolute right-3 h-4 w-4" />
+                    </div>
                   </td>
                   <td className="p-4 flex items-center gap-1">
                     <button
@@ -300,8 +318,9 @@ export const TrainingsManagement = () => {
 
       {/* Form Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-4 my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto" onMouseDown={() => setShowModal(false)}>
+          <div className="relative bg-white rounded-2xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-4 my-8" onMouseDown={(e) => e.stopPropagation()}>
+            <AdminModalClose onClick={() => setShowModal(false)} />
             <h3 className="text-lg font-bold text-slate-900">
               {editingTraining ? 'Edit Training Session' : 'Create New Training Session'}
             </h3>
@@ -319,7 +338,7 @@ export const TrainingsManagement = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Event Edition *</label>
                   <select
@@ -367,7 +386,7 @@ export const TrainingsManagement = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Category</label>
                   <select
@@ -411,7 +430,7 @@ export const TrainingsManagement = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Session Date *</label>
                   <input

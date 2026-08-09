@@ -69,7 +69,7 @@ export const MyRegistrations = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-slate-900">My Registered Trainings</h1>
+        <h1 className="text-2xl font-black text-slate-900">My Trainings</h1>
         <p className="text-xs text-slate-500 mt-1">
           View your training enrollment statuses, access released meeting links, or manage registrations.
         </p>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
 import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 
@@ -224,8 +225,9 @@ export const TrainersManagement = () => {
 
       {/* Create / Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto" onMouseDown={() => setShowModal(false)}>
+          <div className="relative bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 my-8" onMouseDown={(e) => e.stopPropagation()}>
+            <AdminModalClose onClick={() => setShowModal(false)} />
             <h3 className="text-lg font-bold text-slate-900">
               {editingTrainer ? 'Edit Trainer Profile' : 'Create Trainer Profile'}
             </h3>
@@ -287,6 +289,7 @@ export const TrainersManagement = () => {
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="e.g. Ibrahim Ahmed Abdirahman"
                     className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#1a6b3c]"
                     required
                   />
@@ -301,6 +304,7 @@ export const TrainersManagement = () => {
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="e.g. ibrahim@example.com"
                     className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#1a6b3c]"
                     required
                   />
@@ -311,6 +315,7 @@ export const TrainersManagement = () => {
                     type="text"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="e.g. +252 61 234 5678"
                     className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#1a6b3c]"
                   />
                 </div>
@@ -323,6 +328,7 @@ export const TrainersManagement = () => {
                   type="text"
                   value={form.organization}
                   onChange={(e) => setForm({ ...form, organization: e.target.value })}
+                  placeholder="e.g. Somali National University"
                   className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#1a6b3c]"
                 />
               </div>

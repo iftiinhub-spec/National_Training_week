@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import EmptyState from '../../components/common/EmptyState';
-import { VideoCameraIcon, PlayIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import PublicPageHeader from '../../components/common/PublicPageHeader';
+import PublicEmptyState from '../../components/common/PublicEmptyState';
+import { PlayIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 
 export const Recordings = () => {
   const [recordings, setRecordings] = useState([]);
@@ -28,21 +29,11 @@ export const Recordings = () => {
     <div className="min-h-screen bg-white">
 
       {/* ── Page Hero ── */}
-      <section className="relative py-20 text-white text-center bg-[#1da156]">
-        <div className="absolute inset-0 opacity-10 bg-grid-pattern pointer-events-none" />
-        <div className="relative max-w-3xl mx-auto px-4 z-10">
-          <p className="text-xs font-bold uppercase tracking-widest text-white mb-3">
-            Free Public Learning Library
-          </p>
-          <h1 className="text-4xl sm:text-5xl font-black mb-4">
-            Recorded Training Sessions
-          </h1>
-          <p className="text-white text-sm max-w-xl mx-auto leading-relaxed">
-            Access published video recordings from completed National Training Week sessions
-            for open learning and review.
-          </p>
-        </div>
-      </section>
+      <PublicPageHeader
+        eyebrow="Free public learning library"
+        title="Recorded Training Sessions"
+        description="Revisit published National Training Week sessions for continued learning, revision, and professional development."
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-14 space-y-8">
 
@@ -116,10 +107,9 @@ export const Recordings = () => {
             ))}
           </div>
         ) : (
-          <EmptyState
-            icon={VideoCameraIcon}
-            title="No published recordings available"
-            message="Recordings will appear here once training sessions are completed and published."
+          <PublicEmptyState
+            title="The recording library is being prepared"
+            description="Published recordings will appear here after training sessions are completed and approved for public access."
           />
         )}
 

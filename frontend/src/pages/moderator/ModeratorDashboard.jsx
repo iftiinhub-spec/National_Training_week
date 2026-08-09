@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { AcademicCapIcon, CalendarIcon, ClockIcon, UserIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '../../context/AuthContext';
+import { AcademicCapIcon, CalendarIcon, CheckCircleIcon, ClockIcon, UserIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline';
 
 export const ModeratorDashboard = () => {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -32,44 +34,31 @@ export const ModeratorDashboard = () => {
   return (
     <div className="space-y-8">
       
-      {/* Header */}
-      <div className="bg-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-lg">
-        <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
-          Operational Workspace
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-black mt-1">
-          Session Moderator Dashboard
-        </h1>
-        <p className="text-slate-300 text-xs sm:text-sm mt-1">
-          Manage online meeting access, send Trainer & Participant invitations, launch QR attendance, and review session evaluations.
-        </p>
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[.16em] text-[#1a6b3c]">Operational overview</p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Welcome, {user?.fullName?.split(' ')[0] || 'Moderator'}</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Manage assigned sessions, meeting access, participant invitations, live QR attendance, and evaluation results.</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <span className="text-xs font-semibold text-slate-500 block">Total Assigned Trainings</span>
-          <span className="text-2xl font-black text-slate-900">{stats?.totalAssigned || 0}</span>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><span className="text-sm font-semibold text-slate-500">Assigned trainings</span><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-[#1a6b3c]"><AcademicCapIcon className="h-5 w-5" /></span></div><span className="mt-5 block text-3xl font-bold text-slate-950">{stats?.totalAssigned || 0}</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <span className="text-xs font-semibold text-slate-500 block">Upcoming / Active Sessions</span>
-          <span className="text-2xl font-black text-emerald-600">{stats?.upcoming || 0}</span>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><span className="text-sm font-semibold text-slate-500">Upcoming / active</span><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-[#1a6b3c]"><ClockIcon className="h-5 w-5" /></span></div><span className="mt-5 block text-3xl font-bold text-slate-950">{stats?.upcoming || 0}</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <span className="text-xs font-semibold text-slate-500 block">Completed Sessions</span>
-          <span className="text-2xl font-black text-purple-600">{stats?.completed || 0}</span>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><span className="text-sm font-semibold text-slate-500">Completed sessions</span><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-[#1a6b3c]"><CheckCircleIcon className="h-5 w-5" /></span></div><span className="mt-5 block text-3xl font-bold text-slate-950">{stats?.completed || 0}</span>
         </div>
       </div>
 
       {/* Assigned Trainings List */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
-        <h3 className="text-lg font-bold text-slate-900">Your Assigned Sessions</h3>
+        <div className="flex items-center justify-between"><div><h3 className="text-lg font-bold text-slate-900">Recent assigned sessions</h3><p className="mt-1 text-xs text-slate-500">Open a session to access operational tools.</p></div><Link to="/moderator/trainings" className="text-sm font-bold text-[#1a6b3c] hover:underline">View all</Link></div>
 
         {trainings && trainings.length > 0 ? (
           <div className="space-y-4">
-            {trainings.map((tr) => (
+            {trainings.slice(0, 3).map((tr) => (
               <div
                 key={tr._id}
                 className="p-5 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-emerald-500 transition-colors"

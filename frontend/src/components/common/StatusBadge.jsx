@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const StatusBadge = ({ status, type = 'training' }) => {
+export const StatusBadge = ({ status }) => {
   if (!status) return null;
 
   const styles = {

@@ -3,15 +3,26 @@ import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { ClockIcon } from '@heroicons/react/24/outline';
+import PublicPageHeader from '../../components/common/PublicPageHeader';
+import PublicEmptyState from '../../components/common/PublicEmptyState';
 
 export const Program = () => {
   const [eventData, setEventData]     = useState(null);
   const [programDays, setProgramDays] = useState([]);
   const [activeDay, setActiveDay]     = useState(null);
   const [loading, setLoading]         = useState(true);
+  const [events, setEvents]           = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState('');
 
   useEffect(() => {
-    api.get('/public/program')
+    api.get('/public/events').then((res) => {
+      if (res.success) setEvents(res.data.events || []);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get(`/public/program${selectedEvent ? `?eventId=${selectedEvent}` : ''}`)
       .then((res) => {
         if (res.success && res.data) {
           setEventData(res.data.event);
@@ -22,7 +33,7 @@ export const Program = () => {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedEvent]);
 
   const currentDay = programDays.find((p) => p.day._id === activeDay) || programDays[0];
 
@@ -35,37 +46,30 @@ export const Program = () => {
     <div className="bg-white min-h-screen">
 
       {/* ── Page Hero ─────────────────────────────── */}
-      <section className="relative py-20 text-white text-center bg-[#1da156]">
-        <div className="absolute inset-0 opacity-10 bg-grid-pattern pointer-events-none" />
-        <div className="relative max-w-3xl mx-auto px-4 z-10">
-          <p className="text-xs font-bold uppercase tracking-widest text-white mb-3">
-            Official Event Schedule
-          </p>
-          <h1 className="text-4xl sm:text-5xl font-black mb-3">
-            National Training Week 2026
-          </h1>
-          <p className="text-white text-sm">
-            Theme:{' '}
-            <span className="text-white font-semibold">
-              {eventData?.theme || 'Artificial Intelligence for National Transformation'}
-            </span>
-          </p>
-          <p className="text-white text-xs mt-2 font-medium">
+      <PublicPageHeader eyebrow="Official event schedule" title={eventData?.name || 'Program schedule'} description={eventData?.theme || 'The next edition schedule will be published here when it is ready.'}>
+          {eventData && <p className="mt-3 text-xs font-semibold text-white/75">
             {eventData?.startDate
               ? new Date(eventData.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-              : 'Sept 14'}{' '}
-            –{' '}
+              : 'Dates'}{' '}–{' '}
             {eventData?.endDate
               ? new Date(eventData.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-              : 'Sept 19, 2026'}{' '}
-            · 6 Days · 100% Online
-          </p>
-        </div>
-      </section>
+              : 'to be announced'}{' '}
+            · {programDays.length || 'Program'} Days · Online
+          </p>}
+          {events.length > 1 && (
+            <label className="mt-6 inline-flex items-center gap-3 rounded-xl bg-white/10 border border-white/20 px-4 py-2">
+              <span className="text-xs font-bold">View edition</span>
+              <select aria-label="Select event edition" value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} className="bg-white text-black rounded-lg px-3 py-1.5 text-sm font-semibold">
+                <option value="">Current edition</option>
+                {events.map((event) => <option key={event._id} value={event._id}>{event.year} — {event.theme}</option>)}
+              </select>
+            </label>
+          )}
+      </PublicPageHeader>
 
       {/* ── Day Tab Row ──────────────────────────── */}
       {!loading && programDays.length > 0 && (
-        <div className="bg-white border-b border-black/10 sticky top-[72px] z-40 py-2">
+        <div className="bg-white border-b border-black/10 sticky top-[88px] z-40 py-2">
           <div className="max-w-7xl mx-auto px-4 sm:px-8">
             <div className="flex flex-wrap justify-center gap-3 sm:gap-4 py-4">
               {programDays.map((p) => {
@@ -103,13 +107,9 @@ export const Program = () => {
         {loading ? (
           <LoadingSpinner label="Loading program schedule..." />
         ) : !currentDay ? (
-          <div className="text-center py-24 text-black/50 border border-dashed border-black/20 rounded-2xl">
-            Program schedule will be published soon.
-          </div>
+          <PublicEmptyState title="Program coming soon" description="No public event schedule is available yet. Program days and sessions will appear here after the next edition is published." />
         ) : currentDay.sessions?.length === 0 ? (
-          <div className="text-center py-24 text-black/50 border border-dashed border-black/20 rounded-2xl">
-            No sessions scheduled for this day yet.
-          </div>
+          <PublicEmptyState title="Sessions coming soon" description={`The schedule for Day ${currentDay.day.dayNumber} has not been published yet.`} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentDay.sessions.map((s) => (

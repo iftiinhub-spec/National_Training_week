@@ -2,11 +2,20 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+
+const SOMALIA_REGIONS = [
+  'Awdal', 'Bakool', 'Banaadir', 'Bari', 'Bay', 'Galguduud', 'Gedo', 'Hiiraan',
+  'Lower Juba', 'Middle Juba', 'Lower Shabelle', 'Middle Shabelle', 'Mudug',
+  'Nugaal', 'Sanaag', 'Sool', 'Togdheer', 'Woqooyi Galbeed',
+];
 
 export const SignUp = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [form, setForm] = useState({
     fullName: '',
@@ -15,7 +24,7 @@ export const SignUp = () => {
     confirmPassword: '',
     phone: '',
     gender: '',
-    region: 'Banadir / Mogadishu',
+    region: '',
     organization: '',
     profession: '',
     participantType: 'university_student',
@@ -31,16 +40,17 @@ export const SignUp = () => {
       toast.error('Passwords do not match.');
       return;
     }
-    if (form.password.length < 6) {
-      toast.error('Password must be at least 6 characters.');
+    if (form.password.length < 8) {
+      toast.error('Password must be at least 8 characters.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const { confirmPassword, ...dataToSend } = form;
+      const dataToSend = { ...form };
+      delete dataToSend.confirmPassword;
       await register(dataToSend);
-      navigate('/portal');
+      navigate('/signin');
     } catch (err) {
       // toast error handled in register()
     } finally {
@@ -52,7 +62,7 @@ export const SignUp = () => {
 
   return (
     <div className="py-12 px-4 sm:px-6 lg:px-8 bg-white min-h-[85vh] flex items-center justify-center">
-      <div className="max-w-2xl w-full space-y-6">
+      <div className="max-w-5xl w-full space-y-6">
         
         {/* Header with Logo */}
         <div className="text-center space-y-3">
@@ -60,7 +70,7 @@ export const SignUp = () => {
             <img
               src="/logo.png"
               alt="National Training Week Logo"
-              className="h-30 w-auto mx-auto object-contain"
+              className="h-20 w-auto mx-auto object-contain"
             />
           </Link>
           <h2 className="text-2xl font-black text-black tracking-tight">
@@ -112,34 +122,22 @@ export const SignUp = () => {
                 <label className="block text-xs font-bold text-black uppercase mb-1">
                   Password *
                 </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="At least 6 characters"
-                  className={inputClass}
-                  required
-                />
+                <div className="relative"><input type={showPassword ? 'text' : 'password'} name="password" value={form.password} onChange={handleChange} placeholder="At least 8 characters" className={`${inputClass} pr-12`} required />
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-black/50 hover:text-[#1da156]" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button>
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-black uppercase mb-1">
                   Confirm Password *
                 </label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={form.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Re-enter password"
-                  className={inputClass}
-                  required
-                />
+                <div className="relative"><input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" value={form.confirmPassword} onChange={handleChange} placeholder="Re-enter password" className={`${inputClass} pr-12`} required />
+                  <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-black/50 hover:text-[#1da156]" aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}>{showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <div>
                 <label className="block text-xs font-bold text-black uppercase mb-1">
                   Phone Number
@@ -167,7 +165,6 @@ export const SignUp = () => {
                   <option value="">Select Gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
-                  <option value="prefer_not_to_say">Prefer Not To Say</option>
                 </select>
               </div>
 
@@ -175,18 +172,17 @@ export const SignUp = () => {
                 <label className="block text-xs font-bold text-black uppercase mb-1">
                   Region
                 </label>
-                <input
-                  type="text"
+                <select
                   name="region"
                   value={form.region}
                   onChange={handleChange}
-                  placeholder="e.g. Banadir"
                   className={inputClass}
-                />
+                >
+                  <option value="">Select Region</option>
+                  {SOMALIA_REGIONS.map((region) => <option key={region} value={region}>{region}</option>)}
+                </select>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-bold text-black uppercase mb-1">
                   Participant Type *

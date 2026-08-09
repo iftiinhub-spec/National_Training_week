@@ -6,13 +6,15 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "seed:admin": "node src/seed_admin.js",
+    "clean:admin-only": "node src/clean_admin_only.js",
     "seed": "node src/seed.js",
     "seed:full": "node src/seed_full.js"
   },
   "keywords": [],
-  "author": "Hormuud University",
+  "author": "National Training Week",
   "license": "ISC",
-  "description": "HU National Training Week Management System Backend",
+  "description": "National Training Week Management System Backend",
   "devDependencies": {
     "nodemon": "^3.1.14"
   },

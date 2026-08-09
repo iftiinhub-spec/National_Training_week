@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { intervalToDuration } from 'date-fns';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { useCurrentEvent } from '../../context/EventContext';
 import {
   AcademicCapIcon,
   BuildingLibraryIcon,
@@ -10,35 +12,37 @@ import {
   CalendarDaysIcon,
   GlobeAltIcon,
   ShieldCheckIcon,
-  SparklesIcon,
   ClockIcon,
-  UserIcon,
 } from '@heroicons/react/24/outline';
 
 /* ── Countdown hook ──────────────────────────────── */
 const useCountdown = (target) => {
-  const calc = () => {
+  const calc = React.useCallback(() => {
+    if (!target) return { months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, complete: true };
     const diff = new Date(target) - Date.now();
-    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+    if (diff <= 0) return { months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, complete: true };
+    const duration = intervalToDuration({ start: new Date(), end: new Date(target) });
     return {
-      days:    Math.floor(diff / 86400000),
-      hours:   Math.floor((diff % 86400000) / 3600000),
-      minutes: Math.floor((diff % 3600000) / 60000),
-      seconds: Math.floor((diff % 60000) / 1000),
+      months:  (duration.years || 0) * 12 + (duration.months || 0),
+      days:    duration.days || 0,
+      hours:   duration.hours || 0,
+      minutes: duration.minutes || 0,
+      seconds: duration.seconds || 0,
+      complete: false,
     };
-  };
+  }, [target]);
   const [tick, setTick] = useState(calc);
   useEffect(() => {
     const id = setInterval(() => setTick(calc()), 1000);
     return () => clearInterval(id);
-  }, [target]);
+  }, [calc]);
   return tick;
 };
 
 /* ── Animated number ─────────────────────────────── */
 const Digit = ({ v, label }) => (
-  <div className="flex flex-col items-center bg-white/10 border border-white/20 rounded-xl px-5 py-4 min-w-[72px] backdrop-blur-sm">
-    <span className="text-4xl sm:text-5xl font-black text-white tabular-nums leading-none">
+  <div className="flex min-w-[52px] flex-col items-center rounded-xl border border-white/15 bg-white/10 px-2 py-3 backdrop-blur-md sm:min-w-[72px] sm:px-3">
+    <span className="text-2xl font-black leading-none tabular-nums text-white sm:text-3xl">
       {String(v).padStart(2, '0')}
     </span>
     <span className="text-[10px] uppercase tracking-widest text-white mt-1 font-bold">{label}</span>
@@ -46,29 +50,19 @@ const Digit = ({ v, label }) => (
 );
 
 /* ── Section heading ────────────────────────────── */
-const SectionTitle = ({ tag, title, subtitle }) => (
-  <div className="text-center mb-12" data-section-title>
+const SectionTitle = ({ tag, title, subtitle, light = false }) => (
+  <div className="mx-auto mb-12 max-w-3xl text-center" data-section-title>
     {tag && (
-      <p className="text-xs font-bold uppercase tracking-[.2em] text-[#1da156] mb-2">{tag}</p>
+      <p className={`mb-4 inline-flex rounded-full px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] ${light ? 'bg-white/10 text-white' : 'bg-[#1da156]/10 text-[#1da156]'}`}>{tag}</p>
     )}
-    <h2 className="text-3xl sm:text-4xl font-black text-black relative inline-block">
+    <h2 className={`text-3xl font-bold leading-tight tracking-[-.025em] sm:text-4xl lg:text-[2.75rem] ${light ? 'text-white' : 'text-black'}`}>
       {title}
-      <span className="block h-1 w-16 bg-[#1da156] mx-auto mt-3 rounded-full" />
     </h2>
     {subtitle && (
-      <p className="mt-4 text-black/70 text-sm max-w-xl mx-auto leading-relaxed">{subtitle}</p>
+      <p className={`mx-auto mt-4 max-w-2xl text-sm leading-6 ${light ? 'text-white/65' : 'text-black/60'}`}>{subtitle}</p>
     )}
   </div>
 );
-
-const DAYS = [
-  { day: 'Day 1', theme: 'AI Literacy Day', desc: 'Foundations of Artificial Intelligence, ethics, and essential digital readiness for every participant.' },
-  { day: 'Day 2', theme: 'AI for Education', desc: 'Transforming teaching, learning, research, and personalised study tools across all levels.' },
-  { day: 'Day 3', theme: 'AI for Business', desc: 'Automating business operations, empowering startups, and driving economic productivity.' },
-  { day: 'Day 4', theme: 'AI for Health & Community', desc: 'Healthcare diagnostics, public service optimisation, and measurable social impact.' },
-  { day: 'Day 5', theme: 'AI for Graduates', desc: 'Career pathing, technical portfolio building, and job-market readiness for fresh graduates.' },
-  { day: 'Day 6', theme: 'AI & Innovation Day', desc: "Advanced AI research, capstone showcases, and Somalia's national transformation strategy." },
-];
 
 const AUDIENCE = [
   { Icon: AcademicCapIcon,    label: 'University Students & Scholars', desc: 'Gain cutting-edge skills relevant to academic research and industry.' },
@@ -79,9 +73,21 @@ const AUDIENCE = [
 
 /* ══════════════════════════════════════════════════ */
 export const Home = () => {
+  const { event, days, sessionCount } = useCurrentEvent();
   const [trainers, setTrainers] = useState([]);
   const [loadingTrainers, setLoadingTrainers] = useState(true);
-  const countdown = useCountdown('2026-09-14T08:00:00');
+  const countdownTarget = event?.startDate
+    ? `${event.startDate.slice(0, 10)}T${event.startTime || '09:00'}:00`
+    : null;
+  const countdown = useCountdown(countdownTarget);
+  const eventHasEnded = event?.endDate
+    ? Date.now() > new Date(`${event.endDate.slice(0, 10)}T23:59:59`).getTime()
+    : false;
+  const eventDates = event?.startDate && event?.endDate
+    ? `${new Date(event.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+    : 'Dates to be announced';
+  const eventStatus = event?.status?.replace(/_/g, ' ') || 'Program announced';
+  const heroImage = '/training-week-default-hero.png';
 
   useEffect(() => {
     api.get('/public/trainers')
@@ -94,111 +100,46 @@ export const Home = () => {
     <div className="bg-white min-h-screen">
 
       {/* ══ HERO ════════════════════════════════════════ */}
-      <section
-        id="hero"
-        className="relative min-h-screen flex flex-col"
-        style={{ backgroundColor: '#1da156' }}
-      >
-        {/* Hero background photo */}
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/hero.png')" }}
-        />
-
-        {/* Dark green overlay for readability */}
-        <div className="absolute inset-0 bg-black/60" />
-
-        {/* Main hero content — centred */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-8 py-32 relative z-10 bg-gradient-to-r from-black/40 via-gray/10 to-black/40" >
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white text-xs font-bold uppercase tracking-wider mb-6">
-            <SparklesIcon className="w-3.5 h-3.5 text-white" /> Annual Flagship Program — 2026
-          </span>
-
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-[1.1] tracking-tight max-w-4xl">
-            National<br />
-            <span className="text-white">Training Week</span>
-          </h1>
-
-          <p className="mt-6 text-white text-lg sm:text-xl font-semibold max-w-2xl">
-            Theme: <span className="text-white font-bold">"Artificial Intelligence for National Transformation"</span>
-          </p>
-
-          <p className="mt-3 text-white/90 text-sm sm:text-base max-w-xl leading-relaxed">
-            Six intensive days of high-impact online technical training sessions
-            led by Somalia's top experts — free, certified, and open to all.
-          </p>
-
-          {/* CTAs */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              to="/trainings"
-              className="px-8 py-3.5 rounded-xl bg-black hover:bg-white hover:text-black text-white font-bold text-sm shadow-md transition-all border border-black/40"
-            >
-              Browse All Trainings
-            </Link>
-            <Link
-              to="/signup"
-              className="px-8 py-3.5 rounded-xl bg-white text-[#1da156] hover:bg-black hover:text-white font-bold text-sm shadow-md transition-all"
-            >
-              Register Free →
-            </Link>
-          </div>
-
-          {/* Countdown */}
-          <div className="mt-12">
-            <p className="text-xs uppercase tracking-widest text-white font-bold mb-4">
-              Event Starts In
-            </p>
-            <div className="flex items-center gap-3 justify-center">
-              <Digit v={countdown.days}    label="Days" />
-              <span className="text-3xl font-black text-white/40 mb-4">:</span>
-              <Digit v={countdown.hours}   label="Hours" />
-              <span className="text-3xl font-black text-white/40 mb-4">:</span>
-              <Digit v={countdown.minutes} label="Minutes" />
-              <span className="text-3xl font-black text-white/40 mb-4">:</span>
-              <Digit v={countdown.seconds} label="Seconds" />
+      <section id="hero" className="relative isolate overflow-hidden bg-black pt-[88px] text-white">
+        <div className="absolute inset-0 -z-20 bg-cover bg-center" style={{ backgroundImage: `url('${heroImage}')` }} />
+        <div className="absolute inset-0 -z-10 bg-black/60" />
+        <div className="mx-auto flex min-h-[680px] max-w-7xl items-center justify-start px-4 py-20 text-left sm:px-8">
+          <div className="max-w-3xl animate-fade-up">
+            <h1 className="text-5xl font-black leading-[.98] tracking-[-.04em] sm:text-6xl lg:text-7xl">National<br /><span className="text-[#1da156]">Training Week</span></h1>
+            <p className="mt-6 max-w-2xl text-lg font-bold leading-snug text-white sm:text-xl">{event?.theme || 'Skills, knowledge, and opportunity—accessible nationwide.'}</p>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75 sm:text-base">{event?.description || 'An annual virtual learning platform connecting students, graduates, and professionals with expert-led training across technology, education, health, business, and community development.'}</p>
+            {event && <div className="mt-6 flex flex-wrap justify-start gap-x-6 gap-y-2 text-xs font-bold text-white/80"><span>{eventDates}</span><span>{days.length} day{days.length === 1 ? '' : 's'} · {sessionCount} session{sessionCount === 1 ? '' : 's'}</span><span className="capitalize text-[#1da156]">{eventStatus}</span></div>}
+            {event && (countdown.complete ? (
+              <div className="mx-auto mt-7 inline-flex rounded-xl border border-white/20 bg-black/35 px-5 py-3 text-sm font-bold text-white backdrop-blur-sm">
+                {eventHasEnded ? 'This edition has been completed' : 'The event is underway'}
+              </div>
+            ) : (
+              <div className="mt-7 flex max-w-xl items-center justify-start gap-1.5 sm:gap-2" aria-label="Countdown to event"><Digit v={countdown.months} label="Months" /><Digit v={countdown.days} label="Days" /><Digit v={countdown.hours} label="Hours" /><Digit v={countdown.minutes} label="Mins" /><Digit v={countdown.seconds} label="Secs" /></div>
+            ))}
+            <div className="mt-8 flex flex-col justify-start gap-3 sm:flex-row">
+              {event ? <><Link to="/signup" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Register free</Link><Link to="/program" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Explore the program</Link></> : <><Link to="/about" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Discover the program</Link><Link to="/contact" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Contact the program office</Link></>}
             </div>
           </div>
         </div>
 
-        {/* About bar — anchored to hero bottom */}
-        <div className="relative z-10 bg-white border-t border-black/10 shadow-xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="text-base font-black text-[#1da156] mb-1">About The Event</h3>
-              <p className="text-xs text-black/70 leading-relaxed">
-                National Training Week (NTW) bridges academic theory
-                and real-world technology skills — empowering students, professionals,
-                and graduates across Somalia.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-black uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                <CalendarDaysIcon className="w-4 h-4 text-[#1da156]" /> When
-              </h3>
-              <p className="text-sm font-bold text-black">September 14 – 19, 2026</p>
-              <p className="text-xs text-black/60">Monday to Saturday · 6 Full Days</p>
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-black uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                <GlobeAltIcon className="w-4 h-4 text-[#1da156]" /> Where
-              </h3>
-              <p className="text-sm font-bold text-black">100% Online</p>
-              <p className="text-xs text-black/60">Zoom · Google Meet · Microsoft Teams</p>
-            </div>
+        <div className="border-t border-white/10 bg-white text-slate-900">
+          <div className="mx-auto grid max-w-7xl gap-6 px-4 py-7 sm:px-8 md:grid-cols-3 md:divide-x md:divide-slate-200">
+            <div className="flex gap-3"><AcademicCapIcon className="h-6 w-6 shrink-0 text-[#1da156]" /><div><h2 className="text-sm font-black">Academic and practical</h2><p className="mt-1 text-xs leading-5 text-slate-600">Expert-led learning that connects university knowledge to real national challenges.</p></div></div>
+            <div className="flex gap-3 md:pl-6"><CalendarDaysIcon className="h-6 w-6 shrink-0 text-[#1da156]" /><div><h2 className="text-sm font-black">{event ? eventDates : 'Next dates to be announced'}</h2><p className="mt-1 text-xs leading-5 text-slate-600">The official schedule is published after an edition is approved.</p></div></div>
+            <div className="flex gap-3 md:pl-6"><GlobeAltIcon className="h-6 w-6 shrink-0 text-[#1da156]" /><div><h2 className="text-sm font-black">Accessible nationwide</h2><p className="mt-1 text-xs leading-5 text-slate-600">Join online from anywhere and earn verifiable certificates.</p></div></div>
           </div>
         </div>
       </section>
 
       {/* ══ SCHEDULE / 6 DAYS ════════════════════════ */}
-      <section className="bg-white py-20 border-y border-black/10">
+      <section className="border-y border-slate-200 bg-slate-50 py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <SectionTitle
             tag="Program Structure"
-            title="6 Days Of Focused Innovation"
-            subtitle="Each day focuses on a vital sector where Artificial Intelligence drives Somalia’s national transformation."
+            title={`${days.length || 'Focused'} Days Of Learning`}
+            subtitle={`Each day advances the current edition theme: ${event?.theme || 'national skills and innovation'}.`}
           />
-          <ScheduleTabs />
+          <ScheduleTabs fallbackDays={days} />
           <div className="mt-12 text-center">
             <Link
               to="/program"
@@ -211,12 +152,12 @@ export const Home = () => {
       </section>
 
       {/* ══ FEATURED TRAINERS & KEYNOTES ════════════════ */}
-      <section className="py-20 bg-white">
+      <section className="bg-white py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <SectionTitle
             tag="World-Class Faculty"
             title="Featured Trainers & Keynote Speakers"
-            subtitle="Meet the distinguished university professors, industry engineers, and technical experts leading our 2026 sessions."
+            subtitle={`Meet the professors, industry leaders, and practitioners guiding the ${event?.year || 'current'} edition.`}
           />
 
           {loadingTrainers ? (
@@ -307,24 +248,24 @@ export const Home = () => {
       </section>
 
       {/* ══ WHO SHOULD ATTEND ════════════════════════ */}
-      <section className="py-20 bg-white border-t border-black/10">
+      <section className="border-t border-black/10 bg-white py-24 text-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <SectionTitle
             tag="Who Should Attend"
-            title="Built for Everyone"
-            subtitle="Sessions range from AI literacy to developer deep-dives. No prior experience required."
+            title="Learning designed for every stage"
+            subtitle="From foundational digital literacy to advanced technical practice, the program welcomes learners across Somalia."
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {AUDIENCE.map((a, i) => (
               <div
                 key={i}
-                className="group text-center p-8 border border-black/10 rounded-2xl hover:border-[#1da156] hover:shadow-lg transition-all bg-white"
+                className="group rounded-2xl border border-black/10 bg-white p-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:border-[#1da156] hover:shadow-xl"
               >
-                <div className="w-14 h-14 rounded-2xl bg-white border border-[#1da156]/30 flex items-center justify-center mx-auto mb-4 group-hover:bg-[#1da156] transition-colors">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#1da156]/10 transition-colors group-hover:bg-[#1da156]">
                   <a.Icon className="w-7 h-7 text-[#1da156] group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="font-bold text-black text-sm mb-2 group-hover:text-[#1da156] transition-colors">{a.label}</h3>
-                <p className="text-xs text-black/70 leading-relaxed">{a.desc}</p>
+                <h3 className="mb-2 text-sm font-bold text-black">{a.label}</h3>
+                <p className="text-xs leading-relaxed text-black/65">{a.desc}</p>
               </div>
             ))}
           </div>
@@ -332,7 +273,7 @@ export const Home = () => {
       </section>
 
       {/* ══ CERTIFICATE CTA STRIP ═══════════════════ */}
-      <section className="py-20 bg-[#1da156] text-white">
+      <section className="bg-[#1da156] py-20 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col lg:flex-row items-center justify-between gap-8">
           <div className="max-w-xl">
             <span className="inline-flex items-center gap-2 text-xs font-bold bg-white/15 border border-white/20 px-4 py-1.5 rounded-full mb-4 text-white">
@@ -367,64 +308,8 @@ export const Home = () => {
   );
 };
 
-/* ── Training Tile ── */
-const TrainingTile = ({ training }) => {
-  const photoUrl = (p) => {
-    if (!p) return null;
-    return p.startsWith('http') ? p : `/${p.replace(/^\//,'')}`;
-  };
-
-  return (
-    <Link to={`/trainings/${training._id}`} className="group block relative overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all card-hover-lift bg-white border border-black/10">
-      {/* Image */}
-      <div className="relative h-56 overflow-hidden bg-black">
-        {photoUrl(training.coverImage) ? (
-          <img
-            src={photoUrl(training.coverImage)}
-            alt={training.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-white">
-            <img src="/logo.png" alt="National Training Week" className="h-24 w-auto object-contain opacity-80" />
-          </div>
-        )}
-        {/* Hover overlay with info */}
-        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end p-4">
-          <p className="text-white text-xs leading-relaxed line-clamp-3 font-medium">
-            {training.description || 'Click to view full session details and register.'}
-          </p>
-        </div>
-
-        {/* Status badge */}
-        <span className="absolute top-3 left-3 bg-[#1da156] text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide shadow">
-          {training.status?.replace(/_/g, ' ')}
-        </span>
-      </div>
-
-      {/* Card info */}
-      <div className="p-5 bg-white">
-        <h3 className="font-black text-black text-base leading-snug mb-1 group-hover:text-[#1da156] transition-colors line-clamp-2">
-          {training.title}
-        </h3>
-        <p className="text-xs text-[#1da156] font-bold mb-3">
-          {training.trainer ? `${training.trainer.title || ''} ${training.trainer.name}`.trim() : 'Expert Trainer'}
-        </p>
-        <div className="flex items-center justify-between text-[11px] text-black/70 font-medium border-t border-black/10 pt-3">
-          <span>
-            {training.date ? new Date(training.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-          </span>
-          <span>{training.startTime} – {training.endTime}</span>
-        </div>
-      </div>
-    </Link>
-  );
-};
-
 /* ── Schedule Tabs ── */
-const DATES = ['Sep 14', 'Sep 15', 'Sep 16', 'Sep 17', 'Sep 18', 'Sep 19'];
-
-const ScheduleTabs = () => {
+const ScheduleTabs = ({ fallbackDays = [] }) => {
   const [active, setActive]   = useState(0);
   const [program, setProgram] = useState([]);
   const [loaded, setLoaded]   = useState(false);
@@ -432,18 +317,28 @@ const ScheduleTabs = () => {
   useEffect(() => {
     api.get('/public/program')
       .then(r => { if (r.success && r.data) setProgram(r.data.program || []); })
-      .catch(() => {})
+      .catch(() => setProgram(fallbackDays.map((day) => ({ day, sessions: [] }))))
       .finally(() => setLoaded(true));
-  }, []);
+  }, [fallbackDays]);
 
   const currentDay = program[active];
   const sessions   = currentDay?.sessions || [];
+
+  if (loaded && program.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
+        <CalendarDaysIcon className="mx-auto h-10 w-10 text-[#1da156]" />
+        <h3 className="mt-4 text-xl font-black text-slate-900">Program coming soon</h3>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">No event is active. Program days and training sessions will appear here when the next edition is published.</p>
+      </div>
+    );
+  }
 
   return (
     <div>
       {/* ── Day Tab Row ── */}
       <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-12 py-2">
-        {DAYS.map((day, i) => {
+        {program.map(({ day }, i) => {
           const isActive = active === i;
           return (
             <button
@@ -458,7 +353,7 @@ const ScheduleTabs = () => {
               <span className={`block text-[11px] font-bold tracking-wider mb-1 ${
                 isActive ? 'text-white/90' : 'text-black/60'
               }`}>
-                Day {i + 1} • {DATES[i]}
+                Day {day.dayNumber} • {day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBA'}
               </span>
               <span className={`block text-xs sm:text-sm font-extrabold ${
                 isActive ? 'text-white' : 'text-black'
@@ -479,10 +374,10 @@ const ScheduleTabs = () => {
           <div className="h-1 w-full bg-[#1da156]" />
           <div className="p-10 text-center">
             <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 bg-white text-[#1da156] border border-[#1da156]">
-              {DAYS[active].day}
+              Day {currentDay?.day?.dayNumber}
             </span>
-            <h3 className="text-2xl font-black text-black mb-3">{DAYS[active].theme}</h3>
-            <p className="text-black/70 text-sm leading-relaxed">{DAYS[active].desc}</p>
+            <h3 className="text-2xl font-black text-black mb-3">{currentDay?.day?.theme}</h3>
+            <p className="text-black/70 text-sm leading-relaxed">The detailed sessions for this program day will be published soon.</p>
             <Link to="/program" className="inline-flex items-center gap-1 mt-6 text-xs font-bold text-[#1da156] hover:underline">
               View Full Day Schedule →
             </Link>

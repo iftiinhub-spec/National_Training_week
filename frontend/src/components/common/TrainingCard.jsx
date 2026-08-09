@@ -16,7 +16,6 @@ export const TrainingCard = ({ training }) => {
     endTime,
     level,
     status,
-    capacity,
   } = training;
 
   // Fallback image graphic generator

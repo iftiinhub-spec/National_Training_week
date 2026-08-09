@@ -1,17 +1,29 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BuildingLibraryIcon, MapPinIcon, EnvelopeIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
-import { FaFacebookF, FaLinkedinIn, FaXTwitter, FaYoutube } from 'react-icons/fa6';
+import { BuildingLibraryIcon, MapPinIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { FaFacebookF } from 'react-icons/fa6';
+import { useCurrentEvent } from '../../context/EventContext';
+import api from '../../api/axios';
 
 export const Footer = () => {
   const year = new Date().getFullYear();
+  const { event, days } = useCurrentEvent();
+  const [settings, setSettings] = useState({
+    organizerName: 'National Training Week',
+    contactEmail: 'ntw@trainingweek.so',
+    location: 'Mogadishu, Somalia',
+    facebookUrl: '',
+  });
 
-  const socialLinks = [
-    { Icon: FaFacebookF, url: '#', label: 'Facebook' },
-    { Icon: FaLinkedinIn, url: '#', label: 'LinkedIn' },
-    { Icon: FaXTwitter, url: '#', label: 'X (Twitter)' },
-    { Icon: FaYoutube, url: '#', label: 'YouTube' },
-  ];
+  useEffect(() => {
+    api.get('/public/settings')
+      .then((response) => setSettings((current) => ({ ...current, ...response.data?.settings })))
+      .catch(() => {});
+  }, []);
+  const dates = event?.startDate && event?.endDate
+    ? `${new Date(event.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    : 'Next edition to be announced';
+  const programLabel = days.length ? `${days.length}-Day Program` : 'Official Program';
 
   return (
     <footer className="bg-black text-white/80 border-t border-[#1da156]/20">
@@ -28,9 +40,9 @@ export const Footer = () => {
           </div>
           <div className="text-center md:text-right">
             <p className="text-sm text-[#1da156] font-bold">
-              "Artificial Intelligence for National Transformation"
+              {event?.theme || 'Annual learning and professional development'}
             </p>
-            <p className="text-xs text-white/60 mt-1">September 14 – 19, 2026 · 100% Online</p>
+            <p className="text-xs text-white/60 mt-1">{dates}{event ? ' · Online' : ''}</p>
           </div>
         </div>
       </div>
@@ -44,22 +56,21 @@ export const Footer = () => {
             About NTW
           </h4>
           <p className="text-sm text-white/70 leading-relaxed">
-            Empowering Somalia's workforce, students, and professionals through annual
-            high-impact technical and professional training programs — 100% free, online,
-            and officially certified.
+            An annual national learning initiative connecting students, graduates,
+            professionals, and the public with practical learning and expert-led
+            professional development.
           </p>
-          <div className="flex gap-3 pt-2">
-            {socialLinks.map(({ Icon, url, label }, i) => (
+          {settings.facebookUrl && <div className="flex gap-3 pt-2">
               <a
-                key={i}
-                href={url}
-                aria-label={label}
+                href={settings.facebookUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Facebook"
                 className="w-9 h-9 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-white hover:border-[#1da156] hover:bg-[#1da156] transition-all"
               >
-                <Icon className="w-4 h-4" />
+                <FaFacebookF className="w-4 h-4" />
               </a>
-            ))}
-          </div>
+          </div>}
         </div>
 
         {/* Col 2 */}
@@ -71,7 +82,7 @@ export const Footer = () => {
             {[
               { name: 'Home',                  path: '/' },
               { name: 'About NTW',             path: '/about' },
-              { name: '6-Day Program',         path: '/program' },
+              { name: programLabel,            path: '/program' },
               { name: 'Browse Trainings',      path: '/trainings' },
               { name: 'Recorded Sessions',     path: '/recordings' },
             ].map((l) => (
@@ -115,19 +126,15 @@ export const Footer = () => {
           <ul className="space-y-3 text-sm text-white/70">
             <li className="flex items-center gap-2.5">
               <BuildingLibraryIcon className="w-4 h-4 text-[#1da156] shrink-0" />
-              <span><strong className="text-white">Organizer:</strong> National Training Week</span>
+              <span><strong className="text-white">Organizer:</strong> {settings.organizerName}</span>
             </li>
             <li className="flex items-center gap-2.5">
               <MapPinIcon className="w-4 h-4 text-[#1da156] shrink-0" />
-              <span><strong className="text-white">Location:</strong> Mogadishu, Somalia</span>
+              <span><strong className="text-white">Location:</strong> {settings.location}</span>
             </li>
             <li className="flex items-center gap-2.5">
               <EnvelopeIcon className="w-4 h-4 text-[#1da156] shrink-0" />
-              <span><strong className="text-white">Email:</strong> ntw@trainingweek.so</span>
-            </li>
-            <li className="flex items-center gap-2.5">
-              <GlobeAltIcon className="w-4 h-4 text-[#1da156] shrink-0" />
-              <span><strong className="text-white">Web:</strong> www.nationaltrainingweek.so</span>
+              <span><strong className="text-white">Email:</strong> <a href={`mailto:${settings.contactEmail}`} className="hover:text-[#1da156]">{settings.contactEmail}</a></span>
             </li>
           </ul>
         </div>
@@ -136,8 +143,8 @@ export const Footer = () => {
       {/* Bottom bar */}
       <div className="border-t border-white/10 py-6 bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/60">
-          <p>© {year} National Training Week · All rights reserved.</p>
-          <p className="text-white/60 font-medium">Somalia National Technical Education Initiative</p>
+          <p>&copy; {year} National Training Week. All rights reserved.</p>
+          <p className="text-white/60 font-medium">Learning for national transformation</p>
         </div>
       </div>
     </footer>

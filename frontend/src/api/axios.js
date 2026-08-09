@@ -10,7 +10,7 @@ const api = axios.create({
 // Interceptor to attach JWT token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('hu_ntw_token');
+    const token = localStorage.getItem('ntw_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -29,9 +29,9 @@ api.interceptors.response.use(
       'An unexpected error occurred';
     
     // Auto logout on 401 if token expired/invalid
-    if (error.response?.status === 401 && localStorage.getItem('hu_ntw_token')) {
-      localStorage.removeItem('hu_ntw_token');
-      localStorage.removeItem('hu_ntw_user');
+    if (error.response?.status === 401 && localStorage.getItem('ntw_token')) {
+      localStorage.removeItem('ntw_token');
+      localStorage.removeItem('ntw_user');
       if (!window.location.pathname.startsWith('/signin')) {
         window.location.href = '/signin';
       }

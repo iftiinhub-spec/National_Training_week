@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import toast from 'react-hot-toast';
-import { ChatBubbleLeftEllipsisIcon, StarIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftEllipsisIcon } from '@heroicons/react/24/outline';
 
 export const MyFeedback = () => {
   const [attendanceRecords, setAttendanceRecords] = useState([]);

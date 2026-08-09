@@ -27,7 +27,10 @@ export const getEvent = async (req, res, next) => {
 // POST /api/admin/events
 export const createEvent = async (req, res, next) => {
   try {
-    const event = await Event.create(req.body);
+    const data = { ...req.body };
+    data.isCurrent = req.body.isCurrent === true || req.body.isCurrent === 'true';
+    if (data.isCurrent) await Event.updateMany({}, { $set: { isCurrent: false } });
+    const event = await Event.create(data);
     return successResponse(res, { event }, 'Event created successfully.', 201);
   } catch (err) { next(err); }
 };
@@ -35,7 +38,12 @@ export const createEvent = async (req, res, next) => {
 // PUT /api/admin/events/:id
 export const updateEvent = async (req, res, next) => {
   try {
-    const event = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const data = { ...req.body };
+    data.isCurrent = req.body.isCurrent === true || req.body.isCurrent === 'true';
+    if (data.isCurrent) {
+      await Event.updateMany({ _id: { $ne: req.params.id } }, { $set: { isCurrent: false } });
+    }
+    const event = await Event.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true });
     if (!event) return errorResponse(res, 'Event not found.', 404);
     return successResponse(res, { event }, 'Event updated successfully.');
   } catch (err) { next(err); }

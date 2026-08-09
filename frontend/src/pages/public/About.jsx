@@ -9,6 +9,8 @@ import {
   EnvelopeIcon,
   GlobeAltIcon,
 } from '@heroicons/react/24/outline';
+import { useCurrentEvent } from '../../context/EventContext';
+import PublicPageHeader from '../../components/common/PublicPageHeader';
 
 const OBJECTIVES = [
   'Equip participants with practical, job-ready skills in modern technology and AI.',
@@ -25,24 +27,16 @@ const AUDIENCE = [
   { Icon: RocketLaunchIcon,    role: 'General Public & Professionals',  text: 'Gain digital literacy and understand how AI impacts business and society.' },
 ];
 
-export const About = () => (
+export const About = () => {
+  const { event, days } = useCurrentEvent();
+  const dates = event?.startDate && event?.endDate
+    ? `${new Date(event.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}–${new Date(event.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+    : 'Dates to be announced';
+  return (
   <div className="bg-white min-h-screen">
 
     {/* ── Page Hero Banner ─────────────────────────── */}
-    <section className="relative py-24 text-white text-center bg-[#1da156]">
-      <div className="absolute inset-0 opacity-10 bg-grid-pattern pointer-events-none" />
-      <div className="relative max-w-3xl mx-auto px-4 z-10">
-        <p className="text-xs font-bold uppercase tracking-widest text-white/70 mb-3">About The Event</p>
-        <h1 className="text-4xl sm:text-5xl font-black leading-tight mb-4">
-          National Training Week
-        </h1>
-        <p className="text-white/90 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-          An annual flagship education and capacity-building initiative empowering Somalia's
-          national workforce, scholars, developers, and high-school graduates through
-          expert-led technical training.
-        </p>
-      </div>
-    </section>
+    <PublicPageHeader eyebrow="About the initiative" title="National Training Week" description="An annual education and capacity-building initiative connecting Somalia's students, graduates, professionals, and the public with practical, expert-led learning." />
 
     {/* ── Background & Purpose ─────────────────────── */}
     <section className="py-20 bg-white">
@@ -65,13 +59,10 @@ export const About = () => (
               national theme to guide its curriculum.
             </p>
             <p className="text-black/70 text-sm leading-relaxed">
-              For the <strong className="text-black">2026 edition</strong>, the program centres around{' '}
-              <strong className="text-[#1da156]">Artificial Intelligence for National Transformation</strong>.
-              Over six intensive days, participants engage in interactive online sessions delivered
-              by recognised university professors, industry engineers, and thought leaders.
+              {event ? <>For the <strong className="text-black">{event.year} edition</strong>, the program centres around{' '}<strong className="text-[#1da156]">{event.theme}</strong>. Over {days.length || 'several'} focused days, participants engage in interactive online sessions delivered by university faculty, industry practitioners, and subject experts.</> : <>Each annual edition introduces a focused theme and a structured program of practical sessions led by university faculty, industry practitioners, and subject experts.</>}
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
-              {['September 14–19, 2026', '100% Online', 'Free & Certified'].map((tag) => (
+              {(event ? [dates, 'Online delivery', `${days.length || 'Multiple'} program days`] : ['Annual program', 'Online delivery', 'Open national participation']).map((tag) => (
                 <span key={tag} className="px-4 py-1.5 rounded-full bg-white border border-[#1da156] text-[#1da156] text-xs font-bold">
                   {tag}
                 </span>
@@ -163,6 +154,7 @@ export const About = () => (
     </section>
 
   </div>
-);
+  );
+};
 
 export default About;

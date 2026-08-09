@@ -5,6 +5,7 @@ import Training from '../../models/Training.js';
 import { generateCertificateId } from '../../utils/generateCertificateId.js';
 import { generateCertificatePDF } from '../../utils/generatePDF.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
+import { sendCertificateIssuedEmail } from '../../utils/email.js';
 
 // POST /api/admin/certificates/generate  — generate for eligible participant
 export const generateCertificate = async (req, res, next) => {
@@ -43,7 +44,17 @@ export const generateCertificate = async (req, res, next) => {
       .populate('training', 'title date event')
       .populate('issuedBy', 'fullName');
 
-    return successResponse(res, { certificate: populated }, 'Certificate issued successfully.', 201);
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify-certificate?id=${certificate.certificateId}`;
+    const emailResult = await sendCertificateIssuedEmail({
+      to: populated.participant.email,
+      participantName: populated.participant.fullName,
+      trainingTitle: populated.training.title,
+      certificateId: populated.certificateId,
+      verifyUrl,
+      portalUrl: `${process.env.FRONTEND_URL}/portal/certificates`,
+    });
+
+    return successResponse(res, { certificate: populated, emailDelivered: emailResult.success }, emailResult.success ? 'Certificate issued and participant notified.' : 'Certificate issued, but its notification email could not be delivered.', 201);
   } catch (err) { next(err); }
 };
 
@@ -57,23 +68,32 @@ export const bulkGenerateCertificates = async (req, res, next) => {
       return errorResponse(res, 'Training must be completed before bulk generating certificates.', 400);
     }
 
-    const approvedRegs = await Registration.find({ training: trainingId, status: 'approved' });
-    let issued = 0, skipped = 0, errors = [];
+    const approvedRegs = await Registration.find({ training: trainingId, status: 'approved' }).populate('participant', 'fullName email');
+    let issued = 0, skipped = 0, notified = 0, errors = [];
 
     for (const reg of approvedRegs) {
       try {
         const attendance = await Attendance.findOne({ participant: reg.participant, training: trainingId });
         if (!attendance || attendance.status !== 'present') { skipped++; continue; }
-        const existing = await Certificate.findOne({ participant: reg.participant, training: trainingId, isRevoked: false });
+        const existing = await Certificate.findOne({ participant: reg.participant._id, training: trainingId });
         if (existing) { skipped++; continue; }
 
         const certId = generateCertificateId(training.event?.year || new Date().getFullYear());
-        await Certificate.create({ participant: reg.participant, training: trainingId, certificateId: certId, issuedBy: req.user._id });
+        await Certificate.create({ participant: reg.participant._id, training: trainingId, certificateId: certId, issuedBy: req.user._id });
         issued++;
+        const emailResult = await sendCertificateIssuedEmail({
+          to: reg.participant.email,
+          participantName: reg.participant.fullName,
+          trainingTitle: training.title,
+          certificateId: certId,
+          verifyUrl: `${process.env.FRONTEND_URL}/verify-certificate?id=${certId}`,
+          portalUrl: `${process.env.FRONTEND_URL}/portal/certificates`,
+        });
+        if (emailResult.success) notified++;
       } catch (e) { errors.push({ participant: reg.participant, error: e.message }); }
     }
 
-    return successResponse(res, { issued, skipped, errors }, `Bulk generation complete. Issued: ${issued}, Skipped: ${skipped}.`);
+    return successResponse(res, { issued, skipped, notified, errors }, `Issued ${issued} certificate${issued === 1 ? '' : 's'}; ${notified} participant notification${notified === 1 ? '' : 's'} delivered; ${skipped} skipped.`);
   } catch (err) { next(err); }
 };
 
@@ -101,9 +121,11 @@ export const getCertificates = async (req, res, next) => {
 // PATCH /api/admin/certificates/:id/revoke
 export const revokeCertificate = async (req, res, next) => {
   try {
+    const reason = req.body.reason?.trim();
+    if (!reason) return errorResponse(res, 'A revocation reason is required.', 400);
     const cert = await Certificate.findByIdAndUpdate(
       req.params.id,
-      { isRevoked: true, revokedAt: new Date(), revokedReason: req.body.reason },
+      { isRevoked: true, revokedAt: new Date(), revokedReason: reason },
       { new: true }
     );
     if (!cert) return errorResponse(res, 'Certificate not found.', 404);
@@ -136,7 +158,7 @@ export const downloadCertificate = async (req, res, next) => {
     const pdfBuffer = await generateCertificatePDF({
       participantName: cert.participant.fullName,
       trainingTitle: cert.training.title,
-      eventName: cert.training.event?.name || 'Hormuud University National Training Week',
+      eventName: cert.training.event?.name || 'National Training Week',
       issuedDate: cert.issuedAt,
       certificateId: cert.certificateId,
       verifyUrl,

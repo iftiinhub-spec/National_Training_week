@@ -20,7 +20,8 @@ export const getMeeting = async (req, res, next) => {
     if (!hasAccess) return errorResponse(res, 'Access denied to this training.', 403);
 
     const meeting = await Meeting.findOne({ training: trainingId }).populate('createdBy', 'fullName');
-    if (!meeting) return errorResponse(res, 'No meeting found for this training.', 404);
+    // Not having configured a meeting yet is a normal session state.
+    if (!meeting) return successResponse(res, { meeting: null });
     return successResponse(res, { meeting });
   } catch (err) { next(err); }
 };
@@ -105,7 +106,7 @@ export const sendTrainerInvitation = async (req, res, next) => {
     const result = await sendInvitationEmail({
       to: training.trainer.email,
       trainingTitle: training.title,
-      eventName: training.event?.name || 'Hormuud University NTW',
+      eventName: training.event?.name || 'National Training Week',
       meetingUrl: meeting.meetingUrl,
       meetingId: meeting.meetingId,
       passcode: meeting.passcode,
@@ -125,7 +126,8 @@ export const sendTrainerInvitation = async (req, res, next) => {
       deliveryStatus: result.success ? 'sent' : 'failed',
     });
 
-    return successResponse(res, null, result.success ? 'Trainer invitation sent.' : 'Failed to send trainer invitation.');
+    if (!result.success) return errorResponse(res, `Trainer invitation could not be sent: ${result.error}`, 502);
+    return successResponse(res, null, 'Trainer invitation sent.');
   } catch (err) { next(err); }
 };
 
@@ -157,7 +159,7 @@ export const sendParticipantInvitations = async (req, res, next) => {
         result = await sendInvitationEmail({
           to: email,
           trainingTitle: training.title,
-          eventName: training.event?.name || 'Hormuud University NTW',
+          eventName: training.event?.name || 'National Training Week',
           meetingUrl: meeting.meetingUrl,
           meetingId: meeting.meetingId,
           passcode: meeting.passcode,
@@ -189,6 +191,9 @@ export const sendParticipantInvitations = async (req, res, next) => {
       failedRecipients: failed,
     });
 
+    if (failed.length === emails.length) {
+      return errorResponse(res, 'Participant invitations could not be delivered. Check the SMTP configuration.', 502);
+    }
     return successResponse(res, { total: emails.length, failed: failed.length },
       `Sent to ${emails.length - failed.length} of ${emails.length} participants.`);
   } catch (err) { next(err); }

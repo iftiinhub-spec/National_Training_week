@@ -6,10 +6,10 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('hu_ntw_user');
+    const saved = localStorage.getItem('ntw_user');
     return saved ? JSON.parse(saved) : null;
   });
-  const [token, setToken] = useState(() => localStorage.getItem('hu_ntw_token') || null);
+  const [token, setToken] = useState(() => localStorage.getItem('ntw_token') || null);
   const [loading, setLoading] = useState(true);
 
   // Fetch current user on refresh
@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
           const res = await api.get('/auth/me');
           if (res.success && res.data?.user) {
             setUser(res.data.user);
-            localStorage.setItem('hu_ntw_user', JSON.stringify(res.data.user));
+            localStorage.setItem('ntw_user', JSON.stringify(res.data.user));
           }
         } catch (err) {
           console.error('Auth verification failed:', err);
@@ -39,8 +39,8 @@ export const AuthProvider = ({ children }) => {
         const { user: userData, token: userToken } = res.data;
         setUser(userData);
         setToken(userToken);
-        localStorage.setItem('hu_ntw_token', userToken);
-        localStorage.setItem('hu_ntw_user', JSON.stringify(userData));
+        localStorage.setItem('ntw_token', userToken);
+        localStorage.setItem('ntw_user', JSON.stringify(userData));
         toast.success(`Welcome back, ${userData.fullName}!`);
         return userData;
       }
@@ -53,14 +53,9 @@ export const AuthProvider = ({ children }) => {
   const register = async (formData) => {
     try {
       const res = await api.post('/auth/register', formData);
-      if (res.success && res.data) {
-        const { user: userData, token: userToken } = res.data;
-        setUser(userData);
-        setToken(userToken);
-        localStorage.setItem('hu_ntw_token', userToken);
-        localStorage.setItem('hu_ntw_user', JSON.stringify(userData));
-        toast.success('Registration successful!');
-        return userData;
+      if (res.success) {
+        toast.success('Account request submitted. Check your email and wait for administrator approval.');
+        return res.data?.user;
       }
     } catch (err) {
       toast.error(err.message || 'Registration failed');
@@ -71,8 +66,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('hu_ntw_token');
-    localStorage.removeItem('hu_ntw_user');
+    localStorage.removeItem('ntw_token');
+    localStorage.removeItem('ntw_user');
     toast.success('Logged out successfully');
   };
 
@@ -84,7 +79,7 @@ export const AuthProvider = ({ children }) => {
       });
       if (res.success && res.data?.user) {
         setUser(res.data.user);
-        localStorage.setItem('hu_ntw_user', JSON.stringify(res.data.user));
+        localStorage.setItem('ntw_user', JSON.stringify(res.data.user));
         toast.success('Profile updated successfully');
         return res.data.user;
       }

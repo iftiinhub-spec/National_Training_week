@@ -1,14 +1,15 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './context/AuthContext';
+import { useTheme } from './context/ThemeContext';
 
 // Layouts
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
-import ParticipantLayout from './pages/participant/ParticipantLayout';
-import ModeratorLayout from './pages/moderator/ModeratorLayout';
-import AdminLayout from './pages/admin/AdminLayout';
+const ParticipantLayout = lazy(() => import('./pages/participant/ParticipantLayout'));
+const ModeratorLayout = lazy(() => import('./pages/moderator/ModeratorLayout'));
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
 
 // Public Pages
 import Home from './pages/public/Home';
@@ -21,32 +22,37 @@ import VerifyCertificate from './pages/public/VerifyCertificate';
 import Contact from './pages/public/Contact';
 import SignIn from './pages/public/SignIn';
 import SignUp from './pages/public/SignUp';
+import QRCheckIn from './pages/public/QRCheckIn';
 
 // Participant Pages
-import ParticipantDashboard from './pages/participant/ParticipantDashboard';
-import MyRegistrations from './pages/participant/MyRegistrations';
-import MyAttendance from './pages/participant/MyAttendance';
-import MyCertificates from './pages/participant/MyCertificates';
-import MyFeedback from './pages/participant/MyFeedback';
-import Profile from './pages/participant/Profile';
+const ParticipantDashboard = lazy(() => import('./pages/participant/ParticipantDashboard'));
+const MyRegistrations = lazy(() => import('./pages/participant/MyRegistrations'));
+const MyAttendance = lazy(() => import('./pages/participant/MyAttendance'));
+const MyCertificates = lazy(() => import('./pages/participant/MyCertificates'));
+const MyFeedback = lazy(() => import('./pages/participant/MyFeedback'));
+const Profile = lazy(() => import('./pages/participant/Profile'));
 
 // Moderator Pages
-import ModeratorDashboard from './pages/moderator/ModeratorDashboard';
-import SessionOperation from './pages/moderator/SessionOperation';
+const ModeratorDashboard = lazy(() => import('./pages/moderator/ModeratorDashboard'));
+const SessionOperation = lazy(() => import('./pages/moderator/SessionOperation'));
+const AssignedSessions = lazy(() => import('./pages/moderator/AssignedSessions'));
+const ModeratorProfile = lazy(() => import('./pages/moderator/ModeratorProfile'));
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import EventsManagement from './pages/admin/EventsManagement';
-import TrainingsManagement from './pages/admin/TrainingsManagement';
-import TrainersManagement from './pages/admin/TrainersManagement';
-import ModeratorsManagement from './pages/admin/ModeratorsManagement';
-import RegistrationsManagement from './pages/admin/RegistrationsManagement';
-import AttendanceManagement from './pages/admin/AttendanceManagement';
-import CertificatesManagement from './pages/admin/CertificatesManagement';
-import RecordingsManagement from './pages/admin/RecordingsManagement';
-import CategoriesManagement from './pages/admin/CategoriesManagement';
-import Reports from './pages/admin/Reports';
-import ContactMessages from './pages/admin/ContactMessages';
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const EventsManagement = lazy(() => import('./pages/admin/EventsManagement'));
+const TrainingsManagement = lazy(() => import('./pages/admin/TrainingsManagement'));
+const TrainersManagement = lazy(() => import('./pages/admin/TrainersManagement'));
+const ModeratorsManagement = lazy(() => import('./pages/admin/ModeratorsManagement'));
+const RegistrationsManagement = lazy(() => import('./pages/admin/RegistrationsManagement'));
+const AttendanceManagement = lazy(() => import('./pages/admin/AttendanceManagement'));
+const CertificatesManagement = lazy(() => import('./pages/admin/CertificatesManagement'));
+const RecordingsManagement = lazy(() => import('./pages/admin/RecordingsManagement'));
+const CategoriesManagement = lazy(() => import('./pages/admin/CategoriesManagement'));
+const Reports = lazy(() => import('./pages/admin/Reports'));
+const ContactMessages = lazy(() => import('./pages/admin/ContactMessages'));
+const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
+const Settings = lazy(() => import('./pages/admin/Settings'));
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -59,36 +65,50 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
+
+  return null;
+};
+
 // Layout with Navbar and Footer for public pages
 const PublicLayout = () => {
   return (
-    <div className="min-h-screen flex flex-col justify-between">
+    <div className="flex min-h-screen flex-col">
       <Navbar />
-      {/* pt-[72px] offsets the fixed navbar height for non-hero pages;
+      {/* pt-[88px] offsets the fixed navbar height for non-hero pages;
           Home.jsx handles its own hero offset via min-h-screen */}
-      <div className="flex-1">
+      <main className="flex flex-1 flex-col">
         <Routes>
           <Route path="/"                    element={<Home />} />
-          <Route path="/about"               element={<div className="pt-[72px]"><About /></div>} />
-          <Route path="/program"             element={<div className="pt-[72px]"><Program /></div>} />
-          <Route path="/trainings"           element={<div className="pt-[72px]"><Trainings /></div>} />
-          <Route path="/trainings/:id"       element={<div className="pt-[72px]"><TrainingDetails /></div>} />
-          <Route path="/recordings"          element={<div className="pt-[72px]"><Recordings /></div>} />
-          <Route path="/verify-certificate"  element={<div className="pt-[72px]"><VerifyCertificate /></div>} />
-          <Route path="/contact"             element={<div className="pt-[72px]"><Contact /></div>} />
-          <Route path="/signin"              element={<div className="pt-[72px]"><SignIn /></div>} />
-          <Route path="/signup"              element={<div className="pt-[72px]"><SignUp /></div>} />
+          <Route path="/about"               element={<div className="pt-[88px]"><About /></div>} />
+          <Route path="/program"             element={<div className="pt-[88px]"><Program /></div>} />
+          <Route path="/trainings"           element={<div className="pt-[88px]"><Trainings /></div>} />
+          <Route path="/trainings/:id"       element={<div className="pt-[88px]"><TrainingDetails /></div>} />
+          <Route path="/recordings"          element={<div className="pt-[88px]"><Recordings /></div>} />
+          <Route path="/verify-certificate"  element={<div className="pt-[88px]"><VerifyCertificate /></div>} />
+          <Route path="/contact"             element={<div className="pt-[88px]"><Contact /></div>} />
+          <Route path="/signin"              element={<div className="pt-[88px]"><SignIn /></div>} />
+          <Route path="/signup"              element={<div className="pt-[88px]"><SignUp /></div>} />
+          <Route path="/qr-checkin"          element={<div className="pt-[88px]"><QRCheckIn /></div>} />
         </Routes>
-      </div>
+      </main>
       <Footer />
     </div>
   );
 };
 
 export const App = () => {
+  const { isDark } = useTheme();
   return (
     <>
-      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
+      <ScrollToTop />
+      <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: isDark ? '#172033' : '#ffffff', color: isDark ? '#f8fafc' : '#0f172a', border: `1px solid ${isDark ? '#475569' : '#e2e8f0'}` } }} />
+      <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm font-semibold text-slate-500">Loading…</div>}>
       <Routes>
         
         {/* Participant Portal Routes */}
@@ -118,8 +138,9 @@ export const App = () => {
           }
         >
           <Route index element={<ModeratorDashboard />} />
-          <Route path="trainings" element={<ModeratorDashboard />} />
+          <Route path="trainings" element={<AssignedSessions />} />
           <Route path="trainings/:trainingId" element={<SessionOperation />} />
+          <Route path="profile" element={<ModeratorProfile />} />
         </Route>
 
         {/* Admin Command Center Routes */}
@@ -143,12 +164,15 @@ export const App = () => {
           <Route path="categories" element={<CategoriesManagement />} />
           <Route path="reports" element={<Reports />} />
           <Route path="contact-messages" element={<ContactMessages />} />
+          <Route path="profile" element={<AdminProfile />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
 
         {/* Public Website Fallback */}
         <Route path="/*" element={<PublicLayout />} />
 
       </Routes>
+      </Suspense>
     </>
   );
 };

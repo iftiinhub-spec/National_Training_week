@@ -4,6 +4,17 @@ import EventDay from '../../models/EventDay.js';
 import Registration from '../../models/Registration.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 
+const publicEventFilter = { status: { $ne: 'draft' }, isActive: { $ne: false } };
+
+const findCurrentEvent = async () => {
+  const explicit = await Event.findOne({ ...publicEventFilter, isCurrent: true });
+  if (explicit) return explicit;
+
+  const today = new Date();
+  return (await Event.findOne({ ...publicEventFilter, endDate: { $gte: today } }).sort({ startDate: 1 }))
+    || Event.findOne(publicEventFilter).sort({ year: -1, startDate: -1 });
+};
+
 // GET /api/public/trainings
 export const getPublicTrainings = async (req, res, next) => {
   try {
@@ -58,8 +69,22 @@ export const getPublicTraining = async (req, res, next) => {
 // GET /api/public/events — public event list
 export const getPublicEvents = async (req, res, next) => {
   try {
-    const events = await Event.find({ status: { $ne: 'draft' } }).sort({ year: -1 });
+    const events = await Event.find(publicEventFilter).sort({ year: -1 });
     return successResponse(res, { events });
+  } catch (err) { next(err); }
+};
+
+// GET /api/public/current-event — the edition used across all public pages
+export const getCurrentEvent = async (req, res, next) => {
+  try {
+    const event = await findCurrentEvent();
+    if (!event) return errorResponse(res, 'No public event edition is available.', 404);
+    const days = await EventDay.find({ event: event._id }).sort({ dayNumber: 1 });
+    const sessionCount = await Training.countDocuments({
+      event: event._id,
+      status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] },
+    });
+    return successResponse(res, { event, days, sessionCount });
   } catch (err) { next(err); }
 };
 
@@ -76,11 +101,9 @@ export const getPublicEvent = async (req, res, next) => {
 // GET /api/public/program?eventId= — full program for public program page
 export const getPublicProgram = async (req, res, next) => {
   try {
-    const eventFilter = req.query.eventId
-      ? { _id: req.query.eventId }
-      : { status: { $ne: 'draft' } };
-
-    const event = await Event.findOne(eventFilter).sort({ year: -1 });
+    const event = req.query.eventId
+      ? await Event.findOne({ _id: req.query.eventId, ...publicEventFilter })
+      : await findCurrentEvent();
     if (!event) return errorResponse(res, 'No active event found.', 404);
 
     const days = await EventDay.find({ event: event._id }).sort({ dayNumber: 1 });
@@ -102,7 +125,9 @@ export const getPublicProgram = async (req, res, next) => {
 // GET /api/public/featured-trainings — for home page
 export const getFeaturedTrainings = async (req, res, next) => {
   try {
+    const event = req.query.event || await findCurrentEvent();
     const trainings = await Training.find({
+      ...(event ? { event: event._id || event } : {}),
       status: { $in: ['published', 'registration_open'] },
     })
       .populate('trainer', 'name title photo')

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import { EnvelopeIcon, PhoneIcon, MapPinIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import PublicPageHeader from '../../components/common/PublicPageHeader';
 
 const CONTACT_INFO = [
   { Icon: MapPinIcon,  label: 'Location', value: 'Mogadishu, Somalia' },
@@ -37,20 +38,14 @@ export const Contact = () => {
     <div className="bg-white min-h-screen">
 
       {/* ── Page Hero ───────────────────────────────── */}
-      <section className="relative py-24 text-white text-center bg-[#1da156]">
-        <div className="absolute inset-0 opacity-10 bg-grid-pattern pointer-events-none" />
-        <div className="relative max-w-2xl mx-auto px-4 z-10">
-          <p className="text-xs font-bold uppercase tracking-widest text-white mb-3">Get In Touch</p>
-          <h1 className="text-4xl sm:text-5xl font-black mb-4">Contact Program Committee</h1>
-          <p className="text-white text-sm max-w-xl mx-auto leading-relaxed">
-            Have questions about registration, certificates, or session participation?
-            Send us a message and we'll respond shortly.
-          </p>
-        </div>
-      </section>
+      <PublicPageHeader
+        eyebrow="Get in touch"
+        title="Contact the Program Committee"
+        description="Ask about registration, session participation, certificates, accessibility, or general program support."
+      />
 
       {/* ── Contact Grid ────────────────────────────── */}
-      <section className="py-20 bg-white">
+      <section className="py-16 sm:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
 
@@ -84,7 +79,7 @@ export const Contact = () => {
                   Quick Answers
                 </h3>
                 {[
-                  ['Is registration free?', 'Yes — all NTW 2026 sessions are 100% free for participants.'],
+                  ['Is registration free?', 'Yes — published National Training Week sessions are free for participants unless an edition states otherwise.'],
                   ['How do I get a certificate?', 'Attend the live session and mark your attendance via QR scan.'],
                   ['What platform is used?', 'Zoom, Google Meet, or Microsoft Teams depending on session.'],
                 ].map(([q, a]) => (

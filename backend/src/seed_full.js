@@ -29,7 +29,7 @@ const seed = async () => {
   let event = await Event.findOne({ year: 2026 });
   if (!event) {
     event = await Event.create({
-      name: 'Hormuud University National Training Week 2026',
+      name: 'National Training Week 2026',
       theme: 'Artificial Intelligence for National Transformation',
       year: 2026,
       startDate: new Date('2026-09-14'),
@@ -38,9 +38,12 @@ const seed = async () => {
       registrationDeadline: new Date('2026-09-10'),
       description: 'Six days of expert-led AI training for professionals, students, and the general public — 100% free and certified.',
       status: 'registration_open',
+      isCurrent: true,
     });
     console.log('✅  Event created');
   } else {
+    event.isCurrent = true;
+    await event.save();
     console.log('ℹ️   Event already exists');
   }
 
@@ -72,7 +75,7 @@ const seed = async () => {
   // ── 5. Trainers ───────────────────────────────────────────────────────────────
   await Trainer.deleteMany({});
   const trainerDefs = [
-    { name: 'Dr. Ahmed Hassan',   title: 'Dr.',   organization: 'Hormuud University',        photo: 'speakers/dr_ahmed_hassan.jpg', expertise: ['AI', 'Machine Learning'],         biography: 'AI researcher with 12 years of experience in ML systems and national digital transformation.' },
+    { name: 'Dr. Ahmed Hassan',   title: 'Dr.',   organization: 'National Training Week',    photo: 'speakers/dr_ahmed_hassan.jpg', expertise: ['AI', 'Machine Learning'],         biography: 'AI researcher with 12 years of experience in ML systems and national digital transformation.' },
     { name: 'Prof. Fatima Osman', title: 'Prof.', organization: 'University of Mogadishu',   photo: 'speakers/prof_fatima_osman.jpg', expertise: ['Data Science', 'Statistics'],      biography: 'Professor of Data Science with specialisation in big data for development.' },
     { name: 'Eng. Mohamed Ali',   title: 'Eng.',  organization: 'Tech Somalia',              photo: 'speakers/eng_mohamed_ali.jpg', expertise: ['Cybersecurity', 'Networking'],     biography: 'Senior cybersecurity engineer with international certification and field experience.' },
     { name: 'Dr. Fadumo Ahmed',   title: 'Dr.',   organization: 'Mogadishu Teaching Hospital', photo: 'speakers/dr_fadumo_ahmed.jpg', expertise: ['Healthcare AI', 'Diagnostics'],  biography: 'Medical doctor and AI researcher pioneering telemedicine applications in Somalia.' },

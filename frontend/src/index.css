@@ -9,8 +9,225 @@
   }
   
   body {
-    @apply bg-white text-black antialiased selection:bg-[#1da156] selection:text-white min-h-screen flex flex-col;
-    font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    @apply bg-white text-slate-950 antialiased selection:bg-[#1da156] selection:text-white min-h-screen flex flex-col;
+    font-family: 'Inter Variable', 'Inter', sans-serif;
+  }
+
+  body,
+  body * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 150ms;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+/* System-wide dark theme. Existing utility classes are mapped here so every
+   public page, portal, table, form, and modal follows one persistent theme. */
+.dark body {
+  background: #090f1a;
+  color: #f8fafc;
+}
+
+.dark [class~="bg-white"],
+.dark [class*="bg-white/"] {
+  background-color: #111827 !important;
+}
+
+.dark [class~="bg-slate-50"] {
+  background-color: #172033 !important;
+}
+
+.dark [class*="bg-slate-50/"] {
+  background-color: #172033 !important;
+}
+
+.dark [class~="bg-slate-100"] {
+  background-color: #0f172a !important;
+}
+
+.dark [class*="bg-slate-100/"] {
+  background-color: #0f172a !important;
+}
+
+.dark [class~="bg-slate-200"] {
+  background-color: #263449 !important;
+}
+
+.dark [class~="bg-slate-300"],
+.dark [class~="bg-slate-400"] {
+  background-color: #334155 !important;
+}
+
+.dark [class*="bg-[#f0f9f4]"] {
+  background-color: #123426 !important;
+}
+
+.dark [class~="bg-emerald-50"],
+.dark [class~="bg-emerald-100"] {
+  background-color: #123426 !important;
+}
+
+.dark [class~="bg-blue-50"],
+.dark [class~="bg-blue-100"] {
+  background-color: #102a43 !important;
+}
+
+.dark [class~="bg-amber-50"],
+.dark [class~="bg-amber-100"] {
+  background-color: #382b0b !important;
+}
+
+.dark [class~="bg-rose-50"],
+.dark [class~="bg-rose-100"] {
+  background-color: #3a1720 !important;
+}
+
+.dark [class~="text-black"],
+.dark [class*="text-black/"] ,
+.dark [class~="text-slate-950"],
+.dark [class~="text-slate-900"],
+.dark [class~="text-slate-800"] {
+  color: #f8fafc !important;
+}
+
+.dark [class~="text-slate-700"],
+.dark [class~="text-slate-600"] {
+  color: #d7e0ec !important;
+}
+
+.dark [class~="text-slate-500"] {
+  color: #b0bfd1 !important;
+}
+
+.dark [class~="text-slate-400"] {
+  color: #94a3b8 !important;
+}
+
+.dark [class*="text-[#1a6b3c]"],
+.dark [class*="text-[#1da156]"] {
+  color: #34d399 !important;
+}
+
+.dark [class~="border-black"],
+.dark [class*="border-black/"],
+.dark [class~="border-slate-100"],
+.dark [class~="border-slate-200"],
+.dark [class~="border-slate-300"] {
+  border-color: #475569 !important;
+}
+
+.dark input:not([type='checkbox']):not([type='radio']),
+.dark select,
+.dark textarea {
+  border-color: #475569;
+  background-color: #111827;
+  color: #f8fafc;
+}
+
+.dark input:disabled,
+.dark select:disabled,
+.dark textarea:disabled,
+.dark input[readonly] {
+  background-color: #1e293b;
+  color: #b0bfd1;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #8291a7;
+}
+
+.dark option {
+  background-color: #111827;
+  color: #f8fafc;
+}
+
+.dark img[src="/logo.png"] {
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  filter: brightness(0) invert(1);
+}
+
+.dark footer img[src="/logo.png"] {
+  filter: brightness(0) invert(1);
+}
+
+/* Tailwind hover utilities only become active during interaction, so they
+   require explicit dark equivalents rather than the static surface mapping. */
+.dark .hover\:bg-white:hover,
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-100:hover {
+  background-color: #1e293b !important;
+}
+
+.dark .hover\:bg-emerald-50:hover,
+.dark .hover\:bg-emerald-100:hover {
+  background-color: #123426 !important;
+}
+
+.dark .hover\:bg-rose-50:hover,
+.dark .hover\:bg-rose-100:hover {
+  background-color: #3a1720 !important;
+}
+
+.dark .hover\:text-rose-600:hover,
+.dark .hover\:text-rose-700:hover {
+  color: #fb7185 !important;
+}
+
+.dark .hover\:text-black:hover {
+  color: #f8fafc !important;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #090f1a;
+}
+
+.dark .admin-shell label {
+  color: #d7e0ec;
+}
+
+.dark .admin-shell input:not([type='checkbox']):not([type='radio']),
+.dark .admin-shell select,
+.dark .admin-shell textarea {
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+h1, h2, h3, h4 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(29, 161, 86, 0.45);
+  outline-offset: 3px;
+}
+
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+  font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -63,6 +280,27 @@
   background-size: 28px 28px;
 }
 
+.public-page-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 5.5rem 1rem;
+  text-align: center;
+  color: white;
+  background: #1da156;
+}
+
+.public-page-hero::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 5rem;
+  height: 4px;
+  border-radius: 999px 999px 0 0;
+  background: #ffffff;
+  transform: translateX(-50%);
+}
+
 /* ── TheEvent design utilities ────────────────── */
 html {
   scroll-behavior: smooth;
@@ -98,4 +336,141 @@ html {
 .tab-underline.active::after,
 .tab-underline:hover::after {
   transform: scaleX(1);
+}
+
+/* Admin workspace: readable controls and viewport-safe dialogs */
+.admin-shell label {
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.025em;
+}
+
+.admin-shell input:not([type='checkbox']):not([type='radio']),
+.admin-shell select,
+.admin-shell textarea {
+  min-height: 2.75rem;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.admin-shell textarea {
+  min-height: 7rem;
+}
+
+.admin-shell input::placeholder,
+.admin-shell textarea::placeholder {
+  color: #94a3b8;
+}
+
+.admin-shell input:focus,
+.admin-shell select:focus,
+.admin-shell textarea:focus {
+  border-color: #1a6b3c;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(26, 107, 60, 0.14);
+}
+
+.admin-shell select.admin-status-select,
+.admin-shell select.admin-status-select:focus {
+  min-height: 0;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+}
+
+.admin-shell > main table {
+  min-width: 44rem;
+}
+
+.admin-sidebar-nav {
+  scrollbar-width: none;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar {
+  display: none;
+}
+
+/* Participant mobile app navigation: explicit layout prevents fixed/grid
+   utilities from shrink-wrapping in cached mobile browser stylesheets. */
+.participant-bottom-nav {
+  position: fixed;
+  z-index: 40;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}
+
+.participant-bottom-nav-grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.participant-bottom-nav-grid > a {
+  min-width: 0;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.admin-shell div.fixed.inset-0.z-50 {
+  align-items: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+}
+
+.admin-shell div.fixed.inset-0.z-50 > div {
+  max-height: calc(100dvh - 2rem);
+  margin-block: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 1.5rem;
+  scrollbar-color: #1a6b3c transparent;
+  scrollbar-width: thin;
+}
+
+.admin-shell div.fixed.inset-0.z-50 > div::-webkit-scrollbar {
+  width: 12px;
+}
+
+.admin-shell div.fixed.inset-0.z-50 > div::-webkit-scrollbar-track {
+  margin-block: 1rem;
+  background: transparent;
+}
+
+.admin-shell div.fixed.inset-0.z-50 > div::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: #1a6b3c;
+  background-clip: padding-box;
+}
+
+@media (min-width: 1024px) {
+  .admin-shell div.fixed.inset-0.z-50 > div {
+    width: min(56rem, calc(100vw - 4rem));
+    max-width: 56rem;
+    padding: 2.5rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .admin-shell div.fixed.inset-0.z-50 {
+    padding: 0;
+  }
+
+  .admin-shell div.fixed.inset-0.z-50 > div {
+    width: 100%;
+    max-width: none;
+    max-height: 100dvh;
+    min-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+    padding: 1.25rem;
+  }
 }

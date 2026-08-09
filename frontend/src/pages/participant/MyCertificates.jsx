@@ -29,7 +29,7 @@ export const MyCertificates = () => {
     try {
       const response = await fetch(`/api/participant/certificates/${certId}/download`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('hu_ntw_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('ntw_token')}`,
         },
       });
 
@@ -57,7 +57,7 @@ export const MyCertificates = () => {
       <div>
         <h1 className="text-2xl font-black text-slate-900">My Certificates</h1>
         <p className="text-xs text-slate-500 mt-1">
-          Official Hormuud University Certificates of Completion earned for verified session attendance.
+          Official National Training Week certificates earned through verified session attendance.
         </p>
       </div>
 

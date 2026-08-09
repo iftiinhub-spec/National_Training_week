@@ -8,7 +8,6 @@ import {
   AcademicCapIcon,
   CheckBadgeIcon,
   ClipboardDocumentCheckIcon,
-  VideoCameraIcon,
   ArrowRightIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
@@ -41,21 +40,17 @@ export const ParticipantDashboard = () => {
   return (
     <div className="space-y-8">
       
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-[#1a6b3c] to-[#155289] text-white rounded-2xl p-6 sm:p-8 shadow-lg">
-        <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">
-          Learning Portal
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-black mt-1">
-          Welcome back, {user?.fullName}!
-        </h1>
-        <p className="text-emerald-100 text-xs sm:text-sm mt-1 max-w-xl">
-          National Training Week 2026 — Artificial Intelligence for National Transformation.
-        </p>
+      <div className="flex flex-col gap-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-[#1a6b3c]">Learning overview</p>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Welcome back, {user?.fullName?.split(' ')[0] || 'Participant'}</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{stats?.totalRegistrations > 0 ? 'Track your training registrations, approval status, attendance, and earned certificates.' : 'You have not registered for a training yet. Browse the available sessions to begin.'}</p>
+        </div>
+        <Link to="/trainings" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-5 text-sm font-semibold text-white hover:bg-[#145731]">Browse trainings <ArrowRightIcon className="h-4 w-4" /></Link>
       </div>
 
       {/* Stats Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
           <span className="text-xs font-semibold text-slate-500 block">Total Registrations</span>
           <div className="flex items-center justify-between">
@@ -67,24 +62,24 @@ export const ParticipantDashboard = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
           <span className="text-xs font-semibold text-slate-500 block">Approved Sessions</span>
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-black text-emerald-600">{stats?.approvedRegistrations || 0}</span>
-            <CheckBadgeIcon className="w-6 h-6 text-emerald-500" />
+            <span className="text-2xl font-black text-slate-900">{stats?.approvedRegistrations || 0}</span>
+            <CheckBadgeIcon className="w-6 h-6 text-[#1a6b3c]" />
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
           <span className="text-xs font-semibold text-slate-500 block">Attended (Present)</span>
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-black text-blue-600">{stats?.totalAttended || 0}</span>
-            <ClipboardDocumentCheckIcon className="w-6 h-6 text-blue-500" />
+            <span className="text-2xl font-black text-slate-900">{stats?.totalAttended || 0}</span>
+            <ClipboardDocumentCheckIcon className="w-6 h-6 text-[#1a6b3c]" />
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
           <span className="text-xs font-semibold text-slate-500 block">Earned Certificates</span>
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-black text-purple-600">{stats?.totalCertificates || 0}</span>
-            <CheckBadgeIcon className="w-6 h-6 text-purple-500" />
+            <span className="text-2xl font-black text-slate-900">{stats?.totalCertificates || 0}</span>
+            <CheckBadgeIcon className="w-6 h-6 text-[#1a6b3c]" />
           </div>
         </div>
       </div>
@@ -92,7 +87,7 @@ export const ParticipantDashboard = () => {
       {/* My Registrations Preview Section */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-900">My Registered Training Sessions</h3>
+          <h3 className="text-lg font-bold text-slate-900">My Trainings</h3>
           <Link to="/portal/trainings" className="text-xs font-bold text-[#1a6b3c] hover:underline flex items-center gap-1">
             <span>View All</span>
             <ArrowRightIcon className="w-3.5 h-3.5" />

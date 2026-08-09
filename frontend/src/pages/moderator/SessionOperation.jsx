@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -11,8 +11,6 @@ import {
   UserGroupIcon,
   ChatBubbleLeftEllipsisIcon,
   ArrowLeftIcon,
-  CheckCircleIcon,
-  XMarkIcon,
   EnvelopeIcon,
 } from '@heroicons/react/24/outline';
 
@@ -39,7 +37,7 @@ export const SessionOperation = () => {
   const [qrSession, setQrSession] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
 
-  const fetchSessionData = async () => {
+  const fetchSessionData = useCallback(async () => {
     try {
       const [trRes, meetRes, partRes, attRes, fbRes] = await Promise.all([
         api.get(`/moderator/trainings/${trainingId}`),
@@ -68,11 +66,11 @@ export const SessionOperation = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [trainingId]);
 
   useEffect(() => {
     fetchSessionData();
-  }, [trainingId]);
+  }, [fetchSessionData]);
 
   // Save / Update Meeting
   const handleSaveMeeting = async (e) => {

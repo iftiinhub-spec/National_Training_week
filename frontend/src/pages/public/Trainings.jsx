@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { useCurrentEvent } from '../../context/EventContext';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import PublicPageHeader from '../../components/common/PublicPageHeader';
+import PublicEmptyState from '../../components/common/PublicEmptyState';
 
 const photoUrl = (p) => {
   if (!p) return null;
@@ -75,6 +78,7 @@ const TrainingCard = ({ training: t }) => (
 
 /* ══════════════════════════════════════════════════ */
 export const Trainings = () => {
+  const { event: currentEvent } = useCurrentEvent();
   const [trainings, setTrainings]             = useState([]);
   const [categories, setCategories]           = useState([]);
   const [loading, setLoading]                 = useState(true);
@@ -82,8 +86,10 @@ export const Trainings = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedLevel, setSelectedLevel]     = useState('');
   const [selectedStatus, setSelectedStatus]   = useState('');
+  const [events, setEvents]                   = useState([]);
+  const [selectedEvent, setSelectedEvent]     = useState('');
 
-  const fetchTrainings = async () => {
+  const fetchTrainings = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -91,19 +97,21 @@ export const Trainings = () => {
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedLevel)    params.append('level', selectedLevel);
       if (selectedStatus)   params.append('status', selectedStatus);
+      if (selectedEvent || currentEvent?._id) params.append('event', selectedEvent || currentEvent._id);
       const res = await api.get(`/public/trainings?${params}`);
       if (res.success) setTrainings(res.data || []);
     } catch {}
     finally { setLoading(false); }
-  };
+  }, [search, selectedCategory, selectedLevel, selectedStatus, selectedEvent, currentEvent?._id]);
 
   useEffect(() => {
-    api.get('/admin/categories?activeOnly=true')
+    api.get('/public/events').then((r) => { if (r.success) setEvents(r.data.events || []); }).catch(() => {});
+    api.get('/public/categories?activeOnly=true')
       .then((r) => { if (r.success) setCategories(r.data.categories || []); })
       .catch(() => {});
   }, []);
 
-  useEffect(() => { fetchTrainings(); }, [selectedCategory, selectedLevel, selectedStatus]);
+  useEffect(() => { fetchTrainings(); }, [fetchTrainings]);
 
   const reset = () => { setSearch(''); setSelectedCategory(''); setSelectedLevel(''); setSelectedStatus(''); };
 
@@ -111,23 +119,14 @@ export const Trainings = () => {
     <div className="bg-white min-h-screen">
 
       {/* ── Page Hero ───────────────────────────────── */}
-      <section className="relative py-20 text-white text-center bg-[#1da156]">
-        <div className="absolute inset-0 opacity-10 bg-grid-pattern pointer-events-none" />
-        <div className="relative max-w-2xl mx-auto px-4 z-10">
-          <p className="text-xs font-bold uppercase tracking-widest text-white mb-3">Explore Curriculum</p>
-          <h1 className="text-4xl sm:text-5xl font-black mb-4">National Training Sessions</h1>
-          <p className="text-white text-sm max-w-xl mx-auto leading-relaxed">
-            Browse published sessions for National Training Week 2026. Register free, attend live, and earn verified certificates.
-          </p>
-        </div>
-      </section>
+      <PublicPageHeader eyebrow="Explore the curriculum" title="Training sessions" description={`Browse published learning sessions for ${events.find((e) => e._id === selectedEvent)?.name || currentEvent?.name || 'National Training Week'}. Review schedules, trainers, levels, and registration availability.`} />
 
       {/* ── Filter Bar ──────────────────────────────── */}
-      <section className="sticky top-[72px] z-30 bg-white border-b border-black/10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3">
+      <section className="sticky top-[88px] z-30 border-b border-black/10 bg-white/95 shadow-sm backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
           <form
             onSubmit={(e) => { e.preventDefault(); fetchTrainings(); }}
-            className="flex flex-wrap gap-2 items-center"
+            className="flex flex-wrap items-center gap-2 rounded-2xl border border-black/10 bg-white p-2"
           >
             {/* Search */}
             <div className="relative flex-1 min-w-[200px]">
@@ -140,6 +139,12 @@ export const Trainings = () => {
                 className="w-full pl-9 pr-4 py-2 rounded-lg border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1da156]/40 text-black bg-white"
               />
             </div>
+
+            {/* Category */}
+            <select value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} aria-label="Event edition" className="px-3 py-2 rounded-lg border border-black/10 text-sm bg-white text-black focus:outline-none focus:ring-2 focus:ring-[#1da156]/40">
+              <option value="">Current edition{currentEvent?.year ? ` (${currentEvent.year})` : ''}</option>
+              {events.filter((e) => e._id !== currentEvent?._id).map((e) => <option key={e._id} value={e._id}>{e.year} — {e.theme}</option>)}
+            </select>
 
             {/* Category */}
             <select
@@ -215,16 +220,12 @@ export const Trainings = () => {
               </div>
             </>
           ) : (
-            <div className="text-center py-24 border border-dashed border-black/20 rounded-2xl">
-              <p className="text-black/70 text-lg font-bold mb-2">No sessions found</p>
-              <p className="text-black/60 text-sm mb-6">Try adjusting your search or filter criteria.</p>
-              <button
+            <PublicEmptyState title="No sessions found" description={currentEvent ? 'Try adjusting the search or filters. New published sessions will also appear here automatically.' : 'No current event is available. Sessions will appear here after the next edition is published.'} action={<button
                 onClick={reset}
                 className="px-6 py-2.5 bg-[#1da156] text-white rounded-lg font-bold text-sm"
               >
                 Reset Filters
-              </button>
-            </div>
+              </button>} />
           )}
         </div>
       </section>

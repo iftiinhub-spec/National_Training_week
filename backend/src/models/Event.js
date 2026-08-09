@@ -13,6 +13,7 @@ const eventSchema = new mongoose.Schema(
       required: [true, 'Year is required'],
     },
     startDate: { type: Date, required: [true, 'Start date is required'] },
+    startTime: { type: String, default: '09:00' },
     endDate: { type: Date, required: [true, 'End date is required'] },
     registrationStart: { type: Date },
     registrationDeadline: { type: Date },
@@ -23,9 +24,13 @@ const eventSchema = new mongoose.Schema(
       default: 'draft',
     },
     isActive: { type: Boolean, default: true },
+    isCurrent: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+eventSchema.index({ isCurrent: 1 });
+eventSchema.index({ year: 1 }, { unique: true });
 
 const Event = mongoose.model('Event', eventSchema);
 export default Event;

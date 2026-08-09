@@ -2,6 +2,7 @@ import Registration from '../../models/Registration.js';
 import Training from '../../models/Training.js';
 import Attendance from '../../models/Attendance.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
+import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
 
 // GET /api/admin/registrations
 export const getRegistrations = async (req, res, next) => {
@@ -44,7 +45,9 @@ export const updateRegistrationStatus = async (req, res, next) => {
     const allowed = ['approved', 'rejected', 'cancelled'];
     if (!allowed.includes(status)) return errorResponse(res, 'Invalid status.', 400);
 
-    const reg = await Registration.findById(req.params.id).populate('training');
+    const reg = await Registration.findById(req.params.id)
+      .populate('training')
+      .populate('participant', 'fullName email');
     if (!reg) return errorResponse(res, 'Registration not found.', 404);
     if (reg.status === 'cancelled') return errorResponse(res, 'Cannot update a cancelled registration.', 400);
 
@@ -58,6 +61,7 @@ export const updateRegistrationStatus = async (req, res, next) => {
       }
     }
 
+    const previousStatus = reg.status;
     reg.status = status;
     reg.updatedBy = req.user._id;
     await reg.save();
@@ -65,10 +69,21 @@ export const updateRegistrationStatus = async (req, res, next) => {
     // If approving, create an attendance record (status: not_marked)
     if (status === 'approved') {
       await Attendance.findOneAndUpdate(
-        { participant: reg.participant, training: reg.training._id },
-        { $setOnInsert: { participant: reg.participant, training: reg.training._id, status: 'not_marked' } },
+        { participant: reg.participant._id, training: reg.training._id },
+        { $setOnInsert: { participant: reg.participant._id, training: reg.training._id, status: 'not_marked' } },
         { upsert: true, new: true }
       );
+
+      if (previousStatus !== 'approved') {
+        await sendRegistrationStatusEmail({
+          to: reg.participant.email,
+          participantName: reg.participant.fullName,
+          trainingTitle: reg.training.title,
+          status: 'approved',
+          date: reg.training.date,
+          startTime: reg.training.startTime,
+        });
+      }
     }
 
     return successResponse(res, { registration: reg }, `Registration ${status}.`);

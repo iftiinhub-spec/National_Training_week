@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { EnvelopeIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 export const ContactMessages = () => {
   const [messages, setMessages] = useState([]);

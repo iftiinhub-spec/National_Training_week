@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema(
     passwordHash: {
       type: String,
       required: [true, 'Password is required'],
-      minlength: 6,
+      minlength: 8,
       select: false,
     },
     role: {
@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     phone: { type: String, trim: true },
-    gender: { type: String, enum: ['male', 'female', 'prefer_not_to_say', ''] },
+    gender: { type: String, enum: ['male', 'female', ''] },
     region: { type: String, trim: true },
     organization: { type: String, trim: true },
     profession: { type: String, trim: true },
@@ -46,6 +46,11 @@ const userSchema = new mongoose.Schema(
       ],
     },
     profilePhoto: { type: String, default: null },
+    accountStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'approved',
+    },
     isActive: { type: Boolean, default: true },
     passwordResetToken: { type: String, select: false },
     passwordResetExpires: { type: Date, select: false },

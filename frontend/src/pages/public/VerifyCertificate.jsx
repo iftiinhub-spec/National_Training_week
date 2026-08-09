@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import PublicPageHeader from '../../components/common/PublicPageHeader';
 import {
   ShieldCheckIcon,
   CheckCircleIcon,
@@ -43,6 +44,8 @@ export const VerifyCertificate = () => {
     if (initialId) {
       handleVerify(initialId);
     }
+    // Verification from the URL should run only when that URL value changes.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [initialId]);
 
   const handleSubmit = (e) => {
@@ -54,30 +57,29 @@ export const VerifyCertificate = () => {
     <div className="bg-white min-h-screen">
       
       {/* Hero */}
-      <section className="relative py-20 text-white text-center bg-[#1da156]">
-        <div className="absolute inset-0 opacity-10 bg-grid-pattern pointer-events-none" />
-        <div className="relative max-w-2xl mx-auto px-4 z-10">
-          <div className="w-12 h-12 rounded-full bg-white text-[#1da156] flex items-center justify-center mx-auto mb-3">
-            <ShieldCheckIcon className="w-7 h-7" />
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-black mb-3">
-            Certificate Verification
-          </h1>
-          <p className="text-white text-sm max-w-xl mx-auto leading-relaxed">
-            Verify the authenticity of a National Training Week Certificate by entering the unique Certificate ID.
-          </p>
+      <PublicPageHeader
+        eyebrow="Official credential check"
+        title="Certificate Verification"
+        description="Confirm a National Training Week credential using the unique certificate ID printed on the certificate."
+      >
+        <div className="mx-auto mt-6 flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-white text-[#1da156]">
+          <ShieldCheckIcon className="h-7 w-7" />
         </div>
-      </section>
+      </PublicPageHeader>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
         {/* Input Form */}
-        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-black/10 shadow-md">
+        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-black/10 shadow-sm">
+          <div className="mb-5">
+            <h2 className="text-lg font-bold text-black">Enter certificate ID</h2>
+            <p className="mt-1 text-sm text-black/60">The ID is case-insensitive and may include letters, numbers, and hyphens.</p>
+          </div>
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <MagnifyingGlassIcon className="w-5 h-5 text-black/50 absolute left-3.5 top-3.5" />
               <input
                 type="text"
-                placeholder="e.g. NTW-2026-A1B2C3D4"
+                placeholder="e.g. NTW-YEAR-A1B2C3D4"
                 value={certificateId}
                 onChange={(e) => setCertificateId(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 rounded-xl border border-black/10 text-sm font-mono text-black focus:outline-none focus:ring-2 focus:ring-[#1da156]/40 uppercase bg-white"
@@ -128,7 +130,7 @@ export const VerifyCertificate = () => {
 
               <div className="space-y-1">
                 <span className="text-xs text-black/50 uppercase font-bold">Event Edition</span>
-                <p className="font-medium text-black">{result.eventName || 'NTW 2026'}</p>
+                <p className="font-medium text-black">{result.eventName || 'National Training Week'}</p>
               </div>
 
               <div className="space-y-1">

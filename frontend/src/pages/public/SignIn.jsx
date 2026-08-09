@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LockClosedIcon, EnvelopeIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon, EnvelopeIcon, ArrowRightIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
   const { login } = useAuth();
@@ -18,7 +19,7 @@ export const SignIn = () => {
     setSubmitting(true);
     try {
       const loggedUser = await login(email, password);
-      if (redirectUrl) {
+      if (redirectUrl?.startsWith('/') && !redirectUrl.startsWith('//')) {
         navigate(redirectUrl);
       } else if (loggedUser.role === 'admin') {
         navigate('/admin');
@@ -44,7 +45,7 @@ export const SignIn = () => {
             <img
               src="/logo.png"
               alt="National Training Week Logo"
-              className="h-30 w-auto mx-auto object-contain"
+              className="h-20 w-auto mx-auto object-contain"
             />
           </Link>
           <h2 className="text-2xl font-black text-black tracking-tight">
@@ -84,13 +85,22 @@ export const SignIn = () => {
               <div className="relative">
                 <LockClosedIcon className="w-5 h-5 text-black/40 absolute left-3 top-3" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1da156]/40 text-black bg-white"
+                  className="w-full pl-10 pr-12 py-2.5 rounded-lg border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1da156]/40 text-black bg-white"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-black/45 transition-colors hover:text-[#1da156] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#1da156]"
+                >
+                  {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                </button>
               </div>
             </div>
 

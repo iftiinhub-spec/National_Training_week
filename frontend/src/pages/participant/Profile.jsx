@@ -1,238 +1,108 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
-import { UserCircleIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, CheckIcon, EyeIcon, EyeSlashIcon, KeyIcon, PencilIcon, ShieldCheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+
+const REGIONS = ['Awdal', 'Bakool', 'Banaadir', 'Bari', 'Bay', 'Galguduud', 'Gedo', 'Hiiraan', 'Lower Juba', 'Middle Juba', 'Lower Shabelle', 'Middle Shabelle', 'Mudug', 'Nugaal', 'Sanaag', 'Sool', 'Togdheer', 'Woqooyi Galbeed'];
+const photoUrl = (path) => path ? (path.startsWith('http') ? path : `/${path.replace(/^\//, '')}`) : null;
+const participantLabel = (value) => ({ university_student: 'University Student', highschool_graduate: 'Fresh High-School Graduate', developer_it: 'Developer / IT Specialist', professional: 'Professional', general_public: 'General Public', other: 'Other' }[value] || 'Not provided');
 
 export const Profile = () => {
   const { user, updateProfile } = useAuth();
-
-  const [profileForm, setProfileForm] = useState({
-    fullName: user?.fullName || '',
-    phone: user?.phone || '',
-    gender: user?.gender || '',
-    region: user?.region || '',
-    organization: user?.organization || '',
-    profession: user?.profession || '',
-    participantType: user?.participantType || 'university_student',
-  });
-
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-
+  const fileRef = useRef(null);
+  const [editing, setEditing] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(photoUrl(user?.profilePhoto));
   const [profileSubmitting, setProfileSubmitting] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({ current: false, next: false, confirm: false });
+  const [profileForm, setProfileForm] = useState({ fullName: user?.fullName || '', phone: user?.phone || '', gender: user?.gender || '', region: user?.region || '', organization: user?.organization || '', profession: user?.profession || '', participantType: user?.participantType || 'university_student' });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault();
+  const cancelEdit = () => {
+    setProfileForm({ fullName: user?.fullName || '', phone: user?.phone || '', gender: user?.gender || '', region: user?.region || '', organization: user?.organization || '', profession: user?.profession || '', participantType: user?.participantType || 'university_student' });
+    setProfilePhoto(null);
+    setPhotoPreview(photoUrl(user?.profilePhoto));
+    setEditing(false);
+  };
+
+  const handlePhoto = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setProfilePhoto(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const handleProfileSubmit = async (event) => {
+    event.preventDefault();
     setProfileSubmitting(true);
     try {
-      await updateProfile(profileForm);
-    } catch (err) {
-      // toast error handled in updateProfile
-    } finally {
-      setProfileSubmitting(false);
-    }
+      const data = new FormData();
+      Object.entries(profileForm).forEach(([key, value]) => data.append(key, value));
+      if (profilePhoto) data.append('profilePhoto', profilePhoto);
+      const updated = await updateProfile(data);
+      setPhotoPreview(photoUrl(updated?.profilePhoto));
+      setProfilePhoto(null);
+      setEditing(false);
+    } finally { setProfileSubmitting(false); }
   };
 
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error('New passwords do not match.');
-      return;
-    }
-
+  const handlePasswordSubmit = async (event) => {
+    event.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) return toast.error('New passwords do not match.');
+    if (passwordForm.newPassword.length < 8) return toast.error('New password must be at least 8 characters.');
     setPasswordSubmitting(true);
     try {
-      const res = await api.put('/auth/change-password', {
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
-      });
-      if (res.success) {
-        toast.success('Password updated successfully.');
-        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      }
-    } catch (err) {
-      toast.error(err.message || 'Password update failed.');
-    } finally {
-      setPasswordSubmitting(false);
-    }
+      const res = await api.put('/auth/change-password', { currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword });
+      if (res.success) { toast.success('Password updated successfully.'); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setChangingPassword(false); }
+    } catch (error) { toast.error(error.message || 'Password update failed.'); }
+    finally { setPasswordSubmitting(false); }
   };
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-10">
-      
-      {/* Profile Form Card */}
-      <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <UserCircleIcon className="w-6 h-6 text-[#1a6b3c]" />
-          <h2 className="text-xl font-bold text-slate-900">Update Personal Profile</h2>
+  const fields = [
+    ['Full name', user?.fullName], ['Email address', user?.email], ['Phone number', user?.phone],
+    ['Gender', user?.gender?.replaceAll('_', ' ')], ['Region', user?.region], ['Participant type', participantLabel(user?.participantType)],
+    ['University / School', user?.organization], ['Profession', user?.profession],
+  ];
+  const inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950';
+
+  return <div className="mx-auto max-w-6xl space-y-6 pb-8">
+    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-6 border-b border-slate-200 bg-slate-50/70 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+        <div className="flex items-center gap-5">
+          <div className="group relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#1a6b3c] text-3xl font-bold text-white shadow-md">
+            {photoPreview ? <img src={photoPreview} alt={user?.fullName || 'Profile'} className="h-full w-full object-cover" /> : (user?.fullName || 'P').charAt(0).toUpperCase()}
+            <button type="button" onClick={() => { if (!editing) setEditing(true); fileRef.current?.click(); }} className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100" aria-label={photoPreview ? 'Update profile photo' : 'Upload profile photo'}><CameraIcon className="h-7 w-7" /></button>
+          </div>
+          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhoto} />
+          <div><p className="text-xs font-bold uppercase tracking-[.14em] text-[#1a6b3c]">Participant profile</p><h1 className="mt-1 text-2xl font-bold text-slate-950">{user?.fullName}</h1><p className="mt-1 text-sm text-slate-500">{user?.email}</p><p className="mt-2 text-xs text-slate-400">Hover over the avatar to update your photo</p></div>
         </div>
-
-        <form onSubmit={handleProfileSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name</label>
-              <input
-                type="text"
-                value={profileForm.fullName}
-                onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
-                className="w-full p-2.5 rounded-lg border border-slate-300 text-sm"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Email (Read Only)</label>
-              <input
-                type="email"
-                value={user?.email || ''}
-                disabled
-                className="w-full p-2.5 rounded-lg border border-slate-200 text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Phone Number</label>
-              <input
-                type="text"
-                value={profileForm.phone}
-                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                className="w-full p-2.5 rounded-lg border border-slate-300 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Gender</label>
-              <select
-                value={profileForm.gender}
-                onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
-                className="w-full p-2.5 rounded-lg border border-slate-300 text-sm bg-white"
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="prefer_not_to_say">Prefer Not To Say</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Region</label>
-              <input
-                type="text"
-                value={profileForm.region}
-                onChange={(e) => setProfileForm({ ...profileForm, region: e.target.value })}
-                className="w-full p-2.5 rounded-lg border border-slate-300 text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Participant Type</label>
-              <select
-                value={profileForm.participantType}
-                onChange={(e) => setProfileForm({ ...profileForm, participantType: e.target.value })}
-                className="w-full p-2.5 rounded-lg border border-slate-300 text-sm bg-white"
-              >
-                <option value="university_student">University Student</option>
-                <option value="highschool_graduate">Fresh High-School Graduate</option>
-                <option value="developer_it">Developer / IT Specialist</option>
-                <option value="professional">Professional</option>
-                <option value="general_public">General Public</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">University / School</label>
-              <input
-                type="text"
-                value={profileForm.organization}
-                onChange={(e) => setProfileForm({ ...profileForm, organization: e.target.value })}
-                className="w-full p-2.5 rounded-lg border border-slate-300 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Profession</label>
-              <input
-                type="text"
-                value={profileForm.profession}
-                onChange={(e) => setProfileForm({ ...profileForm, profession: e.target.value })}
-                className="w-full p-2.5 rounded-lg border border-slate-300 text-sm"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={profileSubmitting}
-            className="py-2.5 px-6 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50"
-          >
-            {profileSubmitting ? 'Saving...' : 'Save Profile Changes'}
-          </button>
-        </form>
+        {!editing ? <button type="button" onClick={() => setEditing(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-5 text-sm font-semibold text-white hover:bg-[#145731]"><PencilIcon className="h-4 w-4" /> Edit profile</button> : <button type="button" onClick={cancelEdit} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600"><XMarkIcon className="h-4 w-4" /> Cancel</button>}
       </div>
 
-      {/* Password Form Card */}
-      <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <KeyIcon className="w-6 h-6 text-[#155289]" />
-          <h2 className="text-xl font-bold text-slate-900">Change Account Password</h2>
+      {!editing ? <div className="grid grid-cols-1 gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-3">{fields.map(([label, value]) => <div key={label} className="bg-white p-5"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-2 min-h-5 text-sm font-semibold capitalize text-slate-800">{value || 'Not provided'}</p></div>)}</div> :
+      <form onSubmit={handleProfileSubmit} className="space-y-6 p-6 sm:p-8">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <label>Full name *<input className={`${inputClass} mt-2`} value={profileForm.fullName} onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })} required /></label>
+          <label>Email address<input className={`${inputClass} mt-2 cursor-not-allowed bg-slate-100 text-slate-500`} value={user?.email || ''} disabled /></label>
+          <label>Phone number<input className={`${inputClass} mt-2`} value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} placeholder="e.g. +252 61 234 5678" /></label>
+          <label>Gender<select className={`${inputClass} mt-2`} value={profileForm.gender} onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option></select></label>
+          <label>Region<select className={`${inputClass} mt-2`} value={profileForm.region} onChange={(e) => setProfileForm({ ...profileForm, region: e.target.value })}><option value="">Select region</option>{REGIONS.map((region) => <option key={region}>{region}</option>)}</select></label>
+          <label>Participant type<select className={`${inputClass} mt-2`} value={profileForm.participantType} onChange={(e) => setProfileForm({ ...profileForm, participantType: e.target.value })}><option value="university_student">University Student</option><option value="highschool_graduate">Fresh High-School Graduate</option><option value="developer_it">Developer / IT Specialist</option><option value="professional">Professional</option><option value="general_public">General Public</option><option value="other">Other</option></select></label>
+          <label>University / School<input className={`${inputClass} mt-2`} value={profileForm.organization} onChange={(e) => setProfileForm({ ...profileForm, organization: e.target.value })} /></label>
+          <label>Profession<input className={`${inputClass} mt-2`} value={profileForm.profession} onChange={(e) => setProfileForm({ ...profileForm, profession: e.target.value })} /></label>
         </div>
+        <button disabled={profileSubmitting} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#1a6b3c] px-6 text-sm font-bold text-white disabled:opacity-60"><CheckIcon className="h-5 w-5" />{profileSubmitting ? 'Saving…' : 'Save profile'}</button>
+      </form>}
+    </section>
 
-        <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-md">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Current Password</label>
-            <input
-              type="password"
-              value={passwordForm.currentPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-              className="w-full p-2.5 rounded-lg border border-slate-300 text-sm"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">New Password</label>
-            <input
-              type="password"
-              value={passwordForm.newPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-              className="w-full p-2.5 rounded-lg border border-slate-300 text-sm"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Confirm New Password</label>
-            <input
-              type="password"
-              value={passwordForm.confirmPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-              className="w-full p-2.5 rounded-lg border border-slate-300 text-sm"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={passwordSubmitting}
-            className="py-2.5 px-6 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50"
-          >
-            {passwordSubmitting ? 'Updating...' : 'Update Password'}
-          </button>
-        </form>
-      </div>
-
-    </div>
-  );
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-4"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-[#1a6b3c]"><ShieldCheckIcon className="h-6 w-6" /></span><div><h2 className="text-lg font-bold text-slate-950">Password & security</h2><p className="mt-1 text-sm text-slate-500">Use a strong, unique password to protect your account.</p></div></div>{!changingPassword && <button type="button" onClick={() => setChangingPassword(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><KeyIcon className="h-5 w-5" /> Change password</button>}</div>
+      {changingPassword && <form onSubmit={handlePasswordSubmit} className="mt-7 grid grid-cols-1 gap-5 border-t border-slate-100 pt-7 lg:grid-cols-3">{[['currentPassword', 'Current password', 'current', 'Enter your current password'], ['newPassword', 'New password', 'next', 'At least 8 characters'], ['confirmPassword', 'Confirm new password', 'confirm', 'Re-enter your new password']].map(([key, label, visibility, placeholder]) => <label key={key}>{label}<div className="relative mt-2"><input type={visiblePasswords[visibility] ? 'text' : 'password'} value={passwordForm[key]} onChange={(e) => setPasswordForm({ ...passwordForm, [key]: e.target.value })} placeholder={placeholder} className={`${inputClass} pr-12`} required /><button type="button" onClick={() => setVisiblePasswords({ ...visiblePasswords, [visibility]: !visiblePasswords[visibility] })} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400" aria-label={visiblePasswords[visibility] ? `Hide ${label}` : `Show ${label}`}>{visiblePasswords[visibility] ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></div></label>)}<div className="flex gap-3 lg:col-span-3"><button disabled={passwordSubmitting} className="rounded-xl bg-slate-950 px-6 py-3 text-sm font-bold text-white disabled:opacity-60">{passwordSubmitting ? 'Updating…' : 'Update password'}</button><button type="button" onClick={() => setChangingPassword(false)} className="rounded-xl px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button></div></form>}
+    </section>
+  </div>;
 };
 
 export default Profile;

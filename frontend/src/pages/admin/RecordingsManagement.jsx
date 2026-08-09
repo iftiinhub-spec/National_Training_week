@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
 import { PlusIcon, VideoCameraIcon, EyeIcon, EyeSlashIcon, TrashIcon } from '@heroicons/react/24/outline';
 
@@ -135,8 +136,9 @@ export const RecordingsManagement = () => {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onMouseDown={() => setShowModal(false)}>
+          <div className="relative bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-4" onMouseDown={(e) => e.stopPropagation()}>
+            <AdminModalClose onClick={() => setShowModal(false)} />
             <h3 className="text-lg font-bold text-slate-900">Add Training Recording Link</h3>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
