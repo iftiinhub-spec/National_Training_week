@@ -3,10 +3,7 @@ node_modules/
 **/node_modules/
 
 # Environment variables & credentials
-.env
-backend/.env
-*.env.local
-*.env.*.local
+
 
 # Production builds
 dist/
