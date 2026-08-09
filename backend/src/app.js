@@ -24,9 +24,14 @@ app.use(helmet({
 }));
 
 // CORS configuration
+const productionOrigin = 'https://ntw.elivateict.com';
+const configuredOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || productionOrigin)
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.FRONTEND_URL].filter(Boolean)
-  : [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:5173', 'http://localhost:3000'];
+  ? configuredOrigins
+  : [...new Set([...configuredOrigins, 'http://localhost:5173', 'http://localhost:3000'])];
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
