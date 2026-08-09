@@ -1,6 +1,6 @@
 import multer from 'multer';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import fs from 'fs';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     // Generate safe filename - never trust original filename
-    const safeName = `${uuidv4()}${ext}`;
+    const safeName = `${randomUUID()}${ext}`;
     cb(null, safeName);
   },
 });

@@ -2,7 +2,7 @@ import Attendance from '../../models/Attendance.js';
 import QRSession from '../../models/QRSession.js';
 import Registration from '../../models/Registration.js';
 import Training from '../../models/Training.js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { generateQRDataUrl } from '../../utils/qrGenerator.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
 
@@ -22,7 +22,7 @@ export const openQRSession = async (req, res, next) => {
     // Close any existing open session first
     await QRSession.updateMany({ training: trainingId, isOpen: true }, { isOpen: false, closedAt: new Date() });
 
-    const sessionToken = uuidv4();
+    const sessionToken = randomUUID();
     const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000); // 4 hours
 
     const session = await QRSession.create({
