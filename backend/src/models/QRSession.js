@@ -26,7 +26,6 @@ const qrSessionSchema = new mongoose.Schema(
 );
 
 qrSessionSchema.index({ training: 1, isOpen: 1 });
-qrSessionSchema.index({ sessionToken: 1 });
 
 const QRSession = mongoose.model('QRSession', qrSessionSchema);
 export default QRSession;

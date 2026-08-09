@@ -2,13 +2,15 @@ import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export const CategoriesManagement = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchCategories = async () => {
     try {
@@ -25,19 +27,36 @@ export const CategoriesManagement = () => {
     fetchCategories();
   }, []);
 
-  const handleCreate = async (e) => {
+  const resetForm = () => {
+    setName('');
+    setDescription('');
+    setEditingCategory(null);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
-      const res = await api.post('/admin/categories', { name, description });
+      const res = editingCategory
+        ? await api.put(`/admin/categories/${editingCategory._id}`, { name, description })
+        : await api.post('/admin/categories', { name, description });
       if (res.success) {
-        toast.success('Category created!');
-        setName('');
-        setDescription('');
+        toast.success(editingCategory ? 'Category updated.' : 'Category created.');
+        resetForm();
         fetchCategories();
       }
     } catch (err) {
-      toast.error(err.message || 'Creation failed');
+      toast.error(err.message || 'Unable to save category.');
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const handleEdit = (category) => {
+    setEditingCategory(category);
+    setName(category.name || '');
+    setDescription(category.description || '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id) => {
@@ -62,62 +81,82 @@ export const CategoriesManagement = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Create Form */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4 h-fit">
-          <h3 className="font-bold text-slate-900 text-sm uppercase">Add New Category</h3>
-          <form onSubmit={handleCreate} className="space-y-3 text-xs">
-            <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Category Name *</label>
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[.14em] text-[#1a6b3c]">Category details</p>
+            <h2 className="mt-1 text-lg font-bold text-slate-950">{editingCategory ? 'Edit category' : 'Add a category'}</h2>
+            <p className="mt-1 text-sm text-slate-500">Categories help participants browse related training sessions.</p>
+          </div>
+          {editingCategory && (
+            <button type="button" onClick={resetForm} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+              <XMarkIcon className="h-4 w-4" /> Cancel edit
+            </button>
+          )}
+        </div>
+
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 items-end gap-5 lg:grid-cols-[minmax(15rem,0.8fr)_minmax(20rem,1.4fr)_auto]">
+            <div className="self-stretch">
+              <label className="mb-2 block uppercase">Category name *</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Artificial Intelligence"
-                className="w-full p-2.5 rounded-lg border border-slate-300"
+                className="w-full rounded-xl border border-slate-300 px-4 py-3"
                 required
               />
             </div>
-            <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Description</label>
-              <textarea
-                rows={2}
+            <div className="self-stretch">
+              <label className="mb-2 block uppercase">Description</label>
+              <input
+                type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full p-2.5 rounded-lg border border-slate-300"
-              ></textarea>
+                placeholder="Briefly explain what this category covers"
+                className="w-full rounded-xl border border-slate-300 px-4 py-3"
+              />
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-lg shadow-xs"
+              disabled={submitting}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#124d2a] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Add Category
+              {editingCategory ? <PencilIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />}
+              {submitting ? 'Saving…' : editingCategory ? 'Update Category' : 'Add Category'}
             </button>
           </form>
-        </div>
+      </section>
 
-        {/* List */}
-        <div className="md:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-slate-100 font-bold text-slate-900 text-sm">
-            Existing Categories ({categories.length})
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6">
+            <div>
+              <h2 className="text-base font-bold text-slate-950">Existing categories</h2>
+              <p className="mt-0.5 text-xs text-slate-500">{categories.length} {categories.length === 1 ? 'category' : 'categories'} available</p>
+            </div>
           </div>
-          <ul className="divide-y divide-slate-100 text-xs">
-            {categories.map((cat) => (
-              <li key={cat._id} className="p-4 flex items-center justify-between hover:bg-slate-50">
-                <div>
-                  <h4 className="font-bold text-slate-900 text-sm">{cat.name}</h4>
-                  {cat.description && <p className="text-slate-500 mt-0.5">{cat.description}</p>}
-                </div>
-                <button onClick={() => handleDelete(cat._id)} className="p-1.5 text-slate-400 hover:text-rose-600">
-                  <TrashIcon className="w-4 h-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-      </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr><th className="px-6 py-4">Category name</th><th className="px-6 py-4">Description</th><th className="px-6 py-4 text-right">Actions</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {categories.length > 0 ? categories.map((cat) => (
+                  <tr key={cat._id} className="transition-colors hover:bg-slate-50/80">
+                    <td className="px-6 py-4 font-bold text-slate-950">{cat.name}</td>
+                    <td className="max-w-2xl px-6 py-4 leading-6 text-slate-500">{cat.description || 'No description provided.'}</td>
+                    <td className="px-6 py-4"><div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => handleEdit(cat)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-[#1a6b3c]/30 hover:bg-emerald-50 hover:text-[#1a6b3c]" aria-label={`Edit ${cat.name}`}><PencilIcon className="h-4 w-4" /></button>
+                      <button type="button" onClick={() => handleDelete(cat._id)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600" aria-label={`Delete ${cat.name}`}><TrashIcon className="h-4 w-4" /></button>
+                    </div></td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan="3" className="px-6 py-12 text-center text-sm text-slate-500">No categories have been added yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+      </section>
     </div>
   );
 };

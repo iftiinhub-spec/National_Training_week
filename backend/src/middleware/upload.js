@@ -6,6 +6,7 @@ import fs from 'fs';
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // 5MB default
+const ALLOWED_FIELDS = new Set(['profilePhoto', 'photo', 'coverImage']);
 
 const ensureUploadDir = (dir) => {
   if (!fs.existsSync(dir)) {
@@ -28,6 +29,9 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
+  if (!ALLOWED_FIELDS.has(file.fieldname)) {
+    return cb(new Error('Unexpected upload field.'), false);
+  }
   // Validate MIME type
   if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
     return cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'), false);

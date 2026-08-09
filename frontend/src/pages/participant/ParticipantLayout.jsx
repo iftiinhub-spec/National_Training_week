@@ -1,83 +1,53 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import ThemeToggle from '../../components/common/ThemeToggle';
 import {
-  Squares2X2Icon,
-  AcademicCapIcon,
-  CheckBadgeIcon,
-  ClipboardDocumentCheckIcon,
-  ChatBubbleLeftEllipsisIcon,
-  UserCircleIcon,
-  ArrowLeftOnRectangleIcon,
-} from '@heroicons/react/24/outline';
+  Squares2X2Icon, AcademicCapIcon, CheckBadgeIcon, ClipboardDocumentCheckIcon,
+  ChatBubbleLeftEllipsisIcon, UserCircleIcon, ArrowLeftOnRectangleIcon,
+} from '@heroicons/react/24/solid';
 
-export const ParticipantLayout = () => {
+const ParticipantLayout = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
-
-  const navItems = [
-    { name: 'Portal Home', path: '/portal', icon: Squares2X2Icon },
-    { name: 'My Registered Trainings', path: '/portal/trainings', icon: AcademicCapIcon },
-    { name: 'Attendance Records', path: '/portal/attendance', icon: ClipboardDocumentCheckIcon },
-    { name: 'My Certificates', path: '/portal/certificates', icon: CheckBadgeIcon },
-    { name: 'Training Evaluations', path: '/portal/feedback', icon: ChatBubbleLeftEllipsisIcon },
-    { name: 'My Profile', path: '/portal/profile', icon: UserCircleIcon },
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef(null);
+  const profilePhoto = user?.profilePhoto ? (user.profilePhoto.startsWith('http') ? user.profilePhoto : `/${user.profilePhoto.replace(/^\//, '')}`) : null;
+  const items = [
+    { name: 'Home', desktopName: 'Portal Home', path: '/portal', icon: Squares2X2Icon },
+    { name: 'Trainings', desktopName: 'My Trainings', path: '/portal/trainings', icon: AcademicCapIcon },
+    { name: 'Attendance', desktopName: 'Attendance Records', path: '/portal/attendance', icon: ClipboardDocumentCheckIcon },
+    { name: 'Certificates', desktopName: 'My Certificates', path: '/portal/certificates', icon: CheckBadgeIcon },
+    { name: 'Feedback', desktopName: 'Training Evaluations', path: '/portal/feedback', icon: ChatBubbleLeftEllipsisIcon },
   ];
+  const active = (path) => location.pathname === path;
 
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-      
-      {/* Participant Portal Vertical Sidebar */}
-      <aside className="w-full md:w-64 bg-white border-r border-slate-200 shrink-0 p-4 space-y-6">
-        <div className="flex items-center gap-3 p-2 bg-emerald-50 rounded-xl border border-emerald-200/80">
-          <div className="w-10 h-10 rounded-lg bg-[#1a6b3c] text-white flex items-center justify-center font-bold text-base">
-            {user?.fullName?.charAt(0)}
-          </div>
-          <div className="overflow-hidden">
-            <h4 className="font-bold text-slate-900 text-sm truncate">{user?.fullName}</h4>
-            <span className="text-[11px] font-semibold text-[#1a6b3c] block">Participant Portal</span>
-          </div>
-        </div>
+  useEffect(() => { setProfileMenuOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    const closeMenu = (event) => { if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) setProfileMenuOpen(false); };
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setProfileMenuOpen(false); };
+    document.addEventListener('mousedown', closeMenu);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => { document.removeEventListener('mousedown', closeMenu); document.removeEventListener('keydown', closeOnEscape); };
+  }, []);
 
-        <nav className="space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors ${
-                  isActive
-                    ? 'bg-[#1a6b3c] text-white shadow-xs'
-                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                <Icon className="w-5 h-5 shrink-0" />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
+  return <div className="min-h-screen bg-slate-100 md:flex">
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-slate-200 bg-white p-4 text-slate-950 md:flex">
+      <div className="flex h-24 shrink-0 items-center justify-center border-b border-black px-3"><img src="/logo.png" alt="National Training Week" className="h-20 max-w-full w-auto object-contain" /></div>
+      <nav aria-label="Participant navigation" className="admin-sidebar-nav mt-4 flex-1 space-y-5 overflow-y-auto pr-1">
+        <div><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400">Learning portal</p><div className="space-y-1">{items.map((item) => { const Icon = item.icon; return <Link key={item.path} to={item.path} className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${active(item.path) ? 'bg-emerald-50 text-[#1a6b3c]' : 'text-black hover:bg-slate-100'}`}><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${active(item.path) ? 'bg-[#1a6b3c] text-white' : 'bg-slate-100 text-black'}`}><Icon className="h-5 w-5" /></span>{item.desktopName}</Link>; })}</div></div>
+        <div><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400">Account</p><Link to="/portal/profile" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold ${active('/portal/profile') ? 'bg-emerald-50 text-[#1a6b3c]' : 'text-black hover:bg-slate-100'}`}><span className={`flex h-9 w-9 items-center justify-center rounded-lg ${active('/portal/profile') ? 'bg-[#1a6b3c] text-white' : 'bg-slate-100 text-black'}`}><UserCircleIcon className="h-5 w-5" /></span>My Profile</Link></div>
+      </nav>
+      <div className="mt-4 border-t border-black pt-4"><button onClick={logout} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-600 hover:bg-rose-50 hover:text-rose-600"><ArrowLeftOnRectangleIcon className="h-5 w-5" />Sign Out</button></div>
+    </aside>
 
-        <div className="pt-4 border-t border-slate-100">
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
-          >
-            <ArrowLeftOnRectangleIcon className="w-5 h-5 shrink-0" />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full">
-        <Outlet />
-      </main>
-
+    <div className="min-w-0 flex-1">
+      <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8"><Link to="/portal" className="flex items-center md:hidden" aria-label="Participant portal home"><img src="/logo.png" alt="" className="h-12 w-auto" /></Link><div className="hidden md:block"><p className="text-sm font-bold text-slate-950">Learning Portal</p><p className="text-xs text-slate-500">National Training Week</p></div><div className="flex min-w-0 items-center gap-2"><ThemeToggle /><div ref={profileMenuRef} className="relative min-w-0 sm:min-w-52"><button type="button" onClick={() => setProfileMenuOpen((open) => !open)} aria-label="Open participant account menu" aria-expanded={profileMenuOpen} aria-haspopup="menu" className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-left transition hover:border-[#1a6b3c]/40"><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#1a6b3c] text-sm font-bold text-white">{profilePhoto ? <img src={profilePhoto} alt="" className="h-full w-full object-cover" /> : (user?.fullName || 'P').charAt(0).toUpperCase()}</div><div className="hidden min-w-0 sm:block"><p className="truncate text-sm font-bold text-slate-950">{user?.fullName || 'Participant'}</p><p className="hidden truncate text-xs text-slate-500 sm:block">{user?.email}</p></div></button>{profileMenuOpen && <div role="menu" className="absolute right-0 top-[calc(100%+8px)] z-50 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"><Link role="menuitem" to="/portal/profile" className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold text-black hover:bg-slate-100"><UserCircleIcon className="h-5 w-5" /> My Profile</Link><button role="menuitem" type="button" onClick={logout} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-rose-600 hover:bg-rose-50"><ArrowLeftOnRectangleIcon className="h-5 w-5" /> Sign Out</button></div>}</div></div></header>
+      <main className="min-w-0 p-4 pb-28 sm:p-6 sm:pb-28 md:pb-6 lg:p-8 xl:p-10"><div className="mx-auto w-full max-w-[90rem]"><Outlet /></div></main>
     </div>
-  );
+
+    <nav aria-label="Participant mobile navigation" className="participant-bottom-nav border-t border-slate-200 bg-white/95 px-2 pt-2 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur-md md:hidden"><div className="participant-bottom-nav-grid mx-auto max-w-lg">{items.map((item) => { const Icon = item.icon; const isActive = active(item.path); return <Link key={item.path} to={item.path} aria-current={isActive ? 'page' : undefined} className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors ${isActive ? 'text-[#1a6b3c]' : 'text-black'}`}><span className={`flex h-7 w-9 items-center justify-center rounded-full ${isActive ? 'bg-emerald-100' : ''}`}><Icon className="h-5 w-5" /></span><span className="w-full truncate text-center">{item.name}</span></Link>; })}</div></nav>
+  </div>;
 };
 
 export default ParticipantLayout;

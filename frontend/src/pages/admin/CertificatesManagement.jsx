@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { CheckBadgeIcon, SparklesIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export const CertificatesManagement = () => {
   const [certificates, setCertificates] = useState([]);
@@ -10,6 +10,9 @@ export const CertificatesManagement = () => {
   const [selectedTraining, setSelectedTraining] = useState('');
   const [loading, setLoading] = useState(true);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState(null);
+  const [revokeReason, setRevokeReason] = useState('');
+  const [revoking, setRevoking] = useState(false);
 
   const fetchCertificates = async () => {
     try {
@@ -54,19 +57,21 @@ export const CertificatesManagement = () => {
     }
   };
 
-  const handleRevoke = async (id) => {
-    const reason = window.prompt('Enter reason for revoking this certificate:');
-    if (!reason) return;
-
+  const handleRevoke = async (event) => {
+    event.preventDefault();
+    if (revokeReason.trim().length < 5) return toast.error('Please provide a clear reason of at least 5 characters.');
+    setRevoking(true);
     try {
-      const res = await api.patch(`/admin/certificates/${id}/revoke`, { reason });
+      const res = await api.patch(`/admin/certificates/${revokeTarget._id}/revoke`, { reason: revokeReason.trim() });
       if (res.success) {
         toast.success('Certificate revoked.');
+        setRevokeTarget(null);
+        setRevokeReason('');
         fetchCertificates();
       }
     } catch (err) {
       toast.error(err.message || 'Revocation failed.');
-    }
+    } finally { setRevoking(false); }
   };
 
   if (loading) return <LoadingSpinner label="Loading certificate management..." />;
@@ -142,7 +147,7 @@ export const CertificatesManagement = () => {
                   <td className="p-4">
                     {!cert.isRevoked && (
                       <button
-                        onClick={() => handleRevoke(cert._id)}
+                        onClick={() => setRevokeTarget(cert)}
                         className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded text-[11px]"
                       >
                         Revoke
@@ -155,6 +160,14 @@ export const CertificatesManagement = () => {
           </table>
         </div>
       </div>
+
+      {revokeTarget && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setRevokeTarget(null); }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+        <section role="dialog" aria-modal="true" aria-labelledby="revoke-title" className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+          <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-rose-600">Permanent credential action</p><h2 id="revoke-title" className="mt-1 text-xl font-bold text-slate-950">Revoke certificate?</h2></div><button type="button" aria-label="Close revocation dialog" onClick={() => setRevokeTarget(null)} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"><XMarkIcon className="h-5 w-5" /></button></div>
+          <p className="mt-4 text-sm leading-6 text-slate-600">Public verification will immediately show <strong>{revokeTarget.certificateId}</strong> as revoked. Record a clear administrative reason.</p>
+          <form onSubmit={handleRevoke} className="mt-5"><label htmlFor="revoke-reason" className="text-sm font-bold text-slate-800">Revocation reason</label><textarea id="revoke-reason" autoFocus required minLength={5} maxLength={300} rows={4} value={revokeReason} onChange={(event) => setRevokeReason(event.target.value)} placeholder="e.g. Issued using an incorrect participant record" className="mt-2 w-full rounded-xl border border-slate-300 p-3 text-sm outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100" /><div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" onClick={() => setRevokeTarget(null)} className="min-h-11 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700">Cancel</button><button type="submit" disabled={revoking} className="min-h-11 rounded-xl bg-rose-600 px-5 text-sm font-bold text-white disabled:opacity-60">{revoking ? 'Revoking…' : 'Revoke certificate'}</button></div></form>
+        </section>
+      </div>}
 
     </div>
   );

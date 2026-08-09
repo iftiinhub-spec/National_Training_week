@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../models/User.js';
-import { sendEmail } from '../utils/email.js';
+import { emailButton, emailLayout, sendEmail } from '../utils/email.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
+import { sendAccountStatusEmail } from '../utils/accountApprovalEmail.js';
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
@@ -19,12 +20,12 @@ export const register = async (req, res, next) => {
 
     const user = await User.create({
       fullName, email, passwordHash: password,
-      role: 'participant',
+      role: 'participant', accountStatus: 'pending',
       phone, gender, region, organization, profession, participantType,
     });
 
-    const token = signToken(user._id);
-    return successResponse(res, { user, token }, 'Account created successfully.', 201);
+    await sendAccountStatusEmail({ to: user.email, participantName: user.fullName, status: 'pending' });
+    return successResponse(res, { user }, 'Account request submitted. Wait for administrator approval before signing in.', 201);
   } catch (err) { next(err); }
 };
 
@@ -42,6 +43,12 @@ export const login = async (req, res, next) => {
     }
     if (!user.isActive) {
       return errorResponse(res, 'Your account has been deactivated. Please contact support.', 401);
+    }
+    if (user.role === 'participant' && user.accountStatus !== 'approved') {
+      const message = user.accountStatus === 'rejected'
+        ? 'Your participant account request was not approved. Please contact support.'
+        : 'Your participant account is awaiting administrator approval. We will email you when it is approved.';
+      return errorResponse(res, message, 403);
     }
 
     const token = signToken(user._id);
@@ -106,8 +113,8 @@ export const forgotPassword = async (req, res, next) => {
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
     await sendEmail({
       to: user.email,
-      subject: 'Password Reset — HU National Training Week',
-      html: `<p>You requested a password reset. Click the link below (valid for 1 hour):</p><a href="${resetUrl}">${resetUrl}</a>`,
+      subject: 'Reset your National Training Week password',
+      html: emailLayout({ eyebrow: 'Account security', title: 'Reset your password', preview: 'Your password reset link is valid for one hour', body: `<p style="margin-top:0">Hello ${user.fullName || 'Participant'},</p><p>We received a request to reset your password. This secure link expires in one hour.</p>${emailButton('Reset password', resetUrl)}<p>If you did not request this change, you can safely ignore this email. Your password will remain unchanged.</p>` }),
     });
 
     return successResponse(res, null, 'If an account exists, a reset link has been sent.');

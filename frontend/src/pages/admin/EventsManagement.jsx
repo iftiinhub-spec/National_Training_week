@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { CalendarDaysIcon, PlusIcon, PencilIcon, TrashIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { CalendarDaysIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 export const EventsManagement = () => {
   const [events, setEvents] = useState([]);
@@ -16,13 +17,17 @@ export const EventsManagement = () => {
   const [editingDay, setEditingDay] = useState(null);
 
   const [eventForm, setEventForm] = useState({
-    name: 'Hormuud University National Training Week 2026',
+    name: 'National Training Week 2026',
     theme: 'Artificial Intelligence for National Transformation',
     year: 2026,
     startDate: '2026-09-14',
+    startTime: '09:00',
     endDate: '2026-09-19',
+    registrationStart: '2026-08-01',
+    registrationDeadline: '2026-09-10',
     description: '',
     status: 'registration_open',
+    isCurrent: true,
   });
 
   const [dayForm, setDayForm] = useState({
@@ -103,9 +108,13 @@ export const EventsManagement = () => {
       theme: event.theme || '',
       year: event.year,
       startDate: event.startDate ? event.startDate.split('T')[0] : '',
+      startTime: event.startTime || '09:00',
       endDate: event.endDate ? event.endDate.split('T')[0] : '',
+      registrationStart: event.registrationStart ? event.registrationStart.split('T')[0] : '',
+      registrationDeadline: event.registrationDeadline ? event.registrationDeadline.split('T')[0] : '',
       description: event.description || '',
       status: event.status,
+      isCurrent: Boolean(event.isCurrent),
     });
     setShowEventModal(true);
   };
@@ -170,6 +179,20 @@ export const EventsManagement = () => {
         <button
           onClick={() => {
             setEditingEvent(null);
+            const nextYear = new Date().getFullYear() + 1;
+            setEventForm({
+              name: `National Training Week ${nextYear}`,
+              theme: '',
+              year: nextYear,
+              startDate: '',
+              startTime: '09:00',
+              endDate: '',
+              registrationStart: '',
+              registrationDeadline: '',
+              description: '',
+              status: 'draft',
+              isCurrent: false,
+            });
             setShowEventModal(true);
           }}
           className="px-4 py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs"
@@ -193,7 +216,8 @@ export const EventsManagement = () => {
                     <span className="text-xs font-bold font-mono px-2.5 py-0.5 bg-emerald-100 text-[#1a6b3c] rounded-md">
                       Year {ev.year}
                     </span>
-                    <span className="text-xs font-bold uppercase text-slate-500">{ev.status}</span>
+                      <span className="text-xs font-bold uppercase text-slate-500">{ev.status.replace(/_/g, ' ')}</span>
+                      {ev.isCurrent && <span className="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-[#1a6b3c] text-white">Current public edition</span>}
                   </div>
                   <h3 className="text-xl font-bold text-slate-900">{ev.name}</h3>
                   <p className="text-xs text-emerald-700 font-semibold mt-0.5">Theme: {ev.theme}</p>
@@ -276,8 +300,9 @@ export const EventsManagement = () => {
 
       {/* Event Form Modal */}
       {showEventModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onMouseDown={() => setShowEventModal(false)}>
+          <div className="relative bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-4" onMouseDown={(e) => e.stopPropagation()}>
+            <AdminModalClose onClick={() => setShowEventModal(false)} />
             <h3 className="text-lg font-bold text-slate-900">
               {editingEvent ? 'Edit Event Edition' : 'Create New Event Edition'}
             </h3>
@@ -294,6 +319,17 @@ export const EventsManagement = () => {
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl bg-emerald-50/60 border border-emerald-100 p-4">
+                <div>
+                  <label className="block font-bold uppercase text-slate-700 mb-1">Registration Opens</label>
+                  <input type="date" value={eventForm.registrationStart} onChange={(e) => setEventForm({ ...eventForm, registrationStart: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white" />
+                </div>
+                <div>
+                  <label className="block font-bold uppercase text-slate-700 mb-1">Registration Deadline</label>
+                  <input type="date" value={eventForm.registrationDeadline} onChange={(e) => setEventForm({ ...eventForm, registrationDeadline: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white" />
+                </div>
+              </div>
+
               <div>
                 <label className="block font-bold uppercase text-slate-700 mb-1">Theme</label>
                 <input
@@ -305,7 +341,7 @@ export const EventsManagement = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Year</label>
                   <input
@@ -336,11 +372,15 @@ export const EventsManagement = () => {
                     required
                   />
                 </div>
+                <div>
+                  <label className="block font-bold uppercase text-slate-700 mb-1">Event Starts</label>
+                  <input type="time" value={eventForm.startTime} onChange={(e) => setEventForm({ ...eventForm, startTime: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300" required />
+                </div>
               </div>
 
               <div>
                 <label className="block font-bold uppercase text-slate-700 mb-1">Status</label>
-                <select
+                  <select
                   value={eventForm.status}
                   onChange={(e) => setEventForm({ ...eventForm, status: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300 bg-white"
@@ -350,7 +390,11 @@ export const EventsManagement = () => {
                   <option value="registration_closed">Registration Closed</option>
                   <option value="ongoing">Ongoing</option>
                   <option value="completed">Completed</option>
-                </select>
+                  </select>
+                  <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 cursor-pointer">
+                    <input type="checkbox" checked={eventForm.isCurrent} onChange={(e) => setEventForm({ ...eventForm, isCurrent: e.target.checked })} className="mt-0.5 h-4 w-4 accent-[#1a6b3c]" />
+                    <span><strong className="block text-sm text-slate-900">Use as current public edition</strong><span className="block text-xs text-slate-500 mt-1">Controls the public homepage, countdown, program, and default training catalogue. Only one edition can be current.</span></span>
+                  </label>
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
@@ -375,8 +419,9 @@ export const EventsManagement = () => {
 
       {/* Event Day Form Modal */}
       {showDayModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onMouseDown={() => setShowDayModal(false)}>
+          <div className="relative bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-4" onMouseDown={(e) => e.stopPropagation()}>
+            <AdminModalClose onClick={() => setShowDayModal(false)} />
             <h3 className="text-lg font-bold text-slate-900">
               {editingDay ? 'Edit Event Day' : `Add Day to ${selectedEventForDay?.name}`}
             </h3>

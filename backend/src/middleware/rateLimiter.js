@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 // Strict rate limiter for auth endpoints (login, register, password reset)
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // max 10 attempts per window
+  max: 20, // count failed attempts only; successful requests are skipped below
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -16,13 +16,18 @@ export const authRateLimiter = rateLimit({
 // General API rate limiter
 export const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
     message: 'Too many requests. Please slow down.',
   },
+  // Public read endpoints and health checks must stay available and should not
+  // consume the operational admin/moderator request budget.
+  skip: (req) => req.method === 'GET' && (
+    req.path === '/health' || req.path.startsWith('/public/')
+  ),
 });
 
 // QR check-in rate limiter (prevent rapid scanning)

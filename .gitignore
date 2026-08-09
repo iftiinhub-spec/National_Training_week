@@ -12,6 +12,8 @@ backend/.env
 dist/
 **/dist/
 build/
+test-results/
+**/test-results/
 
 # Uploaded files
 uploads/

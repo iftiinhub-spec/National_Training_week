@@ -26,7 +26,7 @@ export const QRScanModal = ({ isOpen, onClose, onSuccess }) => {
 
       if (res.success) {
         toast.success('Check-in successful! Your attendance status is marked PRESENT.');
-        onSuccess && onSuccess();
+        onSuccess?.();
         onClose();
       }
     } catch (err) {

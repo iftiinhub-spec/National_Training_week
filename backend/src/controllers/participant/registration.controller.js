@@ -3,6 +3,7 @@ import Registration from '../../models/Registration.js';
 import Attendance from '../../models/Attendance.js';
 import Meeting from '../../models/Meeting.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
+import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
 
 // POST /api/participant/registrations
 export const registerForTraining = async (req, res, next) => {
@@ -26,6 +27,14 @@ export const registerForTraining = async (req, res, next) => {
     const reg = await Registration.create({ participant: participantId, training: trainingId });
     const populated = await Registration.findById(reg._id)
       .populate('training', 'title date startTime endTime status');
+    await sendRegistrationStatusEmail({
+      to: req.user.email,
+      participantName: req.user.fullName,
+      trainingTitle: populated.training.title,
+      status: 'pending',
+      date: populated.training.date,
+      startTime: populated.training.startTime,
+    });
     return successResponse(res, { registration: populated }, 'Registration submitted. Awaiting approval.', 201);
   } catch (err) { next(err); }
 };

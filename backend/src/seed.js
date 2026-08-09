@@ -28,7 +28,7 @@ const seed = async () => {
   let event = await Event.findOne({ year: 2026 });
   if (!event) {
     event = await Event.create({
-      name: 'Hormuud University National Training Week 2026',
+      name: 'National Training Week 2026',
       theme: 'Artificial Intelligence for National Transformation',
       year: 2026,
       startDate: new Date('2026-09-14'),
@@ -82,7 +82,7 @@ const seed = async () => {
   const trainerCount = await Trainer.countDocuments();
   if (trainerCount === 0) {
     await Trainer.insertMany([
-      { name: 'Dr. Ahmed Hassan', email: 'a.hassan@example.com', title: 'Dr.', organization: 'Hormuud University', expertise: ['AI', 'Machine Learning'], biography: 'Expert in AI with 10+ years of research experience.' },
+      { name: 'Dr. Ahmed Hassan', email: 'a.hassan@example.com', title: 'Dr.', organization: 'National Training Week', expertise: ['AI', 'Machine Learning'], biography: 'Expert in AI with 10+ years of research experience.' },
       { name: 'Prof. Fatima Osman', email: 'f.osman@example.com', title: 'Prof.', organization: 'University of Mogadishu', expertise: ['Data Science', 'Statistics'], biography: 'Professor of Data Science and Analytics.' },
       { name: 'Eng. Mohamed Ali', email: 'm.ali@example.com', title: 'Eng.', organization: 'Tech Somalia', expertise: ['Cybersecurity', 'Networking'], biography: 'Senior cybersecurity engineer with international experience.' },
     ]);

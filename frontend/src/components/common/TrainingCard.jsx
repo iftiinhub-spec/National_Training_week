@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
-import { CalendarIcon, ClockIcon, AcademicCapIcon, UserIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, ClockIcon, UserIcon } from '@heroicons/react/24/outline';
 
 export const TrainingCard = ({ training }) => {
   const {
@@ -16,7 +16,6 @@ export const TrainingCard = ({ training }) => {
     endTime,
     level,
     status,
-    capacity,
   } = training;
 
   // Fallback image graphic generator
@@ -43,17 +42,12 @@ export const TrainingCard = ({ training }) => {
 
         {/* Branded Fallback Graphic if no image or image fails to load */}
         <div
-          className={`w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#1a6b3c] to-[#155289] text-white text-center ${
+          className={`w-full h-full flex flex-col items-center justify-center bg-slate-50 ${
             imageUrl ? 'hidden' : 'flex'
           }`}
         >
-          <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-2 backdrop-blur-xs border border-white/20">
-            <AcademicCapIcon className="w-7 h-7 text-emerald-300" />
-          </div>
-          <span className="text-xs uppercase tracking-wider font-semibold text-emerald-200">
-            Hormuud University NTW
-          </span>
-          <span className="text-sm font-bold text-white/90 line-clamp-1 mt-1">
+          <img src="/logo.jpg" alt="National Training Week" className="h-20 w-auto object-contain opacity-60" />
+          <span className="text-xs font-semibold text-slate-400 mt-2">
             {category?.name || 'National Training Session'}
           </span>
         </div>
