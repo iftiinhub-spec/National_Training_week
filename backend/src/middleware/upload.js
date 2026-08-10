@@ -6,7 +6,7 @@ import fs from 'fs';
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // 5MB default
-const ALLOWED_FIELDS = new Set(['profilePhoto', 'photo', 'coverImage']);
+const ALLOWED_FIELDS = new Set(['profilePhoto', 'photo', 'coverImage', 'certificateSignature']);
 
 const ensureUploadDir = (dir) => {
   if (!fs.existsSync(dir)) {

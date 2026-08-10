@@ -347,6 +347,12 @@ html {
   letter-spacing: 0.025em;
 }
 
+/* File-upload labels styled as solid action buttons must retain accessible
+   contrast instead of inheriting the generic admin form-label color. */
+.admin-shell label:has(input[type='file'].sr-only) {
+  color: #ffffff !important;
+}
+
 .admin-shell input:not([type='checkbox']):not([type='radio']),
 .admin-shell select,
 .admin-shell textarea {
@@ -414,7 +420,7 @@ html {
 
 .participant-bottom-nav-grid > a {
   min-width: 0;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.2;
 }
 

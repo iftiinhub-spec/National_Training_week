@@ -1,6 +1,5 @@
 import User from '../../models/User.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
-import { sendAccountStatusEmail } from '../../utils/accountApprovalEmail.js';
 
 // --- Participant Management ---
 export const getParticipants = async (req, res, next) => {
@@ -16,7 +15,6 @@ export const getParticipants = async (req, res, next) => {
     if (req.query.isActive !== undefined) filter.isActive = req.query.isActive === 'true';
     if (req.query.region) filter.region = req.query.region;
     if (req.query.participantType) filter.participantType = req.query.participantType;
-    if (req.query.accountStatus) filter.accountStatus = req.query.accountStatus;
 
     const [participants, total] = await Promise.all([
       User.find(filter).select('-passwordHash').sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -31,20 +29,6 @@ export const getParticipant = async (req, res, next) => {
     const user = await User.findOne({ _id: req.params.id, role: 'participant' }).select('-passwordHash');
     if (!user) return errorResponse(res, 'Participant not found.', 404);
     return successResponse(res, { participant: user });
-  } catch (err) { next(err); }
-};
-
-export const updateParticipantAccountStatus = async (req, res, next) => {
-  try {
-    const { status } = req.body;
-    if (!['approved', 'rejected'].includes(status)) return errorResponse(res, 'Invalid account status.', 400);
-    const user = await User.findOne({ _id: req.params.id, role: 'participant' });
-    if (!user) return errorResponse(res, 'Participant not found.', 404);
-    const changed = user.accountStatus !== status;
-    user.accountStatus = status;
-    await user.save();
-    if (changed) await sendAccountStatusEmail({ to: user.email, participantName: user.fullName, status });
-    return successResponse(res, { participant: user }, `Participant account ${status}.`);
   } catch (err) { next(err); }
 };
 

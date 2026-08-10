@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
 import { generateQRBuffer } from './qrGenerator.js';
+import SiteSettings from '../models/SiteSettings.js';
 
 const resolveAsset = (configuredPath, fallback) => {
   const candidate = configuredPath || fallback;
@@ -20,6 +21,7 @@ export const generateCertificatePDF = async ({
 }) => {
   return new Promise(async (resolve, reject) => {
     try {
+      const settings = await SiteSettings.findOne({ key: 'global' }).lean().catch(() => null);
       const doc = new PDFDocument({
         layout: 'landscape',
         size: 'A4',
@@ -123,13 +125,13 @@ export const generateCertificatePDF = async ({
       doc.moveTo(80, 412).lineTo(doc.page.width - 205, 412).lineWidth(1).stroke('#1a6b3c');
 
       // Optional transparent PNG signature. A line is shown until one is configured.
-      const signaturePath = resolveAsset(process.env.CERTIFICATE_SIGNATURE_PATH, 'assets/signature.png');
+      const signaturePath = resolveAsset(settings?.certificateSignature || process.env.CERTIFICATE_SIGNATURE_PATH, 'assets/signature.png');
       if (signaturePath) doc.image(signaturePath, 96, 414, { fit: [145, 48], align: 'center', valign: 'center' });
       doc.moveTo(92, 466).lineTo(248, 466).lineWidth(0.8).stroke('#111111');
       doc.fillColor('#111111').font('Helvetica-Bold').fontSize(9)
-        .text(process.env.CERTIFICATE_SIGNATORY_NAME || 'Authorized Signatory', 92, 471, { width: 156, align: 'center' })
+        .text(settings?.certificateSignatoryName || process.env.CERTIFICATE_SIGNATORY_NAME || 'Authorized Signatory', 92, 471, { width: 156, align: 'center' })
         .font('Helvetica').fontSize(8)
-        .text(process.env.CERTIFICATE_SIGNATORY_TITLE || 'National Training Week', 92, 484, { width: 156, align: 'center' });
+        .text(settings?.certificateSignatoryTitle || process.env.CERTIFICATE_SIGNATORY_TITLE || 'National Training Week', 92, 484, { width: 156, align: 'center' });
 
       doc.end();
     } catch (err) {
