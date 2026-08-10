@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export const CertificatesManagement = () => {
   const [certificates, setCertificates] = useState([]);
@@ -85,6 +86,7 @@ export const CertificatesManagement = () => {
             Enforce eligibility (Approved + Present + Completed), bulk issue digital certificates, and revoke credentials.
           </p>
         </div>
+        <Link to="/admin/settings#certificate-signature" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#1a6b3c] px-4 text-sm font-bold text-[#1a6b3c] hover:bg-emerald-50"><PhotoIcon className="h-5 w-5" /> Upload certificate signature</Link>
       </div>
 
       {/* Bulk Issuance Box */}

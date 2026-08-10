@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import { emailButton, emailLayout, sendEmail } from '../utils/email.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
-import { sendAccountStatusEmail } from '../utils/accountApprovalEmail.js';
+import { sendWelcomeEmail } from '../utils/welcomeEmail.js';
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
@@ -20,12 +20,12 @@ export const register = async (req, res, next) => {
 
     const user = await User.create({
       fullName, email, passwordHash: password,
-      role: 'participant', accountStatus: 'pending',
+      role: 'participant', accountStatus: 'approved',
       phone, gender, region, organization, profession, participantType,
     });
 
-    await sendAccountStatusEmail({ to: user.email, participantName: user.fullName, status: 'pending' });
-    return successResponse(res, { user }, 'Account request submitted. Wait for administrator approval before signing in.', 201);
+    await sendWelcomeEmail({ to: user.email, participantName: user.fullName });
+    return successResponse(res, { user }, 'Account created successfully. You can sign in now.', 201);
   } catch (err) { next(err); }
 };
 
@@ -44,13 +44,6 @@ export const login = async (req, res, next) => {
     if (!user.isActive) {
       return errorResponse(res, 'Your account has been deactivated. Please contact support.', 401);
     }
-    if (user.role === 'participant' && user.accountStatus !== 'approved') {
-      const message = user.accountStatus === 'rejected'
-        ? 'Your participant account request was not approved. Please contact support.'
-        : 'Your participant account is awaiting administrator approval. We will email you when it is approved.';
-      return errorResponse(res, message, 403);
-    }
-
     const token = signToken(user._id);
     const userData = user.toJSON();
     return successResponse(res, { user: userData, token }, 'Login successful.');

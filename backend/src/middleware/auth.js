@@ -33,13 +33,6 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    if (user.role === 'participant' && user.accountStatus !== 'approved') {
-      return res.status(403).json({
-        success: false,
-        message: 'Your participant account is awaiting administrator approval.',
-      });
-    }
-
     req.user = user;
     next();
   } catch (error) {

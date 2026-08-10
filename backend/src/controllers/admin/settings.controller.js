@@ -12,6 +12,9 @@ const defaults = {
   facebookUrl: '',
   emailSenderName: 'National Training Week',
   smtpUser: '',
+  certificateSignature: '',
+  certificateSignatoryName: 'Authorized Signatory',
+  certificateSignatoryTitle: 'National Training Week',
 };
 
 const safeSettings = (settings) => {
@@ -44,7 +47,7 @@ export const updateSettings = async (req, res, next) => {
     if (req.body.smtpUser && req.body.smtpUser !== currentSender && !req.body.smtpPassword) {
       return errorResponse(res, 'Enter an App Password created by the new Gmail sender account.', 400);
     }
-    const allowed = ['organizerName', 'contactEmail', 'replyToEmail', 'location', 'facebookUrl', 'emailSenderName', 'smtpUser'];
+    const allowed = ['organizerName', 'contactEmail', 'replyToEmail', 'location', 'facebookUrl', 'emailSenderName', 'smtpUser', 'certificateSignatoryName', 'certificateSignatoryTitle'];
     const updates = Object.fromEntries(allowed.map((field) => [field, req.body[field] ?? '']));
     if (req.body.smtpPassword) updates.smtpPassEncrypted = encryptSetting(req.body.smtpPassword.replaceAll(' ', ''));
     const settings = await SiteSettings.findOneAndUpdate(
@@ -52,6 +55,28 @@ export const updateSettings = async (req, res, next) => {
     );
     const saved = await SiteSettings.findById(settings._id).select('+smtpPassEncrypted');
     return successResponse(res, { settings: safeSettings(saved) }, 'Website and email settings updated.');
+  } catch (error) { next(error); }
+};
+
+export const uploadCertificateSignature = async (req, res, next) => {
+  try {
+    if (!req.file) return errorResponse(res, 'Select a PNG, JPEG, or WebP signature image.', 400);
+    const certificateSignature = `uploads/certificateSignature/${req.file.filename}`;
+    const settings = await SiteSettings.findOneAndUpdate(
+      { key: 'global' },
+      { $set: { certificateSignature } },
+      { new: true, upsert: true, setDefaultsOnInsert: true },
+    ).select('+smtpPassEncrypted');
+    return successResponse(res, { settings: safeSettings(settings) }, 'Certificate signature uploaded successfully.');
+  } catch (error) { next(error); }
+};
+
+export const removeCertificateSignature = async (req, res, next) => {
+  try {
+    const settings = await SiteSettings.findOneAndUpdate(
+      { key: 'global' }, { $set: { certificateSignature: '' } }, { new: true, upsert: true, setDefaultsOnInsert: true },
+    ).select('+smtpPassEncrypted');
+    return successResponse(res, { settings: safeSettings(settings) }, 'Certificate signature removed.');
   } catch (error) { next(error); }
 };
 

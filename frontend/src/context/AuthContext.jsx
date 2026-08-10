@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.post('/auth/register', formData);
       if (res.success) {
-        toast.success('Account request submitted. Check your email and wait for administrator approval.');
+        toast.success('Account created successfully. You can sign in now.');
         return res.data?.user;
       }
     } catch (err) {
