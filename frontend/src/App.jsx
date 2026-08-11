@@ -17,6 +17,7 @@ import About from './pages/public/About';
 import Program from './pages/public/Program';
 import Trainings from './pages/public/Trainings';
 import TrainingDetails from './pages/public/TrainingDetails';
+import TrainerDetails from './pages/public/TrainerDetails';
 import Recordings from './pages/public/Recordings';
 import VerifyCertificate from './pages/public/VerifyCertificate';
 import Contact from './pages/public/Contact';
@@ -89,6 +90,7 @@ const PublicLayout = () => {
           <Route path="/program"             element={<div className="pt-[88px]"><Program /></div>} />
           <Route path="/trainings"           element={<div className="pt-[88px]"><Trainings /></div>} />
           <Route path="/trainings/:id"       element={<div className="pt-[88px]"><TrainingDetails /></div>} />
+          <Route path="/trainers/:id"        element={<div className="pt-[88px]"><TrainerDetails /></div>} />
           <Route path="/recordings"          element={<div className="pt-[88px]"><Recordings /></div>} />
           <Route path="/verify-certificate"  element={<div className="pt-[88px]"><VerifyCertificate /></div>} />
           <Route path="/contact"             element={<div className="pt-[88px]"><Contact /></div>} />

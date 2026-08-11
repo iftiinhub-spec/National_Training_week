@@ -12,6 +12,7 @@ import {
   ChatBubbleLeftEllipsisIcon,
   ArrowLeftIcon,
   EnvelopeIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 
 export const SessionOperation = () => {
@@ -23,6 +24,7 @@ export const SessionOperation = () => {
   const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('meeting');
+  const [completing, setCompleting] = useState(false);
 
   // Meeting Form
   const [meetingForm, setMeetingForm] = useState({
@@ -170,6 +172,27 @@ export const SessionOperation = () => {
     }
   };
 
+  const handleCompleteTraining = async () => {
+    const presentCount = attendance.filter((record) => record.status === 'present').length;
+    const confirmed = window.confirm(`End this training session now? Attendance will be locked and certificates will be issued immediately to ${presentCount} approved participant${presentCount === 1 ? '' : 's'} currently marked present. This cannot be reopened.`);
+    if (!confirmed) return;
+    setCompleting(true);
+    try {
+      const res = await api.post(`/moderator/trainings/${trainingId}/complete`);
+      if (res.success) {
+        setTraining(res.data.training);
+        setQrSession(null);
+        setQrDataUrl('');
+        toast.success(res.message || 'Training completed and certificates generated.');
+        fetchSessionData();
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to complete the training session.');
+    } finally {
+      setCompleting(false);
+    }
+  };
+
   if (loading) return <LoadingSpinner label="Loading session operational controls..." />;
   if (!training) return <div className="p-8 text-center">Session not found.</div>;
 
@@ -191,6 +214,14 @@ export const SessionOperation = () => {
             </div>
             <h1 className="text-2xl font-black text-slate-900">{training.title}</h1>
           </div>
+          {training.status !== 'completed' ? (
+            <button type="button" onClick={handleCompleteTraining} disabled={completing}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-5 text-xs font-black text-white transition hover:bg-[#124d2a] disabled:cursor-not-allowed disabled:opacity-60">
+              <CheckCircleIcon className="h-5 w-5" />{completing ? 'Completing…' : 'End Training Session'}
+            </button>
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-black text-[#1a6b3c]"><CheckCircleIcon className="h-5 w-5" />Attendance locked · Certificates issued</span>
+          )}
         </div>
       </div>
 
@@ -228,7 +259,7 @@ export const SessionOperation = () => {
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <h3 className="text-lg font-bold text-slate-900">Meeting Configuration</h3>
-              <p className="text-xs text-slate-500">Set platform links, passcode, and release options.</p>
+              <p className="text-xs text-slate-500">Enter the meeting details supplied by Zoom, Teams, Google Meet, or your selected provider.</p>
             </div>
             {meeting && (
               <button
@@ -250,7 +281,7 @@ export const SessionOperation = () => {
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Platform</label>
                 <select
                   value={meetingForm.platform}
-                  onChange={(e) => setMeetingForm({ ...meetingForm, platform: e.target.value })}
+                  onChange={(e) => setMeetingForm({ ...meetingForm, platform: e.target.value, ...(e.target.value === 'google_meet' ? { meetingId: '', passcode: '' } : {}) })}
                   className="w-full p-2.5 rounded-lg border border-slate-300 text-sm bg-white"
                   required
                 >
@@ -274,9 +305,9 @@ export const SessionOperation = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {meetingForm.platform !== 'google_meet' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Meeting ID</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Meeting ID <span className="font-normal normal-case text-slate-400">(optional)</span></label>
                 <input
                   type="text"
                   placeholder="e.g. 845 1234 5678"
@@ -284,10 +315,11 @@ export const SessionOperation = () => {
                   onChange={(e) => setMeetingForm({ ...meetingForm, meetingId: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300 text-sm font-mono"
                 />
+                <p className="mt-1.5 text-[11px] leading-4 text-slate-500">Copy this from the scheduled {meetingForm.platform === 'zoom' ? 'Zoom' : meetingForm.platform === 'teams' ? 'Microsoft Teams' : 'online'} meeting. It is not generated by this system.</p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Passcode</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Passcode <span className="font-normal normal-case text-slate-400">(optional)</span></label>
                 <input
                   type="text"
                   placeholder="e.g. 123456"
@@ -295,8 +327,11 @@ export const SessionOperation = () => {
                   onChange={(e) => setMeetingForm({ ...meetingForm, passcode: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300 text-sm font-mono"
                 />
+                <p className="mt-1.5 text-[11px] leading-4 text-slate-500">Enter the passcode provided with the meeting invitation. Leave it empty when the provider does not use one.</p>
               </div>
-            </div>
+            </div>}
+
+            {meetingForm.platform === 'google_meet' && <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-xs leading-5 text-emerald-900"><strong>Google Meet normally needs only the meeting link.</strong> Meeting ID and passcode are therefore not requested for this platform.</div>}
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Joining Instructions & Notes</label>
@@ -363,7 +398,7 @@ export const SessionOperation = () => {
                 Participant Broadcast Emails
               </h4>
               <p className="text-xs text-slate-600">
-                Send meeting links or reminder emails to all approved enrolled participants.
+                Invitations include meeting access. Reminders include the exact remaining time but intentionally exclude meeting links and credentials.
               </p>
 
               <div className="space-y-2">
@@ -377,7 +412,6 @@ export const SessionOperation = () => {
 
                 <button
                   onClick={() => handleSendParticipantInvites('reminder')}
-                  disabled={!meeting}
                   className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50"
                 >
                   Send Session Reminder Email
@@ -406,7 +440,9 @@ export const SessionOperation = () => {
                 </p>
               </div>
 
-              {qrSession ? (
+              {training.status === 'completed' ? (
+                <span className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600">Attendance locked</span>
+              ) : qrSession ? (
                 <button
                   onClick={handleCloseQR}
                   className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl"
@@ -465,6 +501,7 @@ export const SessionOperation = () => {
                           <select
                             value={rec.status}
                             onChange={(e) => handleUpdateAttendance(rec._id, e.target.value)}
+                            disabled={training.status === 'completed'}
                             className="p-1 rounded border border-slate-300 text-xs font-semibold bg-white"
                           >
                             <option value="present">Present</option>

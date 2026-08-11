@@ -143,6 +143,7 @@ export const sendParticipantInvitations = async (req, res, next) => {
     if (!training) return errorResponse(res, 'Training not found.', 404);
 
     const meeting = await Meeting.findOne({ training: trainingId });
+    if (type === 'invitation' && !meeting) return errorResponse(res, 'Create the meeting details before sending invitations.', 400);
 
     let regFilter = { training: trainingId, status: 'approved' };
     if (selectedIds && selectedIds.length > 0) regFilter.participant = { $in: selectedIds };
@@ -152,6 +153,10 @@ export const sendParticipantInvitations = async (req, res, next) => {
 
     const emails = registrations.map((r) => r.participant.email).filter(Boolean);
     const failed = [];
+    const trainingDate = training.date ? new Date(training.date).toISOString().slice(0, 10) : null;
+    const scheduledStart = meeting?.startTime || (trainingDate && training.startTime
+      ? new Date(`${trainingDate}T${training.startTime}:00+03:00`)
+      : training.date);
 
     for (const email of emails) {
       let result;
@@ -171,8 +176,7 @@ export const sendParticipantInvitations = async (req, res, next) => {
         result = await sendReminderEmail({
           to: email,
           trainingTitle: training.title,
-          startTime: meeting?.startTime || training.date,
-          meetingUrl: meeting?.meetingUrl,
+          startTime: scheduledStart,
           type,
         });
       }

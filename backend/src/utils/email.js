@@ -58,10 +58,27 @@ export const sendInvitationEmail = ({ to, trainingTitle, eventName, meetingUrl, 
   return sendEmail({ to, subject: `Invitation: ${trainingTitle} — National Training Week`, html: emailLayout({ title: 'Your training invitation', preview: `Join ${trainingTitle}`, body: `<p style="margin-top:0">You are invited to attend the following expert-led session.</p>${emailInfoCard([['Training', trainingTitle], ['Event', eventName], ['Date and time', startTime ? new Date(startTime).toLocaleString() : ''], ['Platform', platformNames[platform] || platform], ['Meeting ID', meetingId], ['Passcode', passcode]])}${emailButton('Join the live session', meetingUrl)}${notes ? `<p style="background:#fefce8;border-radius:10px;padding:14px"><strong>Joining notes:</strong> ${escapeHtml(notes)}</p>` : ''}<p>Keep this email available for the session. The meeting link is intended for registered attendees.</p>` }) });
 };
 
-export const sendReminderEmail = ({ to, trainingTitle, startTime, meetingUrl, type = 'reminder' }) => {
+const formatRemainingTime = (startTime) => {
+  const milliseconds = new Date(startTime).getTime() - Date.now();
+  if (!Number.isFinite(milliseconds)) return 'The session schedule is available in your participant portal.';
+  if (milliseconds <= 0) return 'The session has already started.';
+  const totalMinutes = Math.ceil(milliseconds / 60_000);
+  if (totalMinutes <= 1) return 'The session is starting now.';
+  const days = Math.floor(totalMinutes / 1_440);
+  const hours = Math.floor((totalMinutes % 1_440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days === 1 && hours === 0) return 'The session starts tomorrow.';
+  if (days > 0) return `The session starts in ${days} day${days === 1 ? '' : 's'}${hours ? ` and ${hours} hour${hours === 1 ? '' : 's'}` : ''}.`;
+  if (hours > 0) return `The session starts in ${hours} hour${hours === 1 ? '' : 's'}${minutes ? ` and ${minutes} minute${minutes === 1 ? '' : 's'}` : ''}.`;
+  return `The session starts in ${minutes} minutes.`;
+};
+
+export const sendReminderEmail = ({ to, trainingTitle, startTime, type = 'reminder' }) => {
   const labels = { reminder: 'Session reminder', schedule_change: 'Schedule change', cancellation: 'Cancellation notice' };
   const label = labels[type] || 'Session notice';
-  return sendEmail({ to, subject: `${label}: ${trainingTitle}`, html: emailLayout({ eyebrow: label, title: trainingTitle, preview: `${label}: ${trainingTitle}`, body: `<p style="margin-top:0">${type === 'reminder' ? 'Your training session is approaching.' : 'There is an update to your training session.'}</p>${emailInfoCard([['Training', trainingTitle], ['Date and time', startTime ? new Date(startTime).toLocaleString() : '']])}${emailButton('Open meeting', meetingUrl)}<p>Please check your participant portal for the latest information.</p>` }) });
+  const timingMessage = type === 'reminder' ? formatRemainingTime(startTime) : 'There is an update to your training session.';
+  const formattedStart = startTime ? new Date(startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'full', timeStyle: 'short' }) : '';
+  return sendEmail({ to, subject: `${label}: ${trainingTitle}`, html: emailLayout({ eyebrow: label, title: trainingTitle, preview: `${label}: ${trainingTitle}`, body: `<p style="margin-top:0"><strong>${escapeHtml(timingMessage)}</strong></p>${emailInfoCard([['Training', trainingTitle], ['Scheduled start', formattedStart], ...(type === 'reminder' ? [['Time remaining', timingMessage.replace(/^The session (starts|is starting) /, '').replace(/\.$/, '')]] : [])])}<p>Open your participant portal for the latest schedule and access information. For security, meeting access is not included in reminder emails.</p>` }) });
 };
 
 export const sendCertificateIssuedEmail = ({ to, participantName, trainingTitle, certificateId, verifyUrl, portalUrl }) => sendEmail({

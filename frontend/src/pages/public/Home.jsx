@@ -76,13 +76,20 @@ export const Home = () => {
   const { event, days, sessionCount } = useCurrentEvent();
   const [trainers, setTrainers] = useState([]);
   const [loadingTrainers, setLoadingTrainers] = useState(true);
-  const countdownTarget = event?.startDate
-    ? `${event.startDate.slice(0, 10)}T${event.startTime || '09:00'}:00`
-    : null;
+  const [activeFacultyDay, setActiveFacultyDay] = useState('');
+  const now = Date.now();
+  const registrationOpensAt = event?.registrationStart ? new Date(event.registrationStart).getTime() : null;
+  const registrationClosesAt = event?.registrationDeadline ? new Date(event.registrationDeadline).getTime() : null;
+  const eventStartsAt = event?.startDate ? new Date(`${event.startDate.slice(0, 10)}T${event.startTime || '09:00'}:00+03:00`).getTime() : null;
+  const eventEndsAt = event?.endDate ? new Date(`${event.endDate.slice(0, 10)}T23:59:59+03:00`).getTime() : null;
+  const countdownStage = !event ? null
+    : registrationOpensAt && now < registrationOpensAt ? { label: 'Registration opens in', target: registrationOpensAt, registrationOpen: false }
+      : registrationClosesAt && now < registrationClosesAt ? { label: 'Registration closes in', target: registrationClosesAt, registrationOpen: true }
+        : eventStartsAt && now < eventStartsAt ? { label: 'Training Week begins in', target: eventStartsAt, registrationOpen: false }
+          : eventEndsAt && now <= eventEndsAt ? { message: 'National Training Week is underway', registrationOpen: false }
+            : { message: 'This edition has been completed', registrationOpen: false };
+  const countdownTarget = countdownStage?.target || null;
   const countdown = useCountdown(countdownTarget);
-  const eventHasEnded = event?.endDate
-    ? Date.now() > new Date(`${event.endDate.slice(0, 10)}T23:59:59`).getTime()
-    : false;
   const eventDates = event?.startDate && event?.endDate
     ? `${new Date(event.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
     : 'Dates to be announced';
@@ -90,11 +97,22 @@ export const Home = () => {
   const heroImage = '/training-week-default-hero.png';
 
   useEffect(() => {
-    api.get('/public/trainers')
+    api.get(`/public/trainers${event?._id ? `?event=${event._id}` : ''}`)
       .then(r => { if (r.success) setTrainers(r.data.trainers || []); })
       .catch(() => {})
       .finally(() => setLoadingTrainers(false));
-  }, []);
+  }, [event?._id]);
+
+  useEffect(() => {
+    if (days.length && !days.some((day) => day._id === activeFacultyDay)) {
+      setActiveFacultyDay(days[0]._id);
+    }
+  }, [days, activeFacultyDay]);
+
+  const facultyForDay = trainers.filter((trainer) => (
+    !activeFacultyDay || trainer.sessions?.some((session) => session.eventDay?._id === activeFacultyDay)
+  ));
+  const selectedFacultyDay = days.find((day) => day._id === activeFacultyDay);
 
   return (
     <div className="bg-white min-h-screen">
@@ -109,15 +127,18 @@ export const Home = () => {
             <p className="mt-6 max-w-2xl text-lg font-bold leading-snug text-white sm:text-xl">{event?.theme || 'Skills, knowledge, and opportunity—accessible nationwide.'}</p>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75 sm:text-base">{event?.description || 'An annual virtual learning platform connecting students, graduates, and professionals with expert-led training across technology, education, health, business, and community development.'}</p>
             {event && <div className="mt-6 flex flex-wrap justify-start gap-x-6 gap-y-2 text-xs font-bold text-white/80"><span>{eventDates}</span><span>{days.length} day{days.length === 1 ? '' : 's'} · {sessionCount} session{sessionCount === 1 ? '' : 's'}</span><span className="capitalize text-[#1da156]">{eventStatus}</span></div>}
-            {event && (countdown.complete ? (
+            {event && (!countdownTarget || countdown.complete ? (
               <div className="mx-auto mt-7 inline-flex rounded-xl border border-white/20 bg-black/35 px-5 py-3 text-sm font-bold text-white backdrop-blur-sm">
-                {eventHasEnded ? 'This edition has been completed' : 'The event is underway'}
+                {countdownStage?.message || 'The next registration stage is starting now'}
               </div>
             ) : (
-              <div className="mt-7 flex max-w-xl items-center justify-start gap-1.5 sm:gap-2" aria-label="Countdown to event"><Digit v={countdown.months} label="Months" /><Digit v={countdown.days} label="Days" /><Digit v={countdown.hours} label="Hours" /><Digit v={countdown.minutes} label="Mins" /><Digit v={countdown.seconds} label="Secs" /></div>
+              <div className="mt-7">
+                <p className="mb-3 text-sm font-extrabold uppercase tracking-[.14em] text-[#1da156]">{countdownStage?.label}</p>
+                <div className="flex max-w-xl items-center justify-start gap-1.5 sm:gap-2" aria-label={countdownStage?.label}><Digit v={countdown.months} label="Months" /><Digit v={countdown.days} label="Days" /><Digit v={countdown.hours} label="Hours" /><Digit v={countdown.minutes} label="Mins" /><Digit v={countdown.seconds} label="Secs" /></div>
+              </div>
             ))}
             <div className="mt-8 flex flex-col justify-start gap-3 sm:flex-row">
-              {event ? <><Link to="/signup" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Register free</Link><Link to="/program" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Explore the program</Link></> : <><Link to="/about" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Discover the program</Link><Link to="/contact" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Contact the program office</Link></>}
+              {event ? <>{countdownStage?.registrationOpen && <Link to="/signup" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Register free</Link>}<Link to="/program" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Explore the program</Link></> : <><Link to="/about" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Discover the program</Link><Link to="/contact" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Contact the program office</Link></>}
             </div>
           </div>
         </div>
@@ -160,11 +181,28 @@ export const Home = () => {
             subtitle={`Meet the professors, industry leaders, and practitioners guiding the ${event?.year || 'current'} edition.`}
           />
 
+          {days.length > 0 && (
+            <div className="mb-12 flex gap-3 overflow-x-auto px-1 py-3 sm:justify-center" aria-label="Filter speakers by program day">
+              {days.map((day) => {
+                const isActive = activeFacultyDay === day._id;
+                return (
+                  <button key={day._id} type="button" onClick={() => setActiveFacultyDay(day._id)} aria-pressed={isActive}
+                    className={`min-w-[190px] shrink-0 rounded-2xl border px-6 py-4 text-left transition-all ${isActive ? 'border-[#1da156] bg-[#1da156] text-white shadow-lg shadow-[#1da156]/20' : 'border-black/10 bg-white text-black hover:border-[#1da156]'}`}>
+                    <span className={`block text-[11px] font-bold tracking-wide ${isActive ? 'text-white/85' : 'text-black/55'}`}>
+                      Day {day.dayNumber} • {day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBA'}
+                    </span>
+                    <span className="mt-1 block text-sm font-extrabold">{day.theme}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {loadingTrainers ? (
             <LoadingSpinner label="Loading faculty profiles..." />
-          ) : trainers.length > 0 ? (
+          ) : facultyForDay.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
-              {trainers.slice(0, 6).map((tr) => (
+              {facultyForDay.map((tr) => (
                 <div
                   key={tr._id}
                   className="group relative overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 bg-white border border-black/10 flex flex-col"
@@ -184,13 +222,6 @@ export const Home = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* Hover bio overlay */}
-                    <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
-                      <p className="text-white text-xs leading-relaxed line-clamp-5">
-                        {tr.biography}
-                      </p>
-                    </div>
 
                     {/* Expertise badge top-left */}
                     {tr.expertise?.[0] && (
@@ -226,24 +257,19 @@ export const Home = () => {
                         ))}
                       </div>
                     )}
+                    <Link to={`/trainers/${tr._id}`} className="mt-2 self-start text-sm font-semibold text-[#1da156] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1da156]">
+                      View full profile
+                    </Link>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-16 text-black/60 border border-dashed border-black/20 rounded-2xl">
-              Faculty profiles will be published soon!
+              {selectedFacultyDay ? `Speakers for Day ${selectedFacultyDay.dayNumber} will be published soon.` : 'Faculty profiles will be published soon.'}
             </div>
           )}
 
-          <div className="mt-10 text-center">
-            <Link
-              to="/trainings"
-              className="inline-flex items-center gap-2 px-8 py-3 bg-[#1da156] hover:bg-black text-white font-bold rounded-xl text-sm shadow transition-colors"
-            >
-              Browse All Sessions →
-            </Link>
-          </div>
         </div>
       </section>
 

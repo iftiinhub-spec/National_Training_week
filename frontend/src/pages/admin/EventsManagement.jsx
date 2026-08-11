@@ -5,6 +5,22 @@ import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
 import { CalendarDaysIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
+const registrationDefaults = (eventDate) => {
+  if (!eventDate) return { registrationStart: '', registrationDeadline: '' };
+  const start = new Date(`${eventDate}T09:00:00`);
+  const opens = new Date(start.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const closes = new Date(start.getTime() - 24 * 60 * 60 * 1000);
+  const localValue = (date) => {
+    const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return shifted.toISOString().slice(0, 16);
+  };
+  return { registrationStart: localValue(opens), registrationDeadline: localValue(closes) };
+};
+
+const toNairobiInput = (value) => value
+  ? new Date(new Date(value).getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16)
+  : '';
+
 export const EventsManagement = () => {
   const [events, setEvents] = useState([]);
   const [eventDaysMap, setEventDaysMap] = useState({});
@@ -23,8 +39,8 @@ export const EventsManagement = () => {
     startDate: '2026-09-14',
     startTime: '09:00',
     endDate: '2026-09-19',
-    registrationStart: '2026-08-01',
-    registrationDeadline: '2026-09-10',
+    registrationStart: '2026-08-01T09:00',
+    registrationDeadline: '2026-09-13T09:00',
     description: '',
     status: 'registration_open',
     isCurrent: true,
@@ -110,8 +126,8 @@ export const EventsManagement = () => {
       startDate: event.startDate ? event.startDate.split('T')[0] : '',
       startTime: event.startTime || '09:00',
       endDate: event.endDate ? event.endDate.split('T')[0] : '',
-      registrationStart: event.registrationStart ? event.registrationStart.split('T')[0] : '',
-      registrationDeadline: event.registrationDeadline ? event.registrationDeadline.split('T')[0] : '',
+      registrationStart: toNairobiInput(event.registrationStart),
+      registrationDeadline: toNairobiInput(event.registrationDeadline),
       description: event.description || '',
       status: event.status,
       isCurrent: Boolean(event.isCurrent),
@@ -190,7 +206,7 @@ export const EventsManagement = () => {
               registrationStart: '',
               registrationDeadline: '',
               description: '',
-              status: 'draft',
+              status: 'registration_scheduled',
               isCurrent: false,
             });
             setShowEventModal(true);
@@ -322,12 +338,13 @@ export const EventsManagement = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl bg-emerald-50/60 border border-emerald-100 p-4">
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Registration Opens</label>
-                  <input type="date" value={eventForm.registrationStart} onChange={(e) => setEventForm({ ...eventForm, registrationStart: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white" />
+                  <input type="datetime-local" value={eventForm.registrationStart} onChange={(e) => setEventForm({ ...eventForm, registrationStart: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white" required />
                 </div>
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Registration Deadline</label>
-                  <input type="date" value={eventForm.registrationDeadline} onChange={(e) => setEventForm({ ...eventForm, registrationDeadline: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white" />
+                  <input type="datetime-local" value={eventForm.registrationDeadline} onChange={(e) => setEventForm({ ...eventForm, registrationDeadline: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white" required />
                 </div>
+                <p className="sm:col-span-2 text-[11px] leading-5 text-slate-500">These values are created automatically from the event start date. You can extend or shorten the window at any time.</p>
               </div>
 
               <div>
@@ -357,7 +374,10 @@ export const EventsManagement = () => {
                   <input
                     type="date"
                     value={eventForm.startDate}
-                    onChange={(e) => setEventForm({ ...eventForm, startDate: e.target.value })}
+                    onChange={(e) => {
+                      const defaults = registrationDefaults(e.target.value);
+                      setEventForm({ ...eventForm, startDate: e.target.value, ...(!editingEvent ? defaults : {}) });
+                    }}
                     className="w-full p-2.5 rounded-lg border border-slate-300"
                     required
                   />
@@ -386,6 +406,7 @@ export const EventsManagement = () => {
                   className="w-full p-2.5 rounded-lg border border-slate-300 bg-white"
                 >
                   <option value="draft">Draft</option>
+                  <option value="registration_scheduled">Registration Scheduled</option>
                   <option value="registration_open">Registration Open</option>
                   <option value="registration_closed">Registration Closed</option>
                   <option value="ongoing">Ongoing</option>

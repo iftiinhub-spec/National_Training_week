@@ -1,7 +1,7 @@
 import express from 'express';
 import { getPublicTrainings, getPublicTraining, getPublicEvents, getPublicEvent, getCurrentEvent, getPublicProgram, getFeaturedTrainings } from '../controllers/public/training.controller.js';
 import { getPublicRecordings } from '../controllers/admin/recording.controller.js';
-import { getPublicTrainers } from '../controllers/admin/trainer.controller.js';
+import { getPublicTrainer, getPublicTrainers } from '../controllers/admin/trainer.controller.js';
 import { verifyCertificate } from '../controllers/admin/certificate.controller.js';
 import { createContactMessage } from '../controllers/admin/contact.controller.js';
 import { getCategories } from '../controllers/admin/category.controller.js';
@@ -18,6 +18,7 @@ router.get('/trainings', getPublicTrainings);
 router.get('/trainings/:id', getPublicTraining);
 router.get('/featured-trainings', getFeaturedTrainings);
 router.get('/trainers', getPublicTrainers);
+router.get('/trainers/:id', getPublicTrainer);
 router.get('/categories', getCategories);
 
 // Events & Program

@@ -7,6 +7,7 @@ import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { getMeeting, createMeeting, updateMeeting, deleteMeeting, releaseMeeting, sendTrainerInvitation, sendParticipantInvitations, getCommunications } from '../controllers/admin/meeting.controller.js';
 import { openQRSession, closeQRSession, getAttendance, updateAttendance, createManualAttendance } from '../controllers/admin/attendance.controller.js';
 import { getTrainingFeedback } from '../controllers/admin/feedback.controller.js';
+import { completeTraining } from '../controllers/admin/training.controller.js';
 
 const router = express.Router();
 router.use(protect, moderatorOnly);
@@ -85,6 +86,7 @@ router.post('/trainings/:trainingId/qr-session/close', closeQRSession);
 router.get('/trainings/:trainingId/attendance', getAttendance);
 router.patch('/trainings/:trainingId/attendance/:attendanceId', updateAttendance);
 router.post('/trainings/:trainingId/attendance/manual', createManualAttendance);
+router.post('/trainings/:id/complete', completeTraining);
 
 // Feedback
 router.get('/trainings/:trainingId/feedback', getTrainingFeedback);

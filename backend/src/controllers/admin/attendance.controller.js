@@ -12,12 +12,18 @@ const checkAccess = async (trainingId, userId, role) => {
   return training && String(training.moderator) === String(userId);
 };
 
+const attendanceIsLocked = async (trainingId) => {
+  const training = await Training.findById(trainingId).select('status attendanceLockedAt');
+  return !training || training.status === 'completed' || Boolean(training.attendanceLockedAt);
+};
+
 // POST /api/.../trainings/:trainingId/qr-session/open
 export const openQRSession = async (req, res, next) => {
   try {
     const { trainingId } = req.params;
     const hasAccess = await checkAccess(trainingId, req.user._id, req.user.role);
     if (!hasAccess) return errorResponse(res, 'Access denied.', 403);
+    if (await attendanceIsLocked(trainingId)) return errorResponse(res, 'Attendance is locked because this training is completed.', 400);
 
     // Close any existing open session first
     await QRSession.updateMany({ training: trainingId, isOpen: true }, { isOpen: false, closedAt: new Date() });
@@ -55,6 +61,8 @@ export const qrCheckIn = async (req, res, next) => {
   try {
     const { trainingId, sessionToken } = req.body;
     const participantId = req.user._id;
+
+    if (await attendanceIsLocked(trainingId)) return errorResponse(res, 'Attendance is closed for this completed training.', 400);
 
     // 1. Verify QR session is open and valid
     const session = await QRSession.findOne({ training: trainingId, sessionToken, isOpen: true });
@@ -118,6 +126,7 @@ export const updateAttendance = async (req, res, next) => {
     const { trainingId, attendanceId } = req.params;
     const hasAccess = await checkAccess(trainingId, req.user._id, req.user.role);
     if (!hasAccess) return errorResponse(res, 'Access denied.', 403);
+    if (await attendanceIsLocked(trainingId)) return errorResponse(res, 'Attendance is locked because this training is completed.', 400);
 
     const { status } = req.body;
     const allowed = ['present', 'absent', 'late', 'not_marked'];
@@ -141,6 +150,7 @@ export const createManualAttendance = async (req, res, next) => {
     const { participantId, status } = req.body;
     const hasAccess = await checkAccess(trainingId, req.user._id, req.user.role);
     if (!hasAccess) return errorResponse(res, 'Access denied.', 403);
+    if (await attendanceIsLocked(trainingId)) return errorResponse(res, 'Attendance is locked because this training is completed.', 400);
 
     const registration = await Registration.findOne({
       participant: participantId, training: trainingId, status: 'approved',

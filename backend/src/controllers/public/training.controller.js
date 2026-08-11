@@ -3,16 +3,18 @@ import Event from '../../models/Event.js';
 import EventDay from '../../models/EventDay.js';
 import Registration from '../../models/Registration.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
+import { syncEventStatus } from '../../utils/eventLifecycle.js';
 
 const publicEventFilter = { status: { $ne: 'draft' }, isActive: { $ne: false } };
 
 const findCurrentEvent = async () => {
   const explicit = await Event.findOne({ ...publicEventFilter, isCurrent: true });
-  if (explicit) return explicit;
+  if (explicit) return syncEventStatus(explicit);
 
   const today = new Date();
-  return (await Event.findOne({ ...publicEventFilter, endDate: { $gte: today } }).sort({ startDate: 1 }))
-    || Event.findOne(publicEventFilter).sort({ year: -1, startDate: -1 });
+  const event = (await Event.findOne({ ...publicEventFilter, endDate: { $gte: today } }).sort({ startDate: 1 }))
+    || await Event.findOne(publicEventFilter).sort({ year: -1, startDate: -1 });
+  return syncEventStatus(event);
 };
 
 // GET /api/public/trainings
@@ -49,7 +51,7 @@ export const getPublicTrainings = async (req, res, next) => {
 export const getPublicTraining = async (req, res, next) => {
   try {
     const training = await Training.findById(req.params.id)
-      .populate('event', 'name year theme startDate endDate')
+      .populate('event', 'name year theme startDate endDate registrationStart registrationDeadline')
       .populate('eventDay', 'dayNumber theme date')
       .populate('category', 'name')
       .populate('trainer', 'name title organization biography photo expertise');
