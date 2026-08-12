@@ -33,38 +33,38 @@
 /* System-wide dark theme. Existing utility classes are mapped here so every
    public page, portal, table, form, and modal follows one persistent theme. */
 .dark body {
-  background: #090f1a;
-  color: #f8fafc;
+  background: #080808;
+  color: #f7f7f7;
 }
 
 .dark [class~="bg-white"],
 .dark [class*="bg-white/"] {
-  background-color: #111827 !important;
+  background-color: #121212 !important;
 }
 
 .dark [class~="bg-slate-50"] {
-  background-color: #172033 !important;
+  background-color: #1a1a1a !important;
 }
 
 .dark [class*="bg-slate-50/"] {
-  background-color: #172033 !important;
+  background-color: #1a1a1a !important;
 }
 
 .dark [class~="bg-slate-100"] {
-  background-color: #0f172a !important;
+  background-color: #0d0d0d !important;
 }
 
 .dark [class*="bg-slate-100/"] {
-  background-color: #0f172a !important;
+  background-color: #0d0d0d !important;
 }
 
 .dark [class~="bg-slate-200"] {
-  background-color: #263449 !important;
+  background-color: #242424 !important;
 }
 
 .dark [class~="bg-slate-300"],
 .dark [class~="bg-slate-400"] {
-  background-color: #334155 !important;
+  background-color: #303030 !important;
 }
 
 .dark [class*="bg-[#f0f9f4]"] {
@@ -78,7 +78,7 @@
 
 .dark [class~="bg-blue-50"],
 .dark [class~="bg-blue-100"] {
-  background-color: #102a43 !important;
+  background-color: #102a1c !important;
 }
 
 .dark [class~="bg-amber-50"],
@@ -96,20 +96,20 @@
 .dark [class~="text-slate-950"],
 .dark [class~="text-slate-900"],
 .dark [class~="text-slate-800"] {
-  color: #f8fafc !important;
+  color: #f7f7f7 !important;
 }
 
 .dark [class~="text-slate-700"],
 .dark [class~="text-slate-600"] {
-  color: #d7e0ec !important;
+  color: #dedede !important;
 }
 
 .dark [class~="text-slate-500"] {
-  color: #b0bfd1 !important;
+  color: #b8b8b8 !important;
 }
 
 .dark [class~="text-slate-400"] {
-  color: #94a3b8 !important;
+  color: #969696 !important;
 }
 
 .dark [class*="text-[#1a6b3c]"],
@@ -122,44 +122,37 @@
 .dark [class~="border-slate-100"],
 .dark [class~="border-slate-200"],
 .dark [class~="border-slate-300"] {
-  border-color: #475569 !important;
+  border-color: #3a3a3a !important;
 }
 
 .dark input:not([type='checkbox']):not([type='radio']),
 .dark select,
 .dark textarea {
-  border-color: #475569;
-  background-color: #111827;
-  color: #f8fafc;
+  border-color: #3a3a3a;
+  background-color: #121212;
+  color: #f7f7f7;
 }
 
 .dark input:disabled,
 .dark select:disabled,
 .dark textarea:disabled,
 .dark input[readonly] {
-  background-color: #1e293b;
-  color: #b0bfd1;
+  background-color: #222222;
+  color: #b8b8b8;
 }
 
 .dark input::placeholder,
 .dark textarea::placeholder {
-  color: #8291a7;
+  color: #888888;
 }
 
 .dark option {
-  background-color: #111827;
-  color: #f8fafc;
+  background-color: #121212;
+  color: #f7f7f7;
 }
 
 .dark img[src="/logo.png"] {
-  border-radius: 0;
-  background: transparent;
-  padding: 0;
-  filter: brightness(0) invert(1);
-}
-
-.dark footer img[src="/logo.png"] {
-  filter: brightness(0) invert(1);
+  content: url('/logo-dark.png');
 }
 
 /* Tailwind hover utilities only become active during interaction, so they
@@ -167,7 +160,7 @@
 .dark .hover\:bg-white:hover,
 .dark .hover\:bg-slate-50:hover,
 .dark .hover\:bg-slate-100:hover {
-  background-color: #1e293b !important;
+  background-color: #222222 !important;
 }
 
 .dark .hover\:bg-emerald-50:hover,
@@ -186,22 +179,22 @@
 }
 
 .dark .hover\:text-black:hover {
-  color: #f8fafc !important;
+  color: #f7f7f7 !important;
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #090f1a;
+  background: #080808;
 }
 
 .dark .admin-shell label {
-  color: #d7e0ec;
+  color: #dedede;
 }
 
 .dark .admin-shell input:not([type='checkbox']):not([type='radio']),
 .dark .admin-shell select,
 .dark .admin-shell textarea {
-  border-color: #475569;
-  color: #f8fafc;
+  border-color: #3a3a3a;
+  color: #f7f7f7;
 }
 
 h1, h2, h3, h4 {

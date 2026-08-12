@@ -109,7 +109,7 @@ export const App = () => {
   return (
     <>
       <ScrollToTop />
-      <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: isDark ? '#172033' : '#ffffff', color: isDark ? '#f8fafc' : '#0f172a', border: `1px solid ${isDark ? '#475569' : '#e2e8f0'}` } }} />
+      <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: isDark ? '#1a1a1a' : '#ffffff', color: isDark ? '#f7f7f7' : '#0f172a', border: `1px solid ${isDark ? '#3a3a3a' : '#e2e8f0'}` } }} />
       <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm font-semibold text-slate-500">Loading…</div>}>
       <Routes>
         
