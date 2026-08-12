@@ -58,6 +58,9 @@ const trainingSchema = new mongoose.Schema(
       ],
       default: 'draft',
     },
+    completedAt: { type: Date, default: null },
+    completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    attendanceLockedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

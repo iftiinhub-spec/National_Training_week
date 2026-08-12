@@ -9,7 +9,7 @@ import { validate } from '../middleware/validate.js';
 import { getEvents, getEvent, createEvent, updateEvent, deleteEvent, getEventDays, createEventDay, updateEventDay, deleteEventDay } from '../controllers/admin/event.controller.js';
 import { getCategories, getCategory, createCategory, updateCategory, deleteCategory } from '../controllers/admin/category.controller.js';
 import { getTrainers, getTrainer, createTrainer, updateTrainer, deleteTrainer } from '../controllers/admin/trainer.controller.js';
-import { getTrainings, getTraining, createTraining, updateTraining, updateTrainingStatus, assignTrainingStaff, deleteTraining } from '../controllers/admin/training.controller.js';
+import { getTrainings, getTraining, createTraining, updateTraining, updateTrainingStatus, completeTraining, assignTrainingStaff, deleteTraining } from '../controllers/admin/training.controller.js';
 import { getParticipants, getParticipant, toggleParticipantStatus, getModerators, getModerator, createModerator, updateModerator, toggleModeratorStatus, resetModeratorPassword } from '../controllers/admin/user.controller.js';
 import { getRegistrations, getRegistration, updateRegistrationStatus } from '../controllers/admin/registration.controller.js';
 import { getMeeting, createMeeting, updateMeeting, deleteMeeting, releaseMeeting, sendTrainerInvitation, sendParticipantInvitations, getCommunications } from '../controllers/admin/meeting.controller.js';
@@ -42,6 +42,7 @@ router.route('/trainers/:id').get(getTrainer).put(uploadImage.single('photo'), u
 router.route('/trainings').get(getTrainings).post(uploadImage.single('coverImage'), createTraining);
 router.route('/trainings/:id').get(getTraining).put(uploadImage.single('coverImage'), updateTraining).delete(deleteTraining);
 router.patch('/trainings/:id/status', updateTrainingStatus);
+router.post('/trainings/:id/complete', completeTraining);
 router.patch('/trainings/:id/assign', assignTrainingStaff);
 
 // Meeting & Communications (also accessible by moderator — handled in controller)

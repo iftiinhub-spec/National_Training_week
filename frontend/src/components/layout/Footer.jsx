@@ -33,9 +33,9 @@ export const Footer = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <img
-              src="/logo.png"
+              src="/logo-dark.png"
               alt="National Training Week Logo"
-              className="h-20 w-auto object-contain brightness-0 invert"
+              className="h-20 w-auto object-contain"
             />
           </div>
           <div className="text-center md:text-right">

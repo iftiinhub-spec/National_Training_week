@@ -204,10 +204,11 @@ export const TrainingsManagement = () => {
   };
 
   const handleStatusChange = async (trainingId, newStatus) => {
+    if (newStatus === 'completed' && !window.confirm('Mark this training as completed? Attendance will be locked and certificates will be issued immediately to approved participants marked present.')) return;
     try {
       const res = await api.patch(`/admin/trainings/${trainingId}/status`, { status: newStatus });
       if (res.success) {
-        toast.success(`Status updated to ${newStatus}`);
+        toast.success(res.message || `Status updated to ${newStatus}`);
         fetchData();
       }
     } catch (err) {

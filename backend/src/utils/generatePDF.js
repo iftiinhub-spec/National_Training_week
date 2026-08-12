@@ -44,9 +44,11 @@ export const generateCertificatePDF = async ({
 
       doc.rect(28, 28, doc.page.width - 56, 10).fill('#1a6b3c');
 
-      // Official program logo
-      const logoPath = resolveAsset(process.env.CERTIFICATE_LOGO_PATH, '../frontend/public/logo.png');
-      if (logoPath) doc.image(logoPath, 58, 50, { fit: [100, 58], align: 'left', valign: 'center' });
+      // Partner logos: Hormuud University on the left and National Training Week on the right.
+      const universityLogoPath = resolveAsset(null, 'assets/hu-official-logo.png');
+      const ntwLogoPath = resolveAsset(process.env.CERTIFICATE_LOGO_PATH, '../frontend/public/logo.png');
+      if (universityLogoPath) doc.image(universityLogoPath, 58, 48, { fit: [88, 62], align: 'left', valign: 'center' });
+      if (ntwLogoPath) doc.image(ntwLogoPath, doc.page.width - 158, 50, { fit: [100, 58], align: 'right', valign: 'center' });
 
       // Header
       doc.fillColor('#1a6b3c')

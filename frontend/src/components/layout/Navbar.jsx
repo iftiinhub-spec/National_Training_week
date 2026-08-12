@@ -59,7 +59,7 @@ export const Navbar = () => {
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden xl:flex items-center gap-1">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.path;
               return (
@@ -82,7 +82,7 @@ export const Navbar = () => {
           </nav>
 
           {/* Desktop Auth */}
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden xl:flex items-center gap-2">
             <ThemeToggle />
             {isAuthenticated ? (
               <div className="relative">
@@ -157,7 +157,7 @@ export const Navbar = () => {
           </div>
 
           {/* Mobile toggle */}
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="flex items-center gap-2 xl:hidden">
             <ThemeToggle />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -173,7 +173,7 @@ export const Navbar = () => {
 
       {/* Mobile drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-black/10 shadow-xl px-4 pt-3 pb-6 space-y-1">
+        <div className="xl:hidden max-h-[calc(100vh-88px)] overflow-y-auto bg-white border-t border-black/10 shadow-xl px-4 pt-3 pb-6 space-y-1">
           {navLinks.map((link) => (
             <Link
               key={link.path}

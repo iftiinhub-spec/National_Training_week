@@ -1,4 +1,5 @@
 import Trainer from '../../models/Trainer.js';
+import Training from '../../models/Training.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 
 export const getTrainers = async (req, res, next) => {
@@ -17,8 +18,44 @@ export const getTrainers = async (req, res, next) => {
 
 export const getPublicTrainers = async (req, res, next) => {
   try {
-    const trainers = await Trainer.find({ isActive: true }).sort({ name: 1 });
-    return successResponse(res, { trainers });
+    const sessionFilter = {
+      status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] },
+      trainer: { $ne: null },
+    };
+    if (req.query.event) sessionFilter.event = req.query.event;
+    if (req.query.eventDay) sessionFilter.eventDay = req.query.eventDay;
+    const sessions = await Training.find(sessionFilter)
+      .select('title date startTime endTime trainer event eventDay category status')
+      .populate('event', 'name year')
+      .populate('eventDay', 'dayNumber theme date')
+      .populate('category', 'name')
+      .sort({ date: 1, startTime: 1 });
+    const trainerIds = [...new Set(sessions.map((session) => String(session.trainer)))];
+    const trainers = await Trainer.find({ _id: { $in: trainerIds }, isActive: true }).sort({ name: 1 }).lean();
+    const enriched = trainers.map((trainer) => ({
+      ...trainer,
+      sessions: sessions.filter((session) => String(session.trainer) === String(trainer._id)),
+    }));
+    return successResponse(res, { trainers: enriched });
+  } catch (err) { next(err); }
+};
+
+export const getPublicTrainer = async (req, res, next) => {
+  try {
+    const trainer = await Trainer.findOne({ _id: req.params.id, isActive: true }).lean();
+    if (!trainer) return errorResponse(res, 'Trainer not found.', 404);
+    const sessionFilter = {
+      trainer: trainer._id,
+      status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] },
+    };
+    if (req.query.event) sessionFilter.event = req.query.event;
+    const sessions = await Training.find(sessionFilter)
+      .select('title description coverImage date startTime endTime audience level language status event eventDay category')
+      .populate('event', 'name year')
+      .populate('eventDay', 'dayNumber theme date')
+      .populate('category', 'name')
+      .sort({ date: 1, startTime: 1 });
+    return successResponse(res, { trainer: { ...trainer, sessions } });
   } catch (err) { next(err); }
 };
 

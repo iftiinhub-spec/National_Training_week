@@ -17,6 +17,7 @@ import About from './pages/public/About';
 import Program from './pages/public/Program';
 import Trainings from './pages/public/Trainings';
 import TrainingDetails from './pages/public/TrainingDetails';
+import TrainerDetails from './pages/public/TrainerDetails';
 import Recordings from './pages/public/Recordings';
 import VerifyCertificate from './pages/public/VerifyCertificate';
 import Contact from './pages/public/Contact';
@@ -89,6 +90,7 @@ const PublicLayout = () => {
           <Route path="/program"             element={<div className="pt-[88px]"><Program /></div>} />
           <Route path="/trainings"           element={<div className="pt-[88px]"><Trainings /></div>} />
           <Route path="/trainings/:id"       element={<div className="pt-[88px]"><TrainingDetails /></div>} />
+          <Route path="/trainers/:id"        element={<div className="pt-[88px]"><TrainerDetails /></div>} />
           <Route path="/recordings"          element={<div className="pt-[88px]"><Recordings /></div>} />
           <Route path="/verify-certificate"  element={<div className="pt-[88px]"><VerifyCertificate /></div>} />
           <Route path="/contact"             element={<div className="pt-[88px]"><Contact /></div>} />
@@ -107,7 +109,7 @@ export const App = () => {
   return (
     <>
       <ScrollToTop />
-      <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: isDark ? '#172033' : '#ffffff', color: isDark ? '#f8fafc' : '#0f172a', border: `1px solid ${isDark ? '#475569' : '#e2e8f0'}` } }} />
+      <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: isDark ? '#1a1a1a' : '#ffffff', color: isDark ? '#f7f7f7' : '#0f172a', border: `1px solid ${isDark ? '#3a3a3a' : '#e2e8f0'}` } }} />
       <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm font-semibold text-slate-500">Loading…</div>}>
       <Routes>
         

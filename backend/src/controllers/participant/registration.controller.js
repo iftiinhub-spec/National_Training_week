@@ -11,10 +11,36 @@ export const registerForTraining = async (req, res, next) => {
     const { trainingId } = req.body;
     const participantId = req.user._id;
 
-    const training = await Training.findById(trainingId);
+    const training = await Training.findById(trainingId)
+      .populate('eventDay', 'dayNumber theme date')
+      .populate('event', 'registrationStart registrationDeadline startDate status');
     if (!training) return errorResponse(res, 'Training not found.', 404);
     if (!['published', 'registration_open'].includes(training.status)) {
       return errorResponse(res, 'This training is not currently open for registration.', 400);
+    }
+    const now = new Date();
+    if (!training.event?.registrationStart || !training.event?.registrationDeadline) {
+      return errorResponse(res, 'The registration window has not been configured for this event.', 400);
+    }
+    if (now < training.event.registrationStart) {
+      return errorResponse(res, `Registration opens on ${training.event.registrationStart.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })}.`, 400);
+    }
+    if (now >= training.event.registrationDeadline) {
+      return errorResponse(res, 'Registration for this event has closed.', 400);
+    }
+
+    const sameDayTrainings = await Training.find({
+      _id: { $ne: training._id },
+      eventDay: training.eventDay?._id || training.eventDay,
+    }).select('_id title');
+    const conflict = await Registration.findOne({
+      participant: participantId,
+      training: { $in: sameDayTrainings.map((item) => item._id) },
+      status: { $in: ['pending', 'approved'] },
+    }).populate('training', 'title');
+    if (conflict) {
+      const dayLabel = training.eventDay?.dayNumber ? `Day ${training.eventDay.dayNumber}` : 'this event day';
+      return errorResponse(res, `You already have an active registration for “${conflict.training.title}” on ${dayLabel}. A participant can register for only one session per event day.`, 409);
     }
 
     // Capacity check

@@ -1,6 +1,7 @@
 import Training from '../../models/Training.js';
 import Registration from '../../models/Registration.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
+import { completeTrainingSession } from '../../services/completeTrainingSession.js';
 
 // All status values — admin can freely transition between any of these
 const ALL_STATUSES = ['draft', 'published', 'registration_open', 'registration_closed', 'ongoing', 'completed', 'cancelled'];
@@ -79,9 +80,26 @@ export const updateTrainingStatus = async (req, res, next) => {
       return errorResponse(res, `Invalid status '${status}'. Valid values: ${ALL_STATUSES.join(', ')}.`, 400);
     }
 
+    if (status === 'completed') {
+      const result = await completeTrainingSession({ trainingId: training._id, completedBy: req.user._id });
+      return successResponse(res, result, `Training completed. ${result.summary.issued} certificate${result.summary.issued === 1 ? '' : 's'} issued.`);
+    }
+    if (training.status === 'completed') return errorResponse(res, 'A completed training cannot be reopened because attendance is locked and certificates may already be issued.', 400);
     training.status = status;
     await training.save();
     return successResponse(res, { training }, `Training status updated to '${status}'.`);
+  } catch (err) { next(err); }
+};
+
+export const completeTraining = async (req, res, next) => {
+  try {
+    const training = await Training.findById(req.params.id);
+    if (!training) return errorResponse(res, 'Training not found.', 404);
+    if (req.user.role !== 'admin' && String(training.moderator) !== String(req.user._id)) {
+      return errorResponse(res, 'Only the assigned moderator or an administrator can complete this training.', 403);
+    }
+    const result = await completeTrainingSession({ trainingId: training._id, completedBy: req.user._id });
+    return successResponse(res, result, `Training completed. ${result.summary.issued} certificate${result.summary.issued === 1 ? '' : 's'} issued and ${result.summary.notified} notification${result.summary.notified === 1 ? '' : 's'} delivered.`);
   } catch (err) { next(err); }
 };
 
