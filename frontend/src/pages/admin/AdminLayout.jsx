@@ -18,6 +18,7 @@ import {
   XMarkIcon,
   UserCircleIcon,
   Cog6ToothIcon,
+  QuestionMarkCircleIcon,
 } from '@heroicons/react/24/solid';
 
 export const AdminLayout = () => {
@@ -59,6 +60,7 @@ export const AdminLayout = () => {
         { name: 'Certificates', path: '/admin/certificates', icon: CheckBadgeIcon },
         { name: 'Reports & Analytics', path: '/admin/reports', icon: ChartBarIcon },
         { name: 'Contact Messages', path: '/admin/contact-messages', icon: EnvelopeIcon },
+        { name: 'FAQ Management', path: '/admin/faqs', icon: QuestionMarkCircleIcon },
       ],
     },
     {
@@ -71,19 +73,19 @@ export const AdminLayout = () => {
   ];
 
   return (
-    <div className="admin-shell min-h-screen bg-slate-100 md:flex">
+    <div className="admin-shell min-h-screen bg-slate-100 lg:flex">
       {sidebarOpen && (
         <button
           type="button"
           aria-label="Close administration menu"
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
       
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[min(86vw,18rem)] flex-col border-r border-slate-200 bg-white p-4 text-slate-950 shadow-2xl transition-transform duration-200 md:sticky md:top-0 md:h-screen md:w-72 md:translate-x-0 md:shadow-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="mb-4 flex items-center justify-between px-1 md:hidden">
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[min(86vw,18rem)] flex-col border-r border-slate-200 bg-white p-4 text-slate-950 shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:translate-x-0 lg:shadow-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="mb-4 flex items-center justify-between px-1 lg:hidden">
           <span className="text-xs font-bold uppercase tracking-[.16em] text-slate-400">Admin menu</span>
           <button type="button" onClick={() => setSidebarOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100" aria-label="Close administration menu">
             <XMarkIcon className="h-6 w-6" />
@@ -136,7 +138,7 @@ export const AdminLayout = () => {
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 md:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 lg:hidden"
               aria-label="Open administration menu"
               aria-expanded={sidebarOpen}
             >

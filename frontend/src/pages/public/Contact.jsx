@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import { EnvelopeIcon, PhoneIcon, MapPinIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 
 const CONTACT_INFO = [
-  { Icon: MapPinIcon,  label: 'Location', value: 'Mogadishu, Somalia' },
-  { Icon: EnvelopeIcon, label: 'Email Address',  value: 'ntw@trainingweek.so' },
-  { Icon: PhoneIcon,   label: 'Inquiry Hotline', value: '+252 61 000 0000' },
-  { Icon: GlobeAltIcon, label: 'Official Website', value: 'www.nationaltrainingweek.so' },
+  { Icon: MapPinIcon, label: 'Location', value: 'Daru Shura Campus, Villa Baidoa, Wadajir, Mogadishu, Somalia' },
+  { Icon: EnvelopeIcon, label: 'Email Address', value: 'info@ntw.hu.edu.so', href: 'mailto:info@ntw.hu.edu.so' },
+  { Icon: PhoneIcon, label: 'Inquiry Hotline', value: '+252 613 311119 / +2521 858117', href: 'tel:+252613311119' },
+  { Icon: GlobeAltIcon, label: 'Official Website', value: 'www.ntw.hu.edu.so', href: 'https://www.ntw.hu.edu.so' },
 ];
 
 const inputClass =
@@ -59,35 +60,30 @@ export const Contact = () => {
                 </div>
 
                 <div className="space-y-5">
-                  {CONTACT_INFO.map(({ Icon, label, value }) => (
+                  {CONTACT_INFO.map(({ Icon, label, value, href }) => (
                     <div key={label} className="flex items-start gap-4">
                       <div className="p-2.5 bg-white/10 rounded-xl shrink-0">
                         <Icon className="w-5 h-5 text-white" />
                       </div>
                       <div>
                         <p className="text-xs font-bold text-white uppercase tracking-wide">{label}</p>
-                        <p className="text-sm text-white mt-0.5">{value}</p>
+                        {href ? (
+                          <a href={href} className="mt-0.5 block text-sm text-white hover:underline">
+                            {value}
+                          </a>
+                        ) : (
+                          <p className="mt-0.5 text-sm text-white">{value}</p>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* FAQ quick tips */}
-              <div className="bg-white rounded-2xl border border-black/10 p-6 space-y-4 shadow-sm">
-                <h3 className="text-sm font-black text-black uppercase tracking-wide border-b border-black/10 pb-3">
-                  Quick Answers
-                </h3>
-                {[
-                  ['Is registration free?', 'Yes — published National Training Week sessions are free for participants unless an edition states otherwise.'],
-                  ['How do I get a certificate?', 'Attend the live session and mark your attendance via QR scan.'],
-                  ['What platform is used?', 'Zoom, Google Meet, or Microsoft Teams depending on session.'],
-                ].map(([q, a]) => (
-                  <div key={q} className="space-y-1">
-                    <p className="text-xs font-bold text-[#1da156]">{q}</p>
-                    <p className="text-xs text-black/70 leading-relaxed">{a}</p>
-                  </div>
-                ))}
+              <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+                <h3 className="text-sm font-black uppercase tracking-wide text-black">Looking for a quick answer?</h3>
+                <p className="mt-3 text-sm leading-6 text-black/70">Read answers about registration, attendance, certificates, and training sessions before sending a message.</p>
+                <Link to="/faq" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl border border-[#1a6b3c] px-5 text-sm font-bold text-[#1a6b3c] transition hover:bg-[#1a6b3c] hover:text-white">View FAQs</Link>
               </div>
             </div>
 

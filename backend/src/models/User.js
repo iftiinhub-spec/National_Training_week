@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { isValidInternationalPhone, normalizePhone } from '../utils/phone.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -25,10 +26,16 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'moderator', 'participant'],
+      enum: ['admin', 'moderator', 'trainer', 'participant'],
       required: true,
     },
-    phone: { type: String, trim: true },
+    phone: {
+      type: String,
+      trim: true,
+      set: normalizePhone,
+      validate: { validator: (value) => !value || isValidInternationalPhone(value), message: 'Enter a valid phone number for its country code.' },
+    },
+    trainerProfile: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainer', default: null },
     gender: { type: String, enum: ['male', 'female', ''] },
     region: { type: String, trim: true },
     organization: { type: String, trim: true },

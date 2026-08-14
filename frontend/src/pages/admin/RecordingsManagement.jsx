@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
+import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import { PlusIcon, VideoCameraIcon, EyeIcon, EyeSlashIcon, TrashIcon } from '@heroicons/react/24/outline';
 
@@ -10,6 +11,7 @@ export const RecordingsManagement = () => {
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [filters, setFilters] = useState({ event: '', eventDay: '', training: '' });
 
   const [form, setForm] = useState({
     training: '',
@@ -18,11 +20,11 @@ export const RecordingsManagement = () => {
     description: '',
   });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [recRes, trRes] = await Promise.all([
-        api.get('/admin/recordings'),
-        api.get('/admin/trainings'),
+        api.get(`/admin/recordings?${new URLSearchParams({ ...filters, limit: '100' }).toString()}`),
+        api.get('/admin/trainings?limit=100'),
       ]);
 
       if (recRes.success) setRecordings(recRes.data || []);
@@ -37,11 +39,11 @@ export const RecordingsManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,25 +84,27 @@ export const RecordingsManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">Recorded Sessions Library</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-black leading-tight text-slate-900 sm:text-2xl">Recorded Sessions Library</h1>
           <p className="text-xs text-slate-500 mt-1">
             Manage recorded session URLs. Per spec: Only published recordings appear on the public Recorded Sessions page.
           </p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs"
+          className="flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#1a6b3c] px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#124d2a] sm:w-auto"
         >
           <PlusIcon className="w-4 h-4" />
           <span>Add Session Recording</span>
         </button>
       </div>
 
+      <AdminProgramFilters value={filters} onChange={setFilters} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {recordings.map((rec) => (
-          <div key={rec._id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4 flex flex-col justify-between">
+          <div key={rec._id} className="flex flex-col justify-between space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-6">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
@@ -133,6 +137,7 @@ export const RecordingsManagement = () => {
             </div>
           </div>
         ))}
+        {!recordings.length && <div className="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-12 text-center text-sm text-slate-500 sm:p-12">No recordings match these filters.</div>}
       </div>
 
       {showModal && (

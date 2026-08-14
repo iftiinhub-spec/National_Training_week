@@ -20,6 +20,7 @@ const eventDaySchema = new mongoose.Schema(
 
 // A day number must be unique within an event
 eventDaySchema.index({ event: 1, dayNumber: 1 }, { unique: true });
+eventDaySchema.index({ event: 1, date: 1 }, { unique: true });
 
 const EventDay = mongoose.model('EventDay', eventDaySchema);
 export default EventDay;

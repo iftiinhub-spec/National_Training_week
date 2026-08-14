@@ -11,7 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export const Navbar = () => {
-  const { user, isAuthenticated, logout, isAdmin, isModerator, isParticipant } = useAuth();
+  const { user, isAuthenticated, logout, isAdmin, isModerator, isParticipant, isTrainer } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const navigate = useNavigate();
@@ -36,11 +36,13 @@ export const Navbar = () => {
   const getDashboardPath = () => {
     if (isAdmin) return '/admin';
     if (isModerator) return '/moderator';
+    if (isTrainer) return '/trainer';
     return '/portal';
   };
   const getDashboardLabel = () => {
     if (isAdmin) return 'Admin Dashboard';
     if (isModerator) return 'Moderator Portal';
+    if (isTrainer) return 'Trainer Portal';
     return 'My Portal';
   };
 

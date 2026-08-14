@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { normalizeTrainingTime } from '../utils/trainingDateTime.js';
 
 const trainingSchema = new mongoose.Schema(
   {
@@ -34,8 +35,18 @@ const trainingSchema = new mongoose.Schema(
       default: null,
     },
     date: { type: Date, required: [true, 'Training date is required'] },
-    startTime: { type: String, required: [true, 'Start time is required'] },
-    endTime: { type: String, required: [true, 'End time is required'] },
+    startTime: {
+      type: String,
+      required: [true, 'Start time is required'],
+      set: normalizeTrainingTime,
+      match: [/^([01]\d|2[0-3]):[0-5]\d$/, 'Start time must be a valid time'],
+    },
+    endTime: {
+      type: String,
+      required: [true, 'End time is required'],
+      set: normalizeTrainingTime,
+      match: [/^([01]\d|2[0-3]):[0-5]\d$/, 'End time must be a valid time'],
+    },
     audience: { type: String, trim: true },
     level: {
       type: String,

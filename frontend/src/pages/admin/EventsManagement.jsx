@@ -5,16 +5,33 @@ import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
 import { CalendarDaysIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
-const registrationDefaults = (eventDate) => {
-  if (!eventDate) return { registrationStart: '', registrationDeadline: '' };
-  const start = new Date(`${eventDate}T09:00:00`);
-  const opens = new Date(start.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const closes = new Date(start.getTime() - 24 * 60 * 60 * 1000);
-  const localValue = (date) => {
-    const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-    return shifted.toISOString().slice(0, 16);
-  };
-  return { registrationStart: localValue(opens), registrationDeadline: localValue(closes) };
+const minimumFutureDateTime = () => {
+  const future = new Date(Date.now() + 60 * 1000);
+  const shifted = new Date(future.getTime() - future.getTimezoneOffset() * 60000);
+  return shifted.toISOString().slice(0, 16);
+};
+
+const datePart = (dateTime = '') => dateTime.split('T')[0] || '';
+const timePart = (dateTime = '') => dateTime.split('T')[1] || '';
+const minuteAfter = (dateTime = '') => {
+  if (!dateTime) return '';
+  const date = new Date(dateTime);
+  date.setMinutes(date.getMinutes() + 1);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+};
+
+const availableEventStatus = (form) => {
+  const opensAt = new Date(form.registrationStart).getTime();
+  const closesAt = new Date(form.registrationDeadline).getTime();
+  const startsAt = form.startDate && form.startTime ? new Date(`${form.startDate}T${form.startTime}`).getTime() : Number.NaN;
+  const endsAt = form.endDate ? new Date(`${form.endDate}T23:59:59`).getTime() : Number.NaN;
+  if (![opensAt, closesAt, startsAt, endsAt].every(Number.isFinite)) return null;
+  const now = Date.now();
+  if (now < opensAt) return 'registration_scheduled';
+  if (now < closesAt) return 'registration_open';
+  if (now < startsAt) return 'registration_closed';
+  if (now <= endsAt) return 'ongoing';
+  return 'completed';
 };
 
 const toNairobiInput = (value) => value
@@ -33,17 +50,17 @@ export const EventsManagement = () => {
   const [editingDay, setEditingDay] = useState(null);
 
   const [eventForm, setEventForm] = useState({
-    name: 'National Training Week 2026',
-    theme: 'Artificial Intelligence for National Transformation',
-    year: 2026,
-    startDate: '2026-09-14',
-    startTime: '09:00',
-    endDate: '2026-09-19',
-    registrationStart: '2026-08-01T09:00',
-    registrationDeadline: '2026-09-13T09:00',
+    name: '',
+    theme: '',
+    year: '',
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    registrationStart: '',
+    registrationDeadline: '',
     description: '',
-    status: 'registration_open',
-    isCurrent: true,
+    status: 'draft',
+    isCurrent: false,
   });
 
   const [dayForm, setDayForm] = useState({
@@ -82,6 +99,28 @@ export const EventsManagement = () => {
 
   const handleEventSubmit = async (e) => {
     e.preventDefault();
+    const eventStartsAt = eventForm.startDate && eventForm.startTime
+      ? new Date(`${eventForm.startDate}T${eventForm.startTime}`).getTime()
+      : Number.NaN;
+    const registrationOpensAt = new Date(eventForm.registrationStart).getTime();
+    const registrationClosesAt = new Date(eventForm.registrationDeadline).getTime();
+    if (!Number.isFinite(registrationOpensAt) || !Number.isFinite(registrationClosesAt) || !Number.isFinite(eventStartsAt)) {
+      toast.error('Complete the registration window and event schedule.');
+      return;
+    }
+    if (registrationOpensAt >= registrationClosesAt) {
+      toast.error('Registration must open before it closes.');
+      return;
+    }
+    if (registrationClosesAt >= eventStartsAt) {
+      toast.error('Registration must close before the event starts.');
+      return;
+    }
+    const validStatus = availableEventStatus(eventForm);
+    if (eventForm.status !== 'draft' && eventForm.status !== validStatus) {
+      toast.error(`Based on the schedule, status must be ${validStatus?.replaceAll('_', ' ') || 'Draft until the schedule is complete'}.`);
+      return;
+    }
     try {
       if (editingEvent) {
         await api.put(`/admin/events/${editingEvent._id}`, eventForm);
@@ -101,6 +140,26 @@ export const EventsManagement = () => {
   const handleDaySubmit = async (e) => {
     e.preventDefault();
     if (!selectedEventForDay) return;
+    const day = dayForm.date;
+    const eventStart = selectedEventForDay.startDate?.split('T')[0];
+    const eventEnd = selectedEventForDay.endDate?.split('T')[0];
+    const registrationDeadline = new Date(selectedEventForDay.registrationDeadline).getTime();
+    const dayStartsAt = day ? new Date(`${day}T00:00:00+03:00`).getTime() : Number.NaN;
+    if (!day || day < eventStart || day > eventEnd || dayStartsAt <= registrationDeadline) {
+      toast.error(`Event day must be after registration closes and between ${eventStart} and ${eventEnd}.`);
+      return;
+    }
+    const siblingDays = eventDaysMap[selectedEventForDay._id] || [];
+    const duplicateDate = siblingDays.find((item) => item._id !== editingDay?._id && item.date?.split('T')[0] === day);
+    const duplicateNumber = siblingDays.find((item) => item._id !== editingDay?._id && item.dayNumber === dayForm.dayNumber);
+    if (duplicateDate) {
+      toast.error(`An event day already exists on ${day}. Add training sessions to that day instead.`);
+      return;
+    }
+    if (duplicateNumber) {
+      toast.error(`Day ${dayForm.dayNumber} already exists for this event.`);
+      return;
+    }
     try {
       if (editingDay) {
         await api.put(`/admin/events/${selectedEventForDay._id}/days/${editingDay._id}`, dayForm);
@@ -185,9 +244,9 @@ export const EventsManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">Events & Event Days Management</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-black leading-tight text-slate-900 sm:text-2xl">Events & Event Days Management</h1>
           <p className="text-xs text-slate-500 mt-1">
             Manage annual National Training Week editions (2026+) and create/edit themed Event Days for each edition.
           </p>
@@ -195,23 +254,22 @@ export const EventsManagement = () => {
         <button
           onClick={() => {
             setEditingEvent(null);
-            const nextYear = new Date().getFullYear() + 1;
             setEventForm({
-              name: `National Training Week ${nextYear}`,
+              name: '',
               theme: '',
-              year: nextYear,
+              year: '',
               startDate: '',
-              startTime: '09:00',
+              startTime: '',
               endDate: '',
               registrationStart: '',
               registrationDeadline: '',
               description: '',
-              status: 'registration_scheduled',
+              status: 'draft',
               isCurrent: false,
             });
             setShowEventModal(true);
           }}
-          className="px-4 py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs"
+          className="flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#1a6b3c] px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#124d2a] sm:w-auto"
         >
           <PlusIcon className="w-4 h-4" />
           <span>Create New Event Edition</span>
@@ -223,12 +281,12 @@ export const EventsManagement = () => {
         {events.map((ev) => {
           const days = eventDaysMap[ev._id] || [];
           return (
-            <div key={ev._id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
+            <div key={ev._id} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-6">
               
               {/* Event Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-4">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
                     <span className="text-xs font-bold font-mono px-2.5 py-0.5 bg-emerald-100 text-[#1a6b3c] rounded-md">
                       Year {ev.year}
                     </span>
@@ -239,17 +297,17 @@ export const EventsManagement = () => {
                   <p className="text-xs text-emerald-700 font-semibold mt-0.5">Theme: {ev.theme}</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => handleAddDay(ev)}
-                    className="px-3 py-1.5 bg-[#155289] hover:bg-[#11426e] text-white font-bold text-xs rounded-lg flex items-center gap-1"
+                    className="flex min-h-10 items-center gap-1 rounded-lg bg-[#1a6b3c] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#124d2a]"
                   >
                     <PlusIcon className="w-3.5 h-3.5" />
                     <span>Add Event Day</span>
                   </button>
                   <button
                     onClick={() => handleEditEvent(ev)}
-                    className="p-2 text-slate-600 hover:text-blue-600 rounded-lg hover:bg-slate-50"
+                    className="min-h-10 min-w-10 rounded-lg p-2 text-slate-600 hover:bg-emerald-50 hover:text-[#1a6b3c]"
                   >
                     <PencilIcon className="w-4 h-4" />
                   </button>
@@ -328,6 +386,7 @@ export const EventsManagement = () => {
                 <label className="block font-bold uppercase text-slate-700 mb-1">Event Name</label>
                 <input
                   type="text"
+                  placeholder="e.g. National Training Week 2027"
                   value={eventForm.name}
                   onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300"
@@ -338,19 +397,39 @@ export const EventsManagement = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl bg-emerald-50/60 border border-emerald-100 p-4">
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Registration Opens</label>
-                  <input type="datetime-local" value={eventForm.registrationStart} onChange={(e) => setEventForm({ ...eventForm, registrationStart: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white" required />
+                  <input type="datetime-local" min={editingEvent ? undefined : minimumFutureDateTime()} max={eventForm.registrationDeadline || undefined} value={eventForm.registrationStart} onChange={(e) => setEventForm({ ...eventForm, registrationStart: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white" required />
                 </div>
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Registration Deadline</label>
-                  <input type="datetime-local" value={eventForm.registrationDeadline} onChange={(e) => setEventForm({ ...eventForm, registrationDeadline: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white" required />
+                  <input
+                    type="datetime-local"
+                    min={eventForm.registrationStart || minimumFutureDateTime()}
+                    max={eventForm.startDate && eventForm.startTime ? `${eventForm.startDate}T${eventForm.startTime}` : undefined}
+                    value={eventForm.registrationDeadline}
+                    onChange={(e) => {
+                      const deadline = e.target.value;
+                      const deadlineDate = datePart(deadline);
+                      const startIsTooEarly = eventForm.startDate && eventForm.startDate < deadlineDate;
+                      const sameDayTimeIsTooEarly = eventForm.startDate === deadlineDate
+                        && eventForm.startTime && eventForm.startTime <= timePart(deadline);
+                      setEventForm({
+                        ...eventForm,
+                        registrationDeadline: deadline,
+                        ...(startIsTooEarly || sameDayTimeIsTooEarly ? { startDate: '', endDate: '', startTime: '' } : {}),
+                      });
+                    }}
+                    className="w-full p-2.5 rounded-lg border border-slate-300 bg-white"
+                    required
+                  />
                 </div>
-                <p className="sm:col-span-2 text-[11px] leading-5 text-slate-500">These values are created automatically from the event start date. You can extend or shorten the window at any time.</p>
+                <p className="sm:col-span-2 text-[11px] leading-5 text-slate-500">Choose when registration opens and closes. Both must be before the event start date and time.</p>
               </div>
 
               <div>
                 <label className="block font-bold uppercase text-slate-700 mb-1">Theme</label>
                 <input
                   type="text"
+                  placeholder="e.g. Digital Skills for National Growth"
                   value={eventForm.theme}
                   onChange={(e) => setEventForm({ ...eventForm, theme: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300"
@@ -363,8 +442,10 @@ export const EventsManagement = () => {
                   <label className="block font-bold uppercase text-slate-700 mb-1">Year</label>
                   <input
                     type="number"
+                    placeholder="e.g. 2027"
+                    min={new Date().getFullYear()}
                     value={eventForm.year}
-                    onChange={(e) => setEventForm({ ...eventForm, year: Number(e.target.value) })}
+                    onChange={(e) => setEventForm({ ...eventForm, year: e.target.value ? Number(e.target.value) : '' })}
                     className="w-full p-2.5 rounded-lg border border-slate-300"
                     required
                   />
@@ -373,10 +454,16 @@ export const EventsManagement = () => {
                   <label className="block font-bold uppercase text-slate-700 mb-1">Start Date</label>
                   <input
                     type="date"
+                    min={datePart(eventForm.registrationDeadline) || (eventForm.year ? `${eventForm.year}-01-01` : undefined)}
+                    max={eventForm.year ? `${eventForm.year}-12-31` : undefined}
                     value={eventForm.startDate}
                     onChange={(e) => {
-                      const defaults = registrationDefaults(e.target.value);
-                      setEventForm({ ...eventForm, startDate: e.target.value, ...(!editingEvent ? defaults : {}) });
+                      setEventForm({
+                        ...eventForm,
+                        startDate: e.target.value,
+                        ...(eventForm.endDate && eventForm.endDate < e.target.value ? { endDate: '' } : {}),
+                        ...(e.target.value !== datePart(eventForm.registrationDeadline) ? {} : { startTime: '' }),
+                      });
                     }}
                     className="w-full p-2.5 rounded-lg border border-slate-300"
                     required
@@ -386,6 +473,8 @@ export const EventsManagement = () => {
                   <label className="block font-bold uppercase text-slate-700 mb-1">End Date</label>
                   <input
                     type="date"
+                    min={eventForm.startDate || (eventForm.year ? `${eventForm.year}-01-01` : undefined)}
+                    max={eventForm.year ? `${eventForm.year}-12-31` : undefined}
                     value={eventForm.endDate}
                     onChange={(e) => setEventForm({ ...eventForm, endDate: e.target.value })}
                     className="w-full p-2.5 rounded-lg border border-slate-300"
@@ -394,7 +483,7 @@ export const EventsManagement = () => {
                 </div>
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Event Starts</label>
-                  <input type="time" value={eventForm.startTime} onChange={(e) => setEventForm({ ...eventForm, startTime: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300" required />
+                  <input type="time" min={eventForm.startDate === datePart(eventForm.registrationDeadline) ? minuteAfter(eventForm.registrationDeadline) : undefined} value={eventForm.startTime} onChange={(e) => setEventForm({ ...eventForm, startTime: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300" required />
                 </div>
               </div>
 
@@ -406,11 +495,11 @@ export const EventsManagement = () => {
                   className="w-full p-2.5 rounded-lg border border-slate-300 bg-white"
                 >
                   <option value="draft">Draft</option>
-                  <option value="registration_scheduled">Registration Scheduled</option>
-                  <option value="registration_open">Registration Open</option>
-                  <option value="registration_closed">Registration Closed</option>
-                  <option value="ongoing">Ongoing</option>
-                  <option value="completed">Completed</option>
+                  <option value="registration_scheduled" disabled={availableEventStatus(eventForm) !== 'registration_scheduled'}>Registration Scheduled</option>
+                  <option value="registration_open" disabled={availableEventStatus(eventForm) !== 'registration_open'}>Registration Open</option>
+                  <option value="registration_closed" disabled={availableEventStatus(eventForm) !== 'registration_closed'}>Registration Closed</option>
+                  <option value="ongoing" disabled={availableEventStatus(eventForm) !== 'ongoing'}>Ongoing</option>
+                  <option value="completed" disabled={availableEventStatus(eventForm) !== 'completed'}>Completed</option>
                   </select>
                   <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 cursor-pointer">
                     <input type="checkbox" checked={eventForm.isCurrent} onChange={(e) => setEventForm({ ...eventForm, isCurrent: e.target.checked })} className="mt-0.5 h-4 w-4 accent-[#1a6b3c]" />
@@ -464,6 +553,8 @@ export const EventsManagement = () => {
                   <label className="block font-bold uppercase text-slate-700 mb-1">Day Date *</label>
                   <input
                     type="date"
+                    min={selectedEventForDay?.startDate?.split('T')[0]}
+                    max={selectedEventForDay?.endDate?.split('T')[0]}
                     value={dayForm.date}
                     onChange={(e) => setDayForm({ ...dayForm, date: e.target.value })}
                     className="w-full p-2.5 rounded-lg border border-slate-300"

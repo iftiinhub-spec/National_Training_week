@@ -8,7 +8,7 @@ import { validate } from '../middleware/validate.js';
 // Controllers
 import { getEvents, getEvent, createEvent, updateEvent, deleteEvent, getEventDays, createEventDay, updateEventDay, deleteEventDay } from '../controllers/admin/event.controller.js';
 import { getCategories, getCategory, createCategory, updateCategory, deleteCategory } from '../controllers/admin/category.controller.js';
-import { getTrainers, getTrainer, createTrainer, updateTrainer, deleteTrainer } from '../controllers/admin/trainer.controller.js';
+import { getTrainers, getTrainer, createTrainer, updateTrainer, deleteTrainer, reviewTrainer } from '../controllers/admin/trainer.controller.js';
 import { getTrainings, getTraining, createTraining, updateTraining, updateTrainingStatus, completeTraining, assignTrainingStaff, deleteTraining } from '../controllers/admin/training.controller.js';
 import { getParticipants, getParticipant, toggleParticipantStatus, getModerators, getModerator, createModerator, updateModerator, toggleModeratorStatus, resetModeratorPassword } from '../controllers/admin/user.controller.js';
 import { getRegistrations, getRegistration, updateRegistrationStatus } from '../controllers/admin/registration.controller.js';
@@ -20,6 +20,7 @@ import { getRecordings, getRecording, createRecording, updateRecording, togglePu
 import { getOverview, registrationReport, attendanceReport, participantsByRegion, participantsByType, certificateReport, feedbackReport, dailyAttendanceSummary } from '../controllers/admin/report.controller.js';
 import { getContactMessages, markAsRead, deleteContactMessage } from '../controllers/admin/contact.controller.js';
 import { getSettings, updateSettings, sendTestEmail, uploadCertificateSignature, removeCertificateSignature } from '../controllers/admin/settings.controller.js';
+import { createFAQ, deleteFAQ, getFAQs, toggleFAQPublish, updateFAQ } from '../controllers/admin/faq.controller.js';
 
 const router = express.Router();
 router.use(protect, adminOnly);
@@ -37,6 +38,7 @@ router.route('/categories/:id').get(getCategory).put(updateCategory).delete(dele
 // Trainers
 router.route('/trainers').get(getTrainers).post(uploadImage.single('photo'), createTrainer);
 router.route('/trainers/:id').get(getTrainer).put(uploadImage.single('photo'), updateTrainer).delete(deleteTrainer);
+router.patch('/trainers/:id/access', reviewTrainer);
 
 // Trainings
 router.route('/trainings').get(getTrainings).post(uploadImage.single('coverImage'), createTraining);
@@ -107,6 +109,24 @@ router.route('/contact-messages').get(getContactMessages);
 router.patch('/contact-messages/:id/read', markAsRead);
 router.delete('/contact-messages/:id', deleteContactMessage);
 
+// Frequently asked questions
+const faqValidation = [
+  body('question').trim().isLength({ min: 5, max: 200 }).withMessage('Question must be between 5 and 200 characters.'),
+  body('answer').trim().isLength({ min: 10, max: 2000 }).withMessage('Answer must be between 10 and 2000 characters.'),
+  body('category').optional({ checkFalsy: true }).isIn(['General', 'Registration', 'Training Sessions', 'Attendance', 'Certificates', 'Trainer Applications', 'Technical Support']).withMessage('Select a valid FAQ category.'),
+  body('displayOrder').optional().isInt({ min: 0, max: 9999 }).withMessage('Display order must be a non-negative number.'),
+  body('isPublished').optional().isBoolean().withMessage('Published status must be true or false.'),
+];
+router.route('/faqs').get(getFAQs).post(faqValidation, validate, createFAQ);
+router.route('/faqs/:id')
+  .put(param('id').isMongoId().withMessage('Valid FAQ ID is required.'), ...faqValidation, validate, updateFAQ)
+  .delete(param('id').isMongoId().withMessage('Valid FAQ ID is required.'), validate, deleteFAQ);
+router.patch('/faqs/:id/publish',
+  param('id').isMongoId().withMessage('Valid FAQ ID is required.'),
+  body('isPublished').isBoolean().withMessage('Published status must be true or false.'),
+  validate,
+  toggleFAQPublish);
+
 // Public identity and email presentation settings (SMTP credentials remain environment-only)
 router.route('/settings').get(getSettings).put([
   body('organizerName').trim().isLength({ min: 2, max: 100 }).withMessage('Organizer name must be between 2 and 100 characters.'),
@@ -114,6 +134,10 @@ router.route('/settings').get(getSettings).put([
   body('replyToEmail').isEmail().withMessage('A valid reply-to email is required.').normalizeEmail(),
   body('location').trim().isLength({ min: 2, max: 120 }).withMessage('Location must be between 2 and 120 characters.'),
   body('facebookUrl').optional({ checkFalsy: true }).isURL({ protocols: ['https'], require_protocol: true }).withMessage('Facebook URL must start with https://.'),
+  body('tiktokUrl').optional({ checkFalsy: true }).isURL({ protocols: ['https'], require_protocol: true }).withMessage('TikTok URL must start with https://.'),
+  body('instagramUrl').optional({ checkFalsy: true }).isURL({ protocols: ['https'], require_protocol: true }).withMessage('Instagram URL must start with https://.'),
+  body('linkedinUrl').optional({ checkFalsy: true }).isURL({ protocols: ['https'], require_protocol: true }).withMessage('LinkedIn URL must start with https://.'),
+  body('xUrl').optional({ checkFalsy: true }).isURL({ protocols: ['https'], require_protocol: true }).withMessage('X URL must start with https://.'),
   body('emailSenderName').trim().isLength({ min: 2, max: 100 }).withMessage('Email sender name must be between 2 and 100 characters.'),
   body('smtpUser').optional({ checkFalsy: true }).isEmail().withMessage('A valid Gmail sender address is required.').normalizeEmail(),
   body('smtpPassword').optional({ checkFalsy: true }).isLength({ min: 16, max: 32 }).withMessage('The Google App Password must be between 16 and 32 characters.'),

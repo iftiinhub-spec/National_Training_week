@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import { emailButton, emailLayout, sendEmail } from '../utils/email.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { sendWelcomeEmail } from '../utils/welcomeEmail.js';
+import Trainer from '../models/Trainer.js';
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
@@ -40,6 +41,13 @@ export const login = async (req, res, next) => {
     const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash');
     if (!user || !(await user.comparePassword(password))) {
       return errorResponse(res, 'Invalid email or password.', 401);
+    }
+    if (user.role === 'trainer') {
+      const trainer = await Trainer.findById(user.trainerProfile).select('accessStatus');
+      if (!trainer || trainer.accessStatus !== 'approved') {
+        const label = trainer?.accessStatus || 'pending';
+        return errorResponse(res, `Trainer portal access is ${label}.`, 403);
+      }
     }
     if (!user.isActive) {
       return errorResponse(res, 'Your account has been deactivated. Please contact support.', 401);

@@ -17,6 +17,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "axios": "^1.19.0",
     "date-fns": "^4.4.0",
+    "libphonenumber-js": "^1.13.10",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.85.0",

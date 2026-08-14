@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
+import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
-import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const TRAINING_STATUSES = [
   ['draft', 'Draft'],
@@ -25,6 +26,50 @@ const statusControlClass = (status) => {
   return 'border-amber-200 bg-amber-50 text-amber-800';
 };
 
+const registrationWindowIsOpen = (event) => {
+  if (!event?.registrationStart || !event?.registrationDeadline) return false;
+  const now = Date.now();
+  return now >= new Date(event.registrationStart).getTime()
+    && now < new Date(event.registrationDeadline).getTime();
+};
+
+const trainingTime = (training, field) => {
+  const time = toTimeInputValue(training?.[field]);
+  if (!training?.date || !time) return Number.NaN;
+  return new Date(`${training.date.slice(0, 10)}T${time}:00+03:00`).getTime();
+};
+
+const statusIsAvailable = (training, status) => {
+  if (training.status === status) return true;
+  const now = Date.now();
+  if (status === 'registration_open') return registrationWindowIsOpen(training.event);
+  if (status === 'registration_closed') {
+    const registrationStart = new Date(training.event?.registrationStart).getTime();
+    return Number.isFinite(registrationStart) && now >= registrationStart;
+  }
+  if (status === 'ongoing') {
+    const startsAt = trainingTime(training, 'startTime');
+    const endsAt = trainingTime(training, 'endTime');
+    return Number.isFinite(startsAt) && Number.isFinite(endsAt) && now >= startsAt && now < endsAt;
+  }
+  if (status === 'completed') {
+    const endsAt = trainingTime(training, 'endTime');
+    return Number.isFinite(endsAt) && now >= endsAt;
+  }
+  return true;
+};
+
+const toTimeInputValue = (value = '') => {
+  if (/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return value;
+  const match = value.match(/^(0?[1-9]|1[0-2]):([0-5]\d)\s*(AM|PM)$/i);
+  if (!match) return '';
+  let hour = Number(match[1]) % 12;
+  if (match[3].toUpperCase() === 'PM') hour += 12;
+  return `${String(hour).padStart(2, '0')}:${match[2]}`;
+};
+
+const assetUrl = (value) => value ? (value.startsWith('http') ? value : `/${value.replace(/^\//, '')}`) : '';
+
 export const TrainingsManagement = () => {
   const [trainings, setTrainings] = useState([]);
   const [events, setEvents] = useState([]);
@@ -33,10 +78,17 @@ export const TrainingsManagement = () => {
   const [trainers, setTrainers] = useState([]);
   const [moderators, setModerators] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({ event: '', eventDay: '', training: '' });
 
   const [showModal, setShowModal] = useState(false);
   const [editingTraining, setEditingTraining] = useState(null);
   const [coverImageFile, setCoverImageFile] = useState(null);
+  const [coverImagePreview, setCoverImagePreview] = useState('');
+  const coverImageInputRef = useRef(null);
+
+  useEffect(() => () => {
+    if (coverImagePreview.startsWith('blob:')) URL.revokeObjectURL(coverImagePreview);
+  }, [coverImagePreview]);
 
   const [form, setForm] = useState({
     title: '',
@@ -46,9 +98,8 @@ export const TrainingsManagement = () => {
     category: '',
     trainer: '',
     moderator: '',
-    date: '',
-    startTime: '09:00 AM',
-    endTime: '11:00 AM',
+    startTime: '',
+    endTime: '',
     audience: 'General Public & University Students',
     level: 'general',
     language: 'Somali / English',
@@ -58,7 +109,7 @@ export const TrainingsManagement = () => {
   const fetchData = async () => {
     try {
       const [trRes, evRes, catRes, trnerRes, modRes] = await Promise.all([
-        api.get('/admin/trainings'),
+        api.get('/admin/trainings?limit=100'),
         api.get('/admin/events'),
         api.get('/admin/categories'),
         api.get('/admin/trainers'),
@@ -99,7 +150,7 @@ export const TrainingsManagement = () => {
           const days = res.data.days || [];
           setEventDays(days);
           if (days.length > 0) {
-            setForm((prev) => ({ ...prev, eventDay: days[0]._id, date: days[0].date ? days[0].date.split('T')[0] : prev.date }));
+            setForm((prev) => ({ ...prev, eventDay: days[0]._id }));
           }
         }
       } catch (err) {
@@ -119,6 +170,8 @@ export const TrainingsManagement = () => {
       if (daysRes?.success) days = daysRes.data.days || [];
     }
     setEventDays(days);
+    setCoverImageFile(null);
+    setCoverImagePreview('');
 
     setForm({
       title: '',
@@ -128,9 +181,8 @@ export const TrainingsManagement = () => {
       category: categories[0]?._id || '',
       trainer: trainers[0]?._id || '',
       moderator: moderators[0]?._id || '',
-      date: days[0]?.date ? days[0].date.split('T')[0] : '',
-      startTime: '09:00 AM',
-      endTime: '11:00 AM',
+      startTime: '',
+      endTime: '',
       audience: 'General Public & University Students',
       level: 'general',
       language: 'Somali / English',
@@ -141,6 +193,8 @@ export const TrainingsManagement = () => {
 
   const handleOpenEditModal = async (tr) => {
     setEditingTraining(tr);
+    setCoverImageFile(null);
+    setCoverImagePreview(assetUrl(tr.coverImage));
     const evId = tr.event?._id || tr.event || '';
     if (evId) {
       const daysRes = await api.get(`/admin/events/${evId}/days`).catch(() => null);
@@ -155,9 +209,8 @@ export const TrainingsManagement = () => {
       category: tr.category?._id || tr.category || '',
       trainer: tr.trainer?._id || tr.trainer || '',
       moderator: tr.moderator?._id || tr.moderator || '',
-      date: tr.date ? tr.date.split('T')[0] : '',
-      startTime: tr.startTime || '09:00 AM',
-      endTime: tr.endTime || '11:00 AM',
+      startTime: toTimeInputValue(tr.startTime),
+      endTime: toTimeInputValue(tr.endTime),
       audience: tr.audience || 'General Public & University Students',
       level: tr.level || 'general',
       language: tr.language || 'Somali / English',
@@ -197,6 +250,7 @@ export const TrainingsManagement = () => {
       setShowModal(false);
       setEditingTraining(null);
       setCoverImageFile(null);
+      setCoverImagePreview('');
       fetchData();
     } catch (err) {
       toast.error(err.message || 'Save failed');
@@ -228,6 +282,7 @@ export const TrainingsManagement = () => {
   };
 
   if (loading) return <LoadingSpinner label="Loading training sessions..." />;
+  const filteredTrainings = trainings.filter((item) => (!filters.event || String(item.event?._id || item.event) === filters.event) && (!filters.eventDay || String(item.eventDay?._id || item.eventDay) === filters.eventDay));
 
   return (
     <div className="space-y-6">
@@ -248,6 +303,8 @@ export const TrainingsManagement = () => {
         </button>
       </div>
 
+      <AdminProgramFilters value={filters} onChange={setFilters} includeSession={false} />
+
       {/* Trainings Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
@@ -263,7 +320,7 @@ export const TrainingsManagement = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {trainings.map((tr) => (
+              {filteredTrainings.map((tr) => (
                 <tr key={tr._id} className="hover:bg-slate-50">
                   <td className="p-4 font-bold text-slate-900 max-w-xs truncate">
                     {tr.title}
@@ -291,7 +348,15 @@ export const TrainingsManagement = () => {
                         aria-label={`Change status for ${tr.title}`}
                         className="admin-status-select w-full cursor-pointer appearance-none bg-transparent py-2 pl-2 pr-9 text-xs font-bold"
                       >
-                        {TRAINING_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                        {TRAINING_STATUSES.map(([value, label]) => (
+                          <option
+                            key={value}
+                            value={value}
+                            disabled={!statusIsAvailable(tr, value)}
+                          >
+                            {label}
+                          </option>
+                        ))}
                       </select>
                       <ChevronDownIcon className="pointer-events-none absolute right-3 h-4 w-4" />
                     </div>
@@ -312,6 +377,7 @@ export const TrainingsManagement = () => {
                   </td>
                 </tr>
               ))}
+              {!filteredTrainings.length && <tr><td colSpan="6" className="p-12 text-center text-sm text-slate-500">No training sessions match these filters.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -360,20 +426,13 @@ export const TrainingsManagement = () => {
                   {eventDays.length > 0 ? (
                     <select
                       value={form.eventDay}
-                      onChange={(e) => {
-                        const selectedDay = eventDays.find((d) => d._id === e.target.value);
-                        setForm({
-                          ...form,
-                          eventDay: e.target.value,
-                          date: selectedDay?.date ? selectedDay.date.split('T')[0] : form.date,
-                        });
-                      }}
+                      onChange={(e) => setForm({ ...form, eventDay: e.target.value })}
                       className="w-full p-2.5 rounded-lg border border-slate-300 bg-white"
                       required
                     >
                       <option value="">Select Day</option>
                       {eventDays.map((d) => (
-                        <option key={d._id} value={d._id}>Day {d.dayNumber}: {d.theme}</option>
+                        <option key={d._id} value={d._id}>Day {d.dayNumber}: {d.theme}{d.date ? ` (${new Date(d.date).toLocaleDateString()})` : ''}</option>
                       ))}
                     </select>
                   ) : (
@@ -431,35 +490,25 @@ export const TrainingsManagement = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block font-bold uppercase text-slate-700 mb-1">Session Date *</label>
+                  <label className="block font-bold uppercase text-slate-700 mb-1">Start Time</label>
                   <input
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    type="time"
+                    value={form.startTime}
+                    onChange={(e) => setForm({ ...form, startTime: e.target.value })}
                     className="w-full p-2.5 rounded-lg border border-slate-300"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block font-bold uppercase text-slate-700 mb-1">Start Time</label>
-                  <input
-                    type="text"
-                    placeholder="09:00 AM"
-                    value={form.startTime}
-                    onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                    className="w-full p-2.5 rounded-lg border border-slate-300"
-                  />
-                </div>
-                <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">End Time</label>
                   <input
-                    type="text"
-                    placeholder="11:00 AM"
+                    type="time"
                     value={form.endTime}
                     onChange={(e) => setForm({ ...form, endTime: e.target.value })}
                     className="w-full p-2.5 rounded-lg border border-slate-300"
+                    required
                   />
                 </div>
               </div>
@@ -467,11 +516,51 @@ export const TrainingsManagement = () => {
               <div>
                 <label className="block font-bold uppercase text-slate-700 mb-1">16:9 Cover Image / Presentation Graphic</label>
                 <input
+                  ref={coverImageInputRef}
                   type="file"
-                  accept="image/*"
-                  onChange={(e) => setCoverImageFile(e.target.files[0])}
-                  className="w-full p-2 border border-slate-300 rounded-lg text-xs"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+                      toast.error('Choose a PNG, JPG, or WebP image.');
+                      e.target.value = '';
+                      return;
+                    }
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error('Cover image must be 5 MB or smaller.');
+                      e.target.value = '';
+                      return;
+                    }
+                    setCoverImageFile(file);
+                    setCoverImagePreview(URL.createObjectURL(file));
+                  }}
                 />
+                <div className="overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 transition hover:border-[#1a6b3c] hover:bg-emerald-50/40">
+                  {coverImagePreview ? (
+                    <div className="grid gap-4 p-4 sm:grid-cols-[180px_1fr] sm:items-center">
+                      <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-white">
+                        <img src={coverImagePreview} alt="Training cover preview" className="h-full w-full object-cover" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-900">{coverImageFile?.name || 'Current cover image'}</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">Preview shown in the same 16:9 shape used on training cards.</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button type="button" onClick={() => coverImageInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg bg-[#1a6b3c] px-3 py-2 text-xs font-bold text-white"><ArrowUpTrayIcon className="h-4 w-4" />Replace image</button>
+                          {coverImageFile && <button type="button" onClick={() => { setCoverImageFile(null); setCoverImagePreview(assetUrl(editingTraining?.coverImage)); if (coverImageInputRef.current) coverImageInputRef.current.value = ''; }} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700"><XMarkIcon className="h-4 w-4" />Cancel replacement</button>}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => coverImageInputRef.current?.click()} className="flex w-full flex-col items-center px-6 py-9 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1a6b3c] focus-visible:ring-inset">
+                      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-[#1a6b3c]"><PhotoIcon className="h-6 w-6" /></span>
+                      <span className="mt-3 text-sm font-bold text-slate-900">Upload a training cover image</span>
+                      <span className="mt-1 text-xs text-slate-500"><span className="font-bold text-[#1a6b3c]">Choose an image</span> from your device</span>
+                      <span className="mt-2 text-[11px] text-slate-400">PNG, JPG, or WebP · 16:9 recommended · Maximum 5 MB</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>

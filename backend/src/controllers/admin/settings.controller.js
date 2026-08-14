@@ -10,6 +10,10 @@ const defaults = {
   replyToEmail: 'ntw@trainingweek.so',
   location: 'Mogadishu, Somalia',
   facebookUrl: '',
+  tiktokUrl: '',
+  instagramUrl: '',
+  linkedinUrl: '',
+  xUrl: '',
   emailSenderName: 'National Training Week',
   smtpUser: '',
   certificateSignature: '',
@@ -47,7 +51,7 @@ export const updateSettings = async (req, res, next) => {
     if (req.body.smtpUser && req.body.smtpUser !== currentSender && !req.body.smtpPassword) {
       return errorResponse(res, 'Enter an App Password created by the new Gmail sender account.', 400);
     }
-    const allowed = ['organizerName', 'contactEmail', 'replyToEmail', 'location', 'facebookUrl', 'emailSenderName', 'smtpUser', 'certificateSignatoryName', 'certificateSignatoryTitle'];
+    const allowed = ['organizerName', 'contactEmail', 'replyToEmail', 'location', 'facebookUrl', 'tiktokUrl', 'instagramUrl', 'linkedinUrl', 'xUrl', 'emailSenderName', 'smtpUser', 'certificateSignatoryName', 'certificateSignatoryTitle'];
     const updates = Object.fromEntries(allowed.map((field) => [field, req.body[field] ?? '']));
     if (req.body.smtpPassword) updates.smtpPassEncrypted = encryptSetting(req.body.smtpPassword.replaceAll(' ', ''));
     const settings = await SiteSettings.findOneAndUpdate(
@@ -83,8 +87,8 @@ export const removeCertificateSignature = async (req, res, next) => {
 export const getPublicSettings = async (req, res, next) => {
   try {
     const settings = await getOrCreateSettings();
-    const { organizerName, contactEmail, location, facebookUrl } = settings;
-    return successResponse(res, { settings: { organizerName, contactEmail, location, facebookUrl } });
+    const { organizerName, contactEmail, location, facebookUrl, tiktokUrl, instagramUrl, linkedinUrl, xUrl } = settings;
+    return successResponse(res, { settings: { organizerName, contactEmail, location, facebookUrl, tiktokUrl, instagramUrl, linkedinUrl, xUrl } });
   } catch (error) { next(error); }
 };
 

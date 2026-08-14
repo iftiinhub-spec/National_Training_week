@@ -12,6 +12,7 @@ import adminRoutes from './routes/admin.routes.js';
 import moderatorRoutes from './routes/moderator.routes.js';
 import participantRoutes from './routes/participant.routes.js';
 import publicRoutes from './routes/public.routes.js';
+import trainerRoutes from './routes/trainer.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,7 +25,7 @@ app.use(helmet({
 }));
 
 // CORS configuration
-const productionOrigin = 'https://ntw.elivateict.com';
+const productionOrigin = 'https://ntw.hu.edu.so,https://www.ntw.hu.edu.so';
 const configuredOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || productionOrigin)
   .split(',')
   .map((origin) => origin.trim())
@@ -65,6 +66,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/moderator', moderatorRoutes);
 app.use('/api/participant', participantRoutes);
+app.use('/api/trainer', trainerRoutes);
 app.use('/api/public', publicRoutes);
 
 // Health check

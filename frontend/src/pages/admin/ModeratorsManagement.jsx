@@ -3,12 +3,14 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { UserPlusIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import PhoneInput from '../../components/common/PhoneInput';
 
 export const ModeratorsManagement = () => {
   const [moderators, setModerators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [form, setForm] = useState({
     fullName: '',
@@ -38,6 +40,7 @@ export const ModeratorsManagement = () => {
       await api.post('/admin/moderators', form);
       toast.success('Moderator account created!');
       setShowModal(false);
+      setShowPassword(false);
       setForm({ fullName: '', email: '', password: '', phone: '' });
       fetchModerators();
     } catch (err) {
@@ -69,7 +72,7 @@ export const ModeratorsManagement = () => {
           </p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => { setShowPassword(false); setShowModal(true); }}
           className="px-4 py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs"
         >
           <UserPlusIcon className="w-4 h-4" />
@@ -128,6 +131,8 @@ export const ModeratorsManagement = () => {
                 <label className="block font-bold uppercase text-slate-700 mb-1">Full Name *</label>
                 <input
                   type="text"
+                  placeholder="e.g. Amina Mohamed Ali"
+                  autoComplete="name"
                   value={form.fullName}
                   onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300"
@@ -139,6 +144,8 @@ export const ModeratorsManagement = () => {
                 <label className="block font-bold uppercase text-slate-700 mb-1">Email Address *</label>
                 <input
                   type="email"
+                  placeholder="e.g. amina@example.com"
+                  autoComplete="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300"
@@ -148,23 +155,27 @@ export const ModeratorsManagement = () => {
 
               <div>
                 <label className="block font-bold uppercase text-slate-700 mb-1">Initial Password *</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border border-slate-300"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="e.g. StrongPass123"
+                    autoComplete="new-password"
+                    minLength={8}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 p-2.5 pr-11"
+                    required
+                  />
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-slate-700" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                    {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                  </button>
+                </div>
+                <p className="mt-1 text-[11px] font-normal normal-case text-slate-500">Use at least 8 characters.</p>
               </div>
 
               <div>
-                <label className="block font-bold uppercase text-slate-700 mb-1">Phone</label>
-                <input
-                  type="text"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border border-slate-300"
-                />
+                <label className="block font-bold uppercase text-slate-700 mb-1">Phone <span className="font-normal normal-case text-slate-400">(optional)</span></label>
+                <PhoneInput value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
               </div>
 
               <div className="pt-2 flex justify-end gap-2">

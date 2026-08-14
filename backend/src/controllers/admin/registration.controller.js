@@ -3,20 +3,22 @@ import Training from '../../models/Training.js';
 import Attendance from '../../models/Attendance.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
+import { resolveTrainingScope } from '../../utils/trainingScope.js';
 
 // GET /api/admin/registrations
 export const getRegistrations = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
     const filter = {};
-    if (req.query.training) filter.training = req.query.training;
+    const trainingScope = await resolveTrainingScope(req.query);
+    if (trainingScope) filter.training = trainingScope;
     if (req.query.status) filter.status = req.query.status;
     if (req.query.participant) filter.participant = req.query.participant;
 
     const [registrations, total] = await Promise.all([
       Registration.find(filter)
         .populate('participant', 'fullName email phone participantType region organization')
-        .populate('training', 'title date startTime endTime status')
+        .populate({ path: 'training', select: 'title date startTime endTime status event eventDay', populate: [{ path: 'event', select: 'name year' }, { path: 'eventDay', select: 'dayNumber theme date' }] })
         .populate('updatedBy', 'fullName role')
         .sort({ registeredAt: -1 })
         .skip(skip).limit(limit),

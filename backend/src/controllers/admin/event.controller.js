@@ -1,7 +1,55 @@
 import Event from '../../models/Event.js';
 import EventDay from '../../models/EventDay.js';
+import Training from '../../models/Training.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { syncEventStatus } from '../../utils/eventLifecycle.js';
+import { eventDayTimelineError, eventStatusError, eventTimelineError } from '../../utils/eventTimeline.js';
+
+const dateKey = (value) => {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 10) : null;
+};
+
+const todayInNairobi = () => new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+const validateEventDates = (data, existing = null) => {
+  const year = Number(data.year ?? existing?.year);
+  const start = dateKey(data.startDate ?? existing?.startDate);
+  const end = dateKey(data.endDate ?? existing?.endDate);
+  const invalid = (message) => { const error = new Error(message); error.statusCode = 400; throw error; };
+  if (!start || !end) invalid('Valid event start and end dates are required.');
+  if (start > end) invalid('The event end date cannot be before its start date.');
+  if (Number(start.slice(0, 4)) !== year || Number(end.slice(0, 4)) !== year) {
+    invalid(`The event start and end dates must be in ${year}.`);
+  }
+  return { start, end };
+};
+
+const validateDayForEvent = (event, value) => {
+  const message = eventDayTimelineError(event, value);
+  if (message) { const error = new Error(message); error.statusCode = 400; throw error; }
+};
+
+const rejectNewPastDate = (value, previousValue = null, label = 'Date') => {
+  const next = dateKey(value);
+  const previous = dateKey(previousValue);
+  if (next !== previous && next < todayInNairobi()) {
+    const error = new Error(`${label} cannot be in the past.`); error.statusCode = 400; throw error;
+  }
+};
+
+const ensureUniqueEventDay = async ({ eventId, dayNumber, date, excludeId = null }) => {
+  const dayKey = dateKey(date);
+  const nextDay = new Date(`${dayKey}T00:00:00.000Z`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  const base = { event: eventId, ...(excludeId ? { _id: { $ne: excludeId } } : {}) };
+  const [sameNumber, sameDate] = await Promise.all([
+    EventDay.findOne({ ...base, dayNumber }),
+    EventDay.findOne({ ...base, date: { $gte: new Date(`${dayKey}T00:00:00.000Z`), $lt: nextDay } }),
+  ]);
+  if (sameNumber) { const error = new Error(`Day ${dayNumber} already exists for this event.`); error.statusCode = 409; throw error; }
+  if (sameDate) { const error = new Error(`An event day already exists on ${dayKey}. Add trainings to that day instead.`); error.statusCode = 409; throw error; }
+};
 
 const prepareRegistrationWindow = (data, existing = null) => {
   const parseNairobiDateTime = (value) => {
@@ -28,11 +76,35 @@ const prepareRegistrationWindow = (data, existing = null) => {
   const invalidWindow = (message) => { const error = new Error(message); error.statusCode = 400; throw error; };
   if (registrationStart >= registrationDeadline) invalidWindow('Registration must open before it closes.');
   if (registrationDeadline >= startDate) invalidWindow('Registration must close before the event starts.');
+  const now = new Date();
+  const registrationChanged = !existing
+    || registrationStart.getTime() !== new Date(existing.registrationStart).getTime()
+    || registrationDeadline.getTime() !== new Date(existing.registrationDeadline).getTime();
+  if (registrationChanged && registrationStart <= now) invalidWindow('Registration opening must be in the future.');
+  if (registrationChanged && registrationDeadline <= now) invalidWindow('Registration deadline must be in the future.');
 
   data.registrationStart = registrationStart;
   data.registrationDeadline = registrationDeadline;
-  if (!['draft', 'ongoing', 'completed'].includes(data.status || existing?.status)) {
-    const now = new Date();
+  const timelineMessage = eventTimelineError({
+    year: data.year ?? existing?.year,
+    startDate: rawStartDate,
+    startTime: data.startTime ?? existing?.startTime,
+    endDate: data.endDate ?? existing?.endDate,
+    registrationStart,
+    registrationDeadline,
+  });
+  if (timelineMessage) invalidWindow(timelineMessage);
+  const requestedStatus = data.status ?? existing?.status ?? 'draft';
+  const statusMessage = eventStatusError({
+    year: data.year ?? existing?.year,
+    startDate: rawStartDate,
+    startTime: data.startTime ?? existing?.startTime,
+    endDate: data.endDate ?? existing?.endDate,
+    registrationStart,
+    registrationDeadline,
+  }, requestedStatus);
+  if (statusMessage) invalidWindow(statusMessage);
+  if (requestedStatus !== 'draft') {
     data.status = now < registrationStart ? 'registration_scheduled'
       : now < registrationDeadline ? 'registration_open'
         : now < startDate ? 'registration_closed' : 'ongoing';
@@ -66,6 +138,8 @@ export const getEvent = async (req, res, next) => {
 // POST /api/admin/events
 export const createEvent = async (req, res, next) => {
   try {
+    validateEventDates(req.body);
+    rejectNewPastDate(req.body.startDate, null, 'Event start date');
     const data = prepareRegistrationWindow({ ...req.body });
     data.isCurrent = req.body.isCurrent === true || req.body.isCurrent === 'true';
     if (data.isCurrent) await Event.updateMany({}, { $set: { isCurrent: false } });
@@ -79,6 +153,13 @@ export const updateEvent = async (req, res, next) => {
   try {
     const existing = await Event.findById(req.params.id);
     if (!existing) return errorResponse(res, 'Event not found.', 404);
+    const range = validateEventDates(req.body, existing);
+    rejectNewPastDate(req.body.startDate ?? existing.startDate, existing.startDate, 'Event start date');
+    const conflictingDay = await EventDay.findOne({
+      event: existing._id,
+      $or: [{ date: { $lt: new Date(range.start) } }, { date: { $gt: new Date(`${range.end}T23:59:59.999Z`) } }],
+    });
+    if (conflictingDay) return errorResponse(res, 'Update the existing event days first; at least one day falls outside the new event date range.', 400);
     const data = prepareRegistrationWindow({ ...req.body }, existing);
     data.isCurrent = req.body.isCurrent === true || req.body.isCurrent === 'true';
     if (data.isCurrent) {
@@ -92,8 +173,16 @@ export const updateEvent = async (req, res, next) => {
 // DELETE /api/admin/events/:id
 export const deleteEvent = async (req, res, next) => {
   try {
-    const event = await Event.findByIdAndDelete(req.params.id);
+    const event = await Event.findById(req.params.id);
     if (!event) return errorResponse(res, 'Event not found.', 404);
+    const [dayCount, trainingCount] = await Promise.all([
+      EventDay.countDocuments({ event: event._id }),
+      Training.countDocuments({ event: event._id }),
+    ]);
+    if (dayCount || trainingCount) {
+      return errorResponse(res, `Delete the event's ${trainingCount} training(s) and ${dayCount} event day(s) first.`, 409);
+    }
+    await event.deleteOne();
     return successResponse(res, null, 'Event deleted successfully.');
   } catch (err) { next(err); }
 };
@@ -110,6 +199,11 @@ export const getEventDays = async (req, res, next) => {
 // POST /api/admin/events/:eventId/days
 export const createEventDay = async (req, res, next) => {
   try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return errorResponse(res, 'Event not found.', 404);
+    validateDayForEvent(event, req.body.date);
+    rejectNewPastDate(req.body.date, null, 'Event day date');
+    await ensureUniqueEventDay({ eventId: event._id, dayNumber: req.body.dayNumber, date: req.body.date });
     const day = await EventDay.create({ ...req.body, event: req.params.eventId });
     return successResponse(res, { day }, 'Event day created successfully.', 201);
   } catch (err) { next(err); }
@@ -118,6 +212,13 @@ export const createEventDay = async (req, res, next) => {
 // PUT /api/admin/events/:eventId/days/:dayId
 export const updateEventDay = async (req, res, next) => {
   try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return errorResponse(res, 'Event not found.', 404);
+    validateDayForEvent(event, req.body.date);
+    const existingDay = await EventDay.findOne({ _id: req.params.dayId, event: req.params.eventId });
+    if (!existingDay) return errorResponse(res, 'Event day not found.', 404);
+    rejectNewPastDate(req.body.date, existingDay.date, 'Event day date');
+    await ensureUniqueEventDay({ eventId: event._id, dayNumber: req.body.dayNumber, date: req.body.date, excludeId: existingDay._id });
     const day = await EventDay.findOneAndUpdate(
       { _id: req.params.dayId, event: req.params.eventId },
       req.body,
@@ -131,8 +232,11 @@ export const updateEventDay = async (req, res, next) => {
 // DELETE /api/admin/events/:eventId/days/:dayId
 export const deleteEventDay = async (req, res, next) => {
   try {
-    const day = await EventDay.findOneAndDelete({ _id: req.params.dayId, event: req.params.eventId });
+    const day = await EventDay.findOne({ _id: req.params.dayId, event: req.params.eventId });
     if (!day) return errorResponse(res, 'Event day not found.', 404);
+    const trainingCount = await Training.countDocuments({ eventDay: day._id });
+    if (trainingCount) return errorResponse(res, `Delete the ${trainingCount} training(s) assigned to this event day first.`, 409);
+    await day.deleteOne();
     return successResponse(res, null, 'Event day deleted successfully.');
   } catch (err) { next(err); }
 };

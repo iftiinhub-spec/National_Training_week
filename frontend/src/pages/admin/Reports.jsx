@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { ArrowDownTrayIcon, UserGroupIcon, CheckBadgeIcon, ClipboardDocumentCheckIcon, StarIcon } from '@heroicons/react/24/outline';
@@ -20,14 +21,21 @@ export const Reports = () => {
   const [dailyData, setDailyData] = useState([]);
   const [feedbackData, setFeedbackData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({ event: '', eventDay: '', training: '' });
 
   useEffect(() => {
     const fetchReports = async () => {
+      setLoading(true);
       try {
+        const query = new URLSearchParams();
+        if (filters.event) query.set('eventId', filters.event);
+        if (filters.eventDay) query.set('eventDayId', filters.eventDay);
+        if (filters.training) query.set('trainingId', filters.training);
+        const suffix = query.toString() ? `?${query.toString()}` : '';
         const [ovRes, regRes, typeRes, attRes, dailyRes, fbRes] = await Promise.all([
-          api.get('/admin/reports/overview'), api.get('/admin/reports/participants-by-region'),
-          api.get('/admin/reports/participants-by-type'), api.get('/admin/reports/attendance'),
-          api.get('/admin/reports/daily-attendance'), api.get('/admin/reports/feedback'),
+          api.get(`/admin/reports/overview${suffix}`), api.get(`/admin/reports/participants-by-region${suffix}`),
+          api.get(`/admin/reports/participants-by-type${suffix}`), api.get(`/admin/reports/attendance${suffix}`),
+          api.get(`/admin/reports/daily-attendance${suffix}`), api.get(`/admin/reports/feedback${suffix}`),
         ]);
         if (ovRes.success) setOverview(ovRes.data);
         if (regRes.success) setRegionData(regRes.data.byRegion || []);
@@ -42,7 +50,7 @@ export const Reports = () => {
       }
     };
     fetchReports();
-  }, []);
+  }, [filters.event, filters.eventDay, filters.training]);
 
   const exportCsv = () => {
     const rows = [
@@ -84,6 +92,8 @@ export const Reports = () => {
           <button type="button" onClick={exportCsv} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-4 text-sm font-semibold text-white hover:bg-[#145731]"><ArrowDownTrayIcon className="h-5 w-5" /> Export CSV</button>
         </div>
       </div>
+
+      <AdminProgramFilters value={filters} onChange={setFilters} />
 
       <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map(({ label, value, Icon }) => <div key={label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><span className="text-sm font-semibold text-slate-500">{label}</span><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-[#1a6b3c]"><Icon className="h-5 w-5" /></span></div><p className="mt-5 text-3xl font-bold tracking-tight text-slate-950">{value}</p></div>)}

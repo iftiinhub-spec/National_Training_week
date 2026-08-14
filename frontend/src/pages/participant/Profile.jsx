@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import { CameraIcon, CheckIcon, EyeIcon, EyeSlashIcon, KeyIcon, PencilIcon, ShieldCheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import PhoneInput from '../../components/common/PhoneInput';
 
 const REGIONS = ['Awdal', 'Bakool', 'Banaadir', 'Bari', 'Bay', 'Galguduud', 'Gedo', 'Hiiraan', 'Lower Juba', 'Middle Juba', 'Lower Shabelle', 'Middle Shabelle', 'Mudug', 'Nugaal', 'Sanaag', 'Sool', 'Togdheer', 'Woqooyi Galbeed'];
 const photoUrl = (path) => path ? (path.startsWith('http') ? path : `/${path.replace(/^\//, '')}`) : null;
@@ -87,7 +88,7 @@ export const Profile = () => {
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           <label>Full name *<input className={`${inputClass} mt-2`} value={profileForm.fullName} onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })} required /></label>
           <label>Email address<input className={`${inputClass} mt-2 cursor-not-allowed bg-slate-100 text-slate-500`} value={user?.email || ''} disabled /></label>
-          <label>Phone number<input className={`${inputClass} mt-2`} value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} placeholder="e.g. +252 61 234 5678" /></label>
+          <label>Phone number<PhoneInput className="mt-2" value={profileForm.phone} onChange={(phone) => setProfileForm({ ...profileForm, phone })} /></label>
           <label>Gender<select className={`${inputClass} mt-2`} value={profileForm.gender} onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option></select></label>
           <label>Region<select className={`${inputClass} mt-2`} value={profileForm.region} onChange={(e) => setProfileForm({ ...profileForm, region: e.target.value })}><option value="">Select region</option>{REGIONS.map((region) => <option key={region}>{region}</option>)}</select></label>
           <label>Participant type<select className={`${inputClass} mt-2`} value={profileForm.participantType} onChange={(e) => setProfileForm({ ...profileForm, participantType: e.target.value })}><option value="university_student">University Student</option><option value="highschool_graduate">Fresh High-School Graduate</option><option value="developer_it">Developer / IT Specialist</option><option value="professional">Professional</option><option value="general_public">General Public</option><option value="other">Other</option></select></label>

@@ -97,6 +97,7 @@ export const AuthProvider = ({ children }) => {
     isAdmin: user?.role === 'admin',
     isModerator: user?.role === 'moderator',
     isParticipant: user?.role === 'participant',
+    isTrainer: user?.role === 'trainer',
     login,
     register,
     logout,

@@ -1,7 +1,87 @@
 import Training from '../../models/Training.js';
+import Event from '../../models/Event.js';
+import EventDay from '../../models/EventDay.js';
 import Registration from '../../models/Registration.js';
+import Attendance from '../../models/Attendance.js';
+import Meeting from '../../models/Meeting.js';
+import Communication from '../../models/Communication.js';
+import Feedback from '../../models/Feedback.js';
+import Certificate from '../../models/Certificate.js';
+import Recording from '../../models/Recording.js';
+import QRSession from '../../models/QRSession.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { completeTrainingSession } from '../../services/completeTrainingSession.js';
+import { getTrainingDateTime, normalizeTrainingTime } from '../../utils/trainingDateTime.js';
+import { getRegistrationWindowState } from '../../utils/registrationWindow.js';
+
+const normalizeTimes = (data) => {
+  for (const field of ['startTime', 'endTime']) {
+    if (data[field] !== undefined) data[field] = normalizeTrainingTime(data[field]) || data[field];
+  }
+  return data;
+};
+
+const validateTrainingDay = async (data, existing = null) => {
+  const eventId = data.event || existing?.event;
+  const eventDayId = data.eventDay || existing?.eventDay;
+  const [event, eventDay] = await Promise.all([
+    Event.findById(eventId).select('year startDate endDate registrationDeadline'),
+    EventDay.findById(eventDayId).select('event date'),
+  ]);
+  if (!event) { const error = new Error('Selected event does not exist.'); error.statusCode = 400; throw error; }
+  if (!eventDay || String(eventDay.event) !== String(event._id)) {
+    const error = new Error('Selected event day does not belong to the selected event.'); error.statusCode = 400; throw error;
+  }
+  const dayDateKey = new Date(eventDay.date).toISOString().slice(0, 10);
+  // A session always inherits its date from the selected event day.
+  // Ignore any client-supplied date so the two records cannot conflict.
+  data.date = eventDay.date;
+  const trainingDate = data.date;
+  const trainingDateKey = dayDateKey;
+  const startTime = data.startTime ?? existing?.startTime;
+  const endTime = data.endTime ?? existing?.endTime;
+  const startsAt = getTrainingDateTime(trainingDate, startTime);
+  const endsAt = getTrainingDateTime(trainingDate, endTime);
+  if (!startsAt || !endsAt || startsAt >= endsAt) {
+    const error = new Error('Training end time must be later than its start time.'); error.statusCode = 400; throw error;
+  }
+  const registrationDeadline = event.registrationDeadline && new Date(event.registrationDeadline);
+  if (!registrationDeadline || !Number.isFinite(registrationDeadline.getTime())) {
+    const error = new Error('The parent event registration deadline is not configured.'); error.statusCode = 400; throw error;
+  }
+  if (startsAt <= registrationDeadline) {
+    const error = new Error('Training must start after the parent event registration deadline.'); error.statusCode = 400; throw error;
+  }
+  const scheduleChanged = !existing
+    || trainingDateKey !== new Date(existing.date).toISOString().slice(0, 10)
+    || normalizeTrainingTime(startTime) !== normalizeTrainingTime(existing.startTime);
+  if (scheduleChanged && startsAt <= new Date()) {
+    const error = new Error('A new or rescheduled training must start in the future.'); error.statusCode = 400; throw error;
+  }
+};
+
+const validateTimedStatus = (training, status, now = new Date()) => {
+  const startsAt = getTrainingDateTime(training.date, training.startTime);
+  const endsAt = getTrainingDateTime(training.date, training.endTime);
+
+  if (status === 'registration_closed') {
+    const registrationStart = training.event?.registrationStart && new Date(training.event.registrationStart);
+    if (!registrationStart || !Number.isFinite(registrationStart.getTime())) {
+      return 'Configure the event registration window before closing registration.';
+    }
+    if (now < registrationStart) return 'Registration cannot be closed before the event registration window begins.';
+  }
+  if (status === 'ongoing') {
+    if (!startsAt || !endsAt) return 'Configure a valid training date, start time, and end time first.';
+    if (now < startsAt) return 'The training cannot go live before its scheduled start time.';
+    if (now >= endsAt) return 'The training has passed its scheduled end time and cannot be marked live.';
+  }
+  if (status === 'completed') {
+    if (!endsAt) return 'Configure a valid training date and end time before completing the training.';
+    if (now < endsAt) return 'The training cannot be completed before its scheduled end time.';
+  }
+  return null;
+};
 
 // All status values — admin can freely transition between any of these
 const ALL_STATUSES = ['draft', 'published', 'registration_open', 'registration_closed', 'ongoing', 'completed', 'cancelled'];
@@ -19,7 +99,7 @@ export const getTrainings = async (req, res, next) => {
 
     const [trainings, total] = await Promise.all([
       Training.find(filter)
-        .populate('event', 'name year')
+        .populate('event', 'name year registrationStart registrationDeadline')
         .populate('eventDay', 'dayNumber theme date')
         .populate('category', 'name')
         .populate('trainer', 'name title organization photo')
@@ -49,7 +129,8 @@ export const getTraining = async (req, res, next) => {
 // POST /api/admin/trainings
 export const createTraining = async (req, res, next) => {
   try {
-    const data = { ...req.body };
+    const data = normalizeTimes({ ...req.body });
+    await validateTrainingDay(data);
     if (req.file) data.coverImage = `uploads/coverImage/${req.file.filename}`;
     const training = await Training.create(data);
     return successResponse(res, { training }, 'Training created successfully.', 201);
@@ -59,7 +140,10 @@ export const createTraining = async (req, res, next) => {
 // PUT /api/admin/trainings/:id
 export const updateTraining = async (req, res, next) => {
   try {
-    const data = { ...req.body };
+    const data = normalizeTimes({ ...req.body });
+    const existing = await Training.findById(req.params.id);
+    if (!existing) return errorResponse(res, 'Training not found.', 404);
+    await validateTrainingDay(data, existing);
     if (req.file) data.coverImage = `uploads/coverImage/${req.file.filename}`;
     // Remove status from update — use dedicated status endpoint
     delete data.status;
@@ -73,12 +157,29 @@ export const updateTraining = async (req, res, next) => {
 export const updateTrainingStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
-    const training = await Training.findById(req.params.id);
+    const training = await Training.findById(req.params.id)
+      .populate('event', 'registrationStart registrationDeadline');
     if (!training) return errorResponse(res, 'Training not found.', 404);
 
     if (!ALL_STATUSES.includes(status)) {
       return errorResponse(res, `Invalid status '${status}'. Valid values: ${ALL_STATUSES.join(', ')}.`, 400);
     }
+
+    if (status === 'registration_open') {
+      const windowState = getRegistrationWindowState(training.event);
+      if (windowState === 'unconfigured') {
+        return errorResponse(res, 'Configure the event registration start and deadline before opening this training for registration.', 400);
+      }
+      if (windowState === 'scheduled') {
+        return errorResponse(res, `Registration cannot open before ${training.event.registrationStart.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })}.`, 400);
+      }
+      if (windowState === 'closed') {
+        return errorResponse(res, 'Registration cannot open because the event registration deadline has passed.', 400);
+      }
+    }
+
+    const timedStatusError = validateTimedStatus(training, status);
+    if (timedStatusError) return errorResponse(res, timedStatusError, 400);
 
     if (status === 'completed') {
       const result = await completeTrainingSession({ trainingId: training._id, completedBy: req.user._id });
@@ -98,6 +199,8 @@ export const completeTraining = async (req, res, next) => {
     if (req.user.role !== 'admin' && String(training.moderator) !== String(req.user._id)) {
       return errorResponse(res, 'Only the assigned moderator or an administrator can complete this training.', 403);
     }
+    const timedStatusError = validateTimedStatus(training, 'completed');
+    if (timedStatusError) return errorResponse(res, timedStatusError, 400);
     const result = await completeTrainingSession({ trainingId: training._id, completedBy: req.user._id });
     return successResponse(res, result, `Training completed. ${result.summary.issued} certificate${result.summary.issued === 1 ? '' : 's'} issued and ${result.summary.notified} notification${result.summary.notified === 1 ? '' : 's'} delivered.`);
   } catch (err) { next(err); }
@@ -126,6 +229,12 @@ export const deleteTraining = async (req, res, next) => {
     if (!training) return errorResponse(res, 'Training not found.', 404);
     if (['ongoing', 'completed'].includes(training.status)) {
       return errorResponse(res, 'Cannot delete an ongoing or completed training.', 400);
+    }
+    const relatedModels = [Registration, Attendance, Meeting, Communication, Feedback, Certificate, Recording, QRSession];
+    const relatedCounts = await Promise.all(relatedModels.map((Model) => Model.countDocuments({ training: training._id })));
+    const relatedCount = relatedCounts.reduce((total, count) => total + count, 0);
+    if (relatedCount) {
+      return errorResponse(res, `Cannot delete this training because it has ${relatedCount} related operational record(s). Cancel it instead.`, 409);
     }
     await Training.findByIdAndDelete(req.params.id);
     return successResponse(res, null, 'Training deleted successfully.');

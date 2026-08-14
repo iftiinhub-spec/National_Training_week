@@ -10,6 +10,7 @@ import Footer from './components/layout/Footer';
 const ParticipantLayout = lazy(() => import('./pages/participant/ParticipantLayout'));
 const ModeratorLayout = lazy(() => import('./pages/moderator/ModeratorLayout'));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const TrainerLayout = lazy(() => import('./pages/trainer/TrainerLayout'));
 
 // Public Pages
 import Home from './pages/public/Home';
@@ -24,6 +25,7 @@ import Contact from './pages/public/Contact';
 import SignIn from './pages/public/SignIn';
 import SignUp from './pages/public/SignUp';
 import QRCheckIn from './pages/public/QRCheckIn';
+import FAQ from './pages/public/FAQ';
 
 // Participant Pages
 const ParticipantDashboard = lazy(() => import('./pages/participant/ParticipantDashboard'));
@@ -38,6 +40,8 @@ const ModeratorDashboard = lazy(() => import('./pages/moderator/ModeratorDashboa
 const SessionOperation = lazy(() => import('./pages/moderator/SessionOperation'));
 const AssignedSessions = lazy(() => import('./pages/moderator/AssignedSessions'));
 const ModeratorProfile = lazy(() => import('./pages/moderator/ModeratorProfile'));
+const TrainerDashboard = lazy(() => import('./pages/trainer/TrainerDashboard'));
+const TrainerProfile = lazy(() => import('./pages/trainer/TrainerProfile'));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
@@ -54,6 +58,7 @@ const Reports = lazy(() => import('./pages/admin/Reports'));
 const ContactMessages = lazy(() => import('./pages/admin/ContactMessages'));
 const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
 const Settings = lazy(() => import('./pages/admin/Settings'));
+const FAQsManagement = lazy(() => import('./pages/admin/FAQsManagement'));
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -94,9 +99,11 @@ const PublicLayout = () => {
           <Route path="/recordings"          element={<div className="pt-[88px]"><Recordings /></div>} />
           <Route path="/verify-certificate"  element={<div className="pt-[88px]"><VerifyCertificate /></div>} />
           <Route path="/contact"             element={<div className="pt-[88px]"><Contact /></div>} />
+          <Route path="/faq"                 element={<div className="pt-[88px]"><FAQ /></div>} />
           <Route path="/signin"              element={<div className="pt-[88px]"><SignIn /></div>} />
           <Route path="/signup"              element={<div className="pt-[88px]"><SignUp /></div>} />
           <Route path="/qr-checkin"          element={<div className="pt-[88px]"><QRCheckIn /></div>} />
+          <Route path="/trainer-application" element={<Navigate to="/signup?type=trainer" replace />} />
         </Routes>
       </main>
       <Footer />
@@ -146,6 +153,13 @@ export const App = () => {
         </Route>
 
         {/* Admin Command Center Routes */}
+        <Route path="/trainer/*" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerLayout /></ProtectedRoute>}>
+          <Route index element={<TrainerDashboard />} />
+          <Route path="sessions" element={<TrainerDashboard sessionsOnly />} />
+          <Route path="profile" element={<TrainerProfile />} />
+        </Route>
+
+        {/* Admin Command Center Routes */}
         <Route
           path="/admin/*"
           element={
@@ -168,6 +182,7 @@ export const App = () => {
           <Route path="contact-messages" element={<ContactMessages />} />
           <Route path="profile" element={<AdminProfile />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="faqs" element={<FAQsManagement />} />
         </Route>
 
         {/* Public Website Fallback */}

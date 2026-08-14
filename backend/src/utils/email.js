@@ -16,35 +16,42 @@ export const emailInfoCard = (rows) => {
 };
 
 export const emailLayout = ({ eyebrow = 'Official communication', title, preview, body }) => {
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><title>${escapeHtml(title)}</title><style>:root{color-scheme:light dark;supported-color-schemes:light dark}@media (prefers-color-scheme:dark){.email-page{background:#090f1a!important}.email-card{background:#111827!important;border-color:#334155!important}.email-heading,.email-heading strong{color:#f8fafc!important}.email-content{color:#d7e0ec!important}.email-info{border-color:#475569!important}.email-info-label{background:#172033!important;color:#f8fafc!important;border-color:#475569!important}.email-info-value{background:#111827!important;color:#d7e0ec!important;border-color:#475569!important}.email-footer{background:#172033!important;color:#b0bfd1!important;border-color:#475569!important}.email-footer strong{color:#f8fafc!important}.email-caption{color:#94a3b8!important}.email-button,.email-button a{background:#1da156!important;color:#ffffff!important}}[data-ogsc] .email-page{background:#090f1a!important}[data-ogsc] .email-card{background:#111827!important;border-color:#334155!important}[data-ogsc] .email-heading,[data-ogsc] .email-heading strong{color:#f8fafc!important}[data-ogsc] .email-content{color:#d7e0ec!important}[data-ogsc] .email-info{border-color:#475569!important}[data-ogsc] .email-info-label{background:#172033!important;color:#f8fafc!important;border-color:#475569!important}[data-ogsc] .email-info-value{background:#111827!important;color:#d7e0ec!important;border-color:#475569!important}[data-ogsc] .email-footer{background:#172033!important;color:#b0bfd1!important;border-color:#475569!important}[data-ogsc] .email-footer strong{color:#f8fafc!important}</style></head><body class="email-page" bgcolor="#f4f4f4" style="margin:0;background:#f4f4f4;font-family:Inter,Arial,sans-serif;color:#111111"><div style="display:none;max-height:0;overflow:hidden">${escapeHtml(preview || title)}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-page" bgcolor="#f4f4f4" style="background:#f4f4f4;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-card" bgcolor="#ffffff" style="max-width:620px;background:#ffffff;border:1px solid #dddddd;border-radius:14px;overflow:hidden"><tr><td align="center" bgcolor="#ffffff" style="padding:0;background:#ffffff"><img src="cid:ntw-logo" width="620" alt="National Training Week" style="display:block;width:100%;max-width:620px;height:auto;border:0"></td></tr><tr><td class="email-heading" style="padding:34px 32px 8px;color:#111111"><div style="font-size:11px;font-weight:800;letter-spacing:1.7px;text-transform:uppercase;color:#1da156">${escapeHtml(eyebrow)}</div><h1 style="margin:10px 0 0;color:inherit;font-family:Georgia,'Times New Roman',serif;font-size:29px;line-height:1.25;font-weight:700">${escapeHtml(title)}</h1><div style="margin-top:18px;width:48px;height:3px;background:#1da156"></div></td></tr><tr><td class="email-content" style="padding:20px 32px 34px;font-size:15px;line-height:1.75;color:#333333">${body}</td></tr><tr><td class="email-footer" style="border-top:1px solid #dddddd;padding:22px 32px;background:#f7f7f7;font-size:12px;line-height:1.7;color:#555555"><strong style="color:#111111">National Training Week</strong><br>Official automated communication. Please do not share private meeting or account links.</td></tr></table><div class="email-caption" style="padding:16px 12px 0;color:#777777;font-size:11px;line-height:1.5">National Training Week Management System</div></td></tr></table></body></html>`;
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><title>${escapeHtml(title)}</title><style>:root{color-scheme:light dark;supported-color-schemes:light dark}@media (prefers-color-scheme:dark){.email-page{background:#121212!important}.email-card{background:#121212!important;border-color:#333333!important}.email-logo-cell{background:#121212!important}.email-heading,.email-heading strong{color:#ffffff!important}.email-content{color:#dddddd!important}.email-info{border-color:#444444!important}.email-info-label{background:#1c1c1c!important;color:#ffffff!important;border-color:#444444!important}.email-info-value{background:#121212!important;color:#dddddd!important;border-color:#444444!important}.email-footer{background:#1c1c1c!important;color:#bdbdbd!important;border-color:#444444!important}.email-footer strong{color:#ffffff!important}.email-caption{color:#999999!important}.email-button,.email-button a{background:#1da156!important;color:#ffffff!important}}[data-ogsc] .email-page{background:#121212!important}[data-ogsc] .email-card{background:#121212!important;border-color:#333333!important}[data-ogsc] .email-logo-cell{background:#121212!important}[data-ogsc] .email-heading,[data-ogsc] .email-heading strong{color:#ffffff!important}[data-ogsc] .email-content{color:#dddddd!important}[data-ogsc] .email-info{border-color:#444444!important}[data-ogsc] .email-info-label{background:#1c1c1c!important;color:#ffffff!important;border-color:#444444!important}[data-ogsc] .email-info-value{background:#121212!important;color:#dddddd!important;border-color:#444444!important}[data-ogsc] .email-footer{background:#1c1c1c!important;color:#bdbdbd!important;border-color:#444444!important}[data-ogsc] .email-footer strong{color:#ffffff!important}</style></head><body class="email-page" bgcolor="#f4f4f4" style="margin:0;background:#f4f4f4;font-family:Inter,Arial,sans-serif;color:#111111"><div style="display:none;max-height:0;overflow:hidden">${escapeHtml(preview || title)}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-page" bgcolor="#f4f4f4" style="background:#f4f4f4;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-card" bgcolor="#ffffff" style="max-width:620px;background:#ffffff;border:1px solid #dddddd;border-radius:14px;overflow:hidden"><tr><td class="email-logo-cell" align="center" bgcolor="#121212" style="padding:24px 32px;background:#121212"><img src="cid:ntw-logo" width="150" alt="Hormuud University and National Training Week" style="display:block;width:150px;max-width:100%;height:auto;border:0;margin:0 auto"></td></tr><tr><td class="email-heading" style="padding:34px 32px 8px;color:#111111"><div style="font-size:11px;font-weight:800;letter-spacing:1.7px;text-transform:uppercase;color:#1da156">${escapeHtml(eyebrow)}</div><h1 style="margin:10px 0 0;color:inherit;font-family:Georgia,'Times New Roman',serif;font-size:29px;line-height:1.25;font-weight:700">${escapeHtml(title)}</h1><div style="margin-top:18px;width:48px;height:3px;background:#1da156"></div></td></tr><tr><td class="email-content" style="padding:20px 32px 34px;font-size:15px;line-height:1.75;color:#333333">${body}</td></tr><tr><td class="email-footer" style="border-top:1px solid #dddddd;padding:22px 32px;background:#f7f7f7;font-size:12px;line-height:1.7;color:#555555"><strong style="color:#111111">National Training Week</strong><br>Official automated communication. Please do not share private meeting or account links.</td></tr></table><div class="email-caption" style="padding:16px 12px 0;color:#777777;font-size:11px;line-height:1.5">National Training Week Management System</div></td></tr></table></body></html>`;
 };
 
-const emailLogoPath = fileURLToPath(new URL('../../../frontend/public/email-logo-banner.png', import.meta.url));
+const emailLogoPath = fileURLToPath(new URL('../../../frontend/public/logo-dark.png', import.meta.url));
 
-const createTransporter = ({ user, pass }) => nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true',
-  connectionTimeout: 10_000,
-  greetingTimeout: 10_000,
-  socketTimeout: 20_000,
-  auth: { user, pass },
-});
+const isRelayTransport = () => process.env.EMAIL_TRANSPORT === 'smtp-relay';
+
+const createTransporter = ({ user, pass } = {}) => {
+  const options = {
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true',
+    requireTLS: process.env.SMTP_REQUIRE_TLS === 'true',
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
+  };
+  if (!isRelayTransport()) options.auth = { user, pass };
+  return nodemailer.createTransport(options);
+};
 
 export const sendEmail = async ({ to, subject, html, text }) => {
   let transporter;
   try {
     const settings = await SiteSettings.findOne({ key: 'global' }).select('emailSenderName replyToEmail smtpUser +smtpPassEncrypted').lean().catch(() => null);
-    const senderAddress = settings?.smtpUser || process.env.SMTP_USER;
-    let senderPassword = process.env.SMTP_PASS;
-    if (settings?.smtpPassEncrypted) {
+    const relayTransport = isRelayTransport();
+    const senderAddress = relayTransport ? '' : (settings?.smtpUser || process.env.SMTP_USER);
+    let senderPassword = relayTransport ? '' : process.env.SMTP_PASS;
+    if (!relayTransport && settings?.smtpPassEncrypted) {
       try { senderPassword = decryptSetting(settings.smtpPassEncrypted); } catch { throw new Error('Saved email credential could not be decrypted. Re-enter the App Password in Admin Settings.'); }
     }
     transporter = createTransporter({ user: senderAddress, pass: senderPassword });
-    const from = settings?.emailSenderName && senderAddress
+    const from = !relayTransport && settings?.emailSenderName && senderAddress
       ? `"${settings.emailSenderName.replaceAll('"', '')}" <${senderAddress}>`
       : process.env.EMAIL_FROM;
-    const attachments = fs.existsSync(emailLogoPath) ? [{ filename: 'national-training-week-email-header.png', path: emailLogoPath, cid: 'ntw-logo' }] : [];
+    const attachments = fs.existsSync(emailLogoPath) ? [{ filename: 'hormuud-ntw-logo.png', path: emailLogoPath, cid: 'ntw-logo' }] : [];
     const info = await transporter.sendMail({ from, replyTo: settings?.replyToEmail || undefined, to: Array.isArray(to) ? to.join(', ') : to, subject, html, text: text || html.replace(/<[^>]*>/g, ''), attachments });
     return { success: true, messageId: info.messageId };
   } catch (error) {
