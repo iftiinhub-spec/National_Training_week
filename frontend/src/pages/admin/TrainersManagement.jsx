@@ -3,7 +3,8 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import PhoneInput from '../../components/common/PhoneInput';
 
 // Resolve the photo URL — Vite proxies /uploads → backend in dev; same origin in prod
 const photoUrl = (path) => {
@@ -12,14 +13,19 @@ const photoUrl = (path) => {
   return `/${path.replace(/^\//,'')}`;
 };
 
+const TRAINER_TITLES = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.', 'Eng.'];
+
 const EMPTY_FORM = {
   name: '',
   email: '',
   phone: '',
-  title: 'Dr.',
+  title: '',
   organization: '',
   biography: '',
   expertise: '',
+  password: '',
+  confirmPassword: '',
+  accessStatus: 'pending',
 };
 
 export const TrainersManagement = () => {
@@ -30,6 +36,8 @@ export const TrainersManagement = () => {
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const fileRef = useRef();
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -52,6 +60,8 @@ export const TrainersManagement = () => {
     setForm(EMPTY_FORM);
     setPhotoFile(null);
     setPhotoPreview(null);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setShowModal(true);
   };
 
@@ -61,14 +71,19 @@ export const TrainersManagement = () => {
       name: tr.name || '',
       email: tr.email || '',
       phone: tr.phone || '',
-      title: tr.title || 'Dr.',
+      title: tr.title || '',
       organization: tr.organization || '',
       biography: tr.biography || '',
       expertise: tr.expertise || '',
+      password: '',
+      confirmPassword: '',
+      accessStatus: tr.accessStatus || 'pending',
     });
     setPhotoFile(null);
     // Show existing saved photo as preview
     setPhotoPreview(photoUrl(tr.photo));
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setShowModal(true);
   };
 
@@ -82,10 +97,15 @@ export const TrainersManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const needsAccount = !editingTrainer || !editingTrainer.user;
+    if (needsAccount && form.password !== form.confirmPassword) {
+      toast.error('Passwords do not match.');
+      return;
+    }
     setSaving(true);
     try {
       const formData = new FormData();
-      Object.keys(form).forEach((k) => formData.append(k, form[k]));
+      Object.keys(form).forEach((k) => { if (k !== 'confirmPassword') formData.append(k, form[k]); });
       if (photoFile) formData.append('photo', photoFile);
 
       if (editingTrainer) {
@@ -112,6 +132,14 @@ export const TrainersManagement = () => {
     }
   };
 
+  const reviewAccess = async (id, status) => {
+    try {
+      await api.patch(`/admin/trainers/${id}/access`, { status });
+      toast.success(`Trainer ${status}.`);
+      fetchTrainers();
+    } catch (error) { toast.error(error.message || 'Access update failed.'); }
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this trainer profile?')) return;
     try {
@@ -128,16 +156,16 @@ export const TrainersManagement = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">Trainer / Speaker Profiles</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-black leading-tight text-slate-900 sm:text-2xl">Trainer / Speaker Profiles</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Managed profiles for session speakers — trainers do NOT require a system login account.
+            Review applications, create trainer accounts, and control trainer portal access.
           </p>
         </div>
         <button
           onClick={openCreateModal}
-          className="px-4 py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm"
+          className="flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#1a6b3c] px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#124d2a] sm:w-auto"
         >
           <PlusIcon className="w-4 h-4" />
           <span>Add Trainer Profile</span>
@@ -159,7 +187,7 @@ export const TrainersManagement = () => {
                 className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
               >
                 {/* Photo banner */}
-                <div className="relative h-36 bg-gradient-to-br from-[#1a6b3c]/10 to-[#155289]/10 flex items-center justify-center">
+                <div className="relative flex h-32 items-center justify-center bg-emerald-50 sm:h-36">
                   {imgSrc ? (
                     <img
                       src={imgSrc}
@@ -174,7 +202,7 @@ export const TrainersManagement = () => {
                 </div>
 
                 {/* Info */}
-                <div className="p-5 flex-1 flex flex-col space-y-2">
+                <div className="flex flex-1 flex-col space-y-2 p-4 sm:p-5">
                   <div>
                     <h3 className="font-bold text-slate-900 text-base leading-tight">
                       {tr.title ? `${tr.title} ` : ''}{tr.name}
@@ -198,10 +226,11 @@ export const TrainersManagement = () => {
                   )}
 
                   {/* Actions */}
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2 mt-auto">
+                  <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                    <select value={tr.accessStatus || 'pending'} onChange={(e) => reviewAccess(tr._id, e.target.value)} className="min-h-10 min-w-28 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold sm:flex-none"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="suspended">Suspended</option></select>
                     <button
                       onClick={() => openEditModal(tr)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg font-semibold transition-colors"
+                      className="flex min-h-10 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-emerald-50 hover:text-[#1a6b3c]"
                       title="Edit trainer profile"
                     >
                       <PencilIcon className="w-4 h-4" />
@@ -209,7 +238,7 @@ export const TrainersManagement = () => {
                     </button>
                     <button
                       onClick={() => handleDelete(tr._id)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg font-semibold transition-colors"
+                      className="flex min-h-10 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
                       title="Delete trainer profile"
                     >
                       <TrashIcon className="w-4 h-4" />
@@ -275,13 +304,14 @@ export const TrainersManagement = () => {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Title</label>
-                  <input
-                    type="text"
+                  <select
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    placeholder="Dr."
-                    className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#1a6b3c]"
-                  />
+                    className="w-full bg-white p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#1a6b3c]"
+                  >
+                    <option value="">Select title</option>
+                    {TRAINER_TITLES.map((title) => <option key={title} value={title}>{title}</option>)}
+                  </select>
                 </div>
                 <div className="col-span-2">
                   <label className="block font-bold uppercase text-slate-700 mb-1">Full Name *</label>
@@ -311,13 +341,7 @@ export const TrainersManagement = () => {
                 </div>
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Phone</label>
-                  <input
-                    type="text"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="e.g. +252 61 234 5678"
-                    className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#1a6b3c]"
-                  />
+                  <PhoneInput value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
                 </div>
               </div>
 
@@ -328,7 +352,7 @@ export const TrainersManagement = () => {
                   type="text"
                   value={form.organization}
                   onChange={(e) => setForm({ ...form, organization: e.target.value })}
-                  placeholder="e.g. Somali National University"
+                  placeholder="e.g. Hormuud University"
                   className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#1a6b3c]"
                 />
               </div>
@@ -356,6 +380,12 @@ export const TrainersManagement = () => {
                   className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#1a6b3c] resize-none"
                 />
               </div>
+
+              {(!editingTrainer || !editingTrainer.user) && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="font-bold uppercase text-slate-700">Password *<span className="relative mt-1 block"><input type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="e.g. StrongPass123" minLength={8} className="w-full rounded-lg border border-slate-300 p-2.5 pr-11 normal-case font-normal focus:outline-none focus:border-[#1a6b3c]" required /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-slate-700" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></span></label>
+                <label className="font-bold uppercase text-slate-700">Confirm Password *<span className="relative mt-1 block"><input type={showConfirmPassword ? 'text' : 'password'} value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} placeholder="e.g. StrongPass123" minLength={8} className="w-full rounded-lg border border-slate-300 p-2.5 pr-11 normal-case font-normal focus:outline-none focus:border-[#1a6b3c]" required /><button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-slate-700" aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}>{showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></span></label>
+                <label className="font-bold uppercase text-slate-700 sm:col-span-2">Initial Access Status<select value={form.accessStatus} onChange={(e) => setForm({ ...form, accessStatus: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2.5 normal-case font-normal"><option value="pending">Pending review</option><option value="approved">Approved — portal access enabled</option></select></label>
+              </div>}
 
               {/* Buttons */}
               <div className="pt-2 flex justify-end gap-2">

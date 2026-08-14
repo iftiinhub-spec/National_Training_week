@@ -353,7 +353,9 @@ html {
   border-color: #cbd5e1;
   color: #0f172a;
   font-size: 0.875rem;
+  font-weight: 400;
   line-height: 1.5;
+  letter-spacing: normal;
 }
 
 .admin-shell textarea {
@@ -363,6 +365,11 @@ html {
 .admin-shell input::placeholder,
 .admin-shell textarea::placeholder {
   color: #94a3b8;
+  font-size: 0.875rem;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: normal;
+  opacity: 1;
 }
 
 .admin-shell input:focus,

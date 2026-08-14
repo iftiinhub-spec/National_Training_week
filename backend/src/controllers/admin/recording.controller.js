@@ -1,17 +1,19 @@
 import Recording from '../../models/Recording.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
+import { resolveTrainingScope } from '../../utils/trainingScope.js';
 
 // GET /api/admin/recordings
 export const getRecordings = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
     const filter = {};
-    if (req.query.training) filter.training = req.query.training;
+    const trainingScope = await resolveTrainingScope(req.query);
+    if (trainingScope) filter.training = trainingScope;
     if (req.query.isPublished !== undefined) filter.isPublished = req.query.isPublished === 'true';
 
     const [recordings, total] = await Promise.all([
       Recording.find(filter)
-        .populate('training', 'title date coverImage event')
+        .populate({ path: 'training', select: 'title date coverImage event eventDay', populate: [{ path: 'event', select: 'name year' }, { path: 'eventDay', select: 'dayNumber theme date' }] })
         .populate('createdBy', 'fullName')
         .sort({ createdAt: -1 }).skip(skip).limit(limit),
       Recording.countDocuments(filter),

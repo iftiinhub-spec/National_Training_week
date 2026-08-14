@@ -23,4 +23,5 @@ export const authorize = (...roles) => {
 export const adminOnly = authorize('admin');
 export const moderatorOnly = authorize('moderator');
 export const participantOnly = authorize('participant');
+export const trainerOnly = authorize('trainer');
 export const adminOrModerator = authorize('admin', 'moderator');

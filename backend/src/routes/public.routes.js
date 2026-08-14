@@ -8,10 +8,15 @@ import { getCategories } from '../controllers/admin/category.controller.js';
 import { getPublicSettings } from '../controllers/admin/settings.controller.js';
 import { body } from 'express-validator';
 import { validate } from '../middleware/validate.js';
+import { uploadImage } from '../middleware/upload.js';
+import { applyAsTrainer } from '../controllers/trainerApplication.controller.js';
+import { isValidInternationalPhone, normalizePhone } from '../utils/phone.js';
+import { getPublicFAQs } from '../controllers/admin/faq.controller.js';
 
 const router = express.Router();
 
 router.get('/settings', getPublicSettings);
+router.get('/faqs', getPublicFAQs);
 
 // Trainings & Trainers
 router.get('/trainings', getPublicTrainings);
@@ -20,6 +25,12 @@ router.get('/featured-trainings', getFeaturedTrainings);
 router.get('/trainers', getPublicTrainers);
 router.get('/trainers/:id', getPublicTrainer);
 router.get('/categories', getCategories);
+router.post('/trainer-applications', uploadImage.single('photo'), [
+  body('name').trim().notEmpty().isLength({ max: 100 }), body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 8 }), body('phone').customSanitizer(normalizePhone).custom(isValidInternationalPhone),
+  body('organization').trim().notEmpty().isLength({ max: 150 }), body('expertise').trim().notEmpty(),
+  body('biography').trim().notEmpty().isLength({ min: 30, max: 2000 }),
+], validate, applyAsTrainer);
 
 // Events & Program
 router.get('/events', getPublicEvents);

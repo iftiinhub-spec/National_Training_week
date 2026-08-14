@@ -25,6 +25,8 @@ export const SignIn = () => {
         navigate('/admin');
       } else if (loggedUser.role === 'moderator') {
         navigate('/moderator');
+      } else if (loggedUser.role === 'trainer') {
+        navigate('/trainer');
       } else {
         navigate('/portal');
       }
@@ -52,7 +54,7 @@ export const SignIn = () => {
             Sign In to National Training Week
           </h2>
           <p className="text-xs text-black/70">
-            Account access for Participants, Moderators, and Administrators
+            Account access for Participants, Trainers, Moderators, and Administrators
           </p>
         </div>
 

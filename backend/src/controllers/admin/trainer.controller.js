@@ -1,6 +1,7 @@
 import Trainer from '../../models/Trainer.js';
 import Training from '../../models/Training.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
+import User from '../../models/User.js';
 
 export const getTrainers = async (req, res, next) => {
   try {
@@ -9,7 +10,7 @@ export const getTrainers = async (req, res, next) => {
     if (req.query.active === 'true') filter.isActive = true;
     if (req.query.search) filter.name = { $regex: req.query.search, $options: 'i' };
     const [trainers, total] = await Promise.all([
-      Trainer.find(filter).sort({ name: 1 }).skip(skip).limit(limit),
+      Trainer.find(filter).populate('user', 'isActive').sort({ name: 1 }).skip(skip).limit(limit),
       Trainer.countDocuments(filter),
     ]);
     return paginatedResponse(res, trainers, total, page, limit);
@@ -70,32 +71,81 @@ export const getTrainer = async (req, res, next) => {
 export const createTrainer = async (req, res, next) => {
   try {
     const data = { ...req.body };
+    if (!data.password) return errorResponse(res, 'Password is required when creating a trainer account.', 400);
+    if (data.password.length < 8) return errorResponse(res, 'Password must be at least 8 characters.', 400);
+    if (await User.exists({ email: data.email.toLowerCase() })) return errorResponse(res, 'An account with this email already exists.', 409);
     if (req.file) data.photo = `uploads/photo/${req.file.filename}`;
     if (data.expertise && typeof data.expertise === 'string') {
       data.expertise = data.expertise.split(',').map((s) => s.trim());
     }
-    const trainer = await Trainer.create(data);
-    return successResponse(res, { trainer }, 'Trainer profile created successfully.', 201);
+    const accessStatus = ['pending', 'approved'].includes(data.accessStatus) ? data.accessStatus : 'pending';
+    const user = await User.create({ fullName: data.name, email: data.email, passwordHash: data.password, phone: data.phone, role: 'trainer', isActive: accessStatus === 'approved', accountStatus: accessStatus === 'approved' ? 'approved' : 'pending' });
+    delete data.password;
+    try {
+      const trainer = await Trainer.create({ ...data, user: user._id, accessStatus, isActive: accessStatus === 'approved' });
+      user.trainerProfile = trainer._id;
+      await user.save({ validateBeforeSave: false });
+      return successResponse(res, { trainer }, 'Trainer account created successfully.', 201);
+    } catch (error) { await User.findByIdAndDelete(user._id); throw error; }
   } catch (err) { next(err); }
 };
 
 export const updateTrainer = async (req, res, next) => {
   try {
     const data = { ...req.body };
+    const password = data.password;
     if (req.file) data.photo = `uploads/photo/${req.file.filename}`;
     if (data.expertise && typeof data.expertise === 'string') {
       data.expertise = data.expertise.split(',').map((s) => s.trim());
     }
+    delete data.password;
+    delete data.accessStatus;
+    const existing = await Trainer.findById(req.params.id);
+    if (!existing) return errorResponse(res, 'Trainer not found.', 404);
+    if (!existing.user && password && password.length < 8) return errorResponse(res, 'Password must be at least 8 characters.', 400);
+    if (data.email && data.email.toLowerCase() !== existing.email) {
+      const duplicate = await User.exists({ email: data.email.toLowerCase(), _id: { $ne: existing.user } });
+      if (duplicate) return errorResponse(res, 'An account with this email already exists.', 409);
+    }
     const trainer = await Trainer.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true });
-    if (!trainer) return errorResponse(res, 'Trainer not found.', 404);
+    if (trainer.user) {
+      await User.findByIdAndUpdate(trainer.user, { fullName: trainer.name, email: trainer.email, phone: trainer.phone, profilePhoto: trainer.photo }, { runValidators: true });
+    } else if (password) {
+      const approved = trainer.accessStatus === 'approved';
+      const user = await User.create({ fullName: trainer.name, email: trainer.email, passwordHash: password, phone: trainer.phone, profilePhoto: trainer.photo, role: 'trainer', trainerProfile: trainer._id, isActive: approved, accountStatus: approved ? 'approved' : 'pending' });
+      trainer.user = user._id;
+      await trainer.save();
+    }
     return successResponse(res, { trainer }, 'Trainer profile updated successfully.');
   } catch (err) { next(err); }
 };
 
+export const reviewTrainer = async (req, res, next) => {
+  try {
+    const { status, reason = '' } = req.body;
+    if (!['approved', 'rejected', 'suspended', 'pending'].includes(status)) return errorResponse(res, 'Invalid trainer access status.', 400);
+    const trainer = await Trainer.findById(req.params.id);
+    if (!trainer) return errorResponse(res, 'Trainer not found.', 404);
+    trainer.accessStatus = status;
+    trainer.reviewReason = reason;
+    trainer.reviewedAt = new Date();
+    trainer.reviewedBy = req.user._id;
+    trainer.isActive = status === 'approved';
+    await trainer.save();
+    if (trainer.user) await User.findByIdAndUpdate(trainer.user, { isActive: status === 'approved', accountStatus: status === 'approved' ? 'approved' : status === 'pending' ? 'pending' : 'rejected' });
+    return successResponse(res, { trainer }, `Trainer access ${status}.`);
+  } catch (error) { next(error); }
+};
+
 export const deleteTrainer = async (req, res, next) => {
   try {
-    const trainer = await Trainer.findByIdAndDelete(req.params.id);
+    const trainer = await Trainer.findById(req.params.id);
     if (!trainer) return errorResponse(res, 'Trainer not found.', 404);
-    return successResponse(res, null, 'Trainer profile deleted successfully.');
+    if (await Training.exists({ trainer: trainer._id })) {
+      return errorResponse(res, 'This trainer is assigned to a training. Reassign those trainings before deleting the account.', 409);
+    }
+    await Trainer.findByIdAndDelete(trainer._id);
+    if (trainer.user) await User.findByIdAndDelete(trainer.user);
+    return successResponse(res, null, 'Trainer account deleted successfully.');
   } catch (err) { next(err); }
 };

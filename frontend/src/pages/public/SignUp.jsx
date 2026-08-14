@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import PhoneInput from '../../components/common/PhoneInput';
+import TrainerApply from './TrainerApply';
 
 const SOMALIA_REGIONS = [
   'Awdal', 'Bakool', 'Banaadir', 'Bari', 'Bay', 'Galguduud', 'Gedo', 'Hiiraan',
@@ -13,6 +15,8 @@ const SOMALIA_REGIONS = [
 export const SignUp = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const registrationType = searchParams.get('type') === 'trainer' ? 'trainer' : 'participant';
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -27,7 +31,7 @@ export const SignUp = () => {
     region: '',
     organization: '',
     profession: '',
-    participantType: 'university_student',
+    participantType: '',
   });
 
   const handleChange = (e) => {
@@ -60,19 +64,24 @@ export const SignUp = () => {
 
   const inputClass = "w-full px-3.5 py-2.5 rounded-lg border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1da156]/40 text-black bg-white";
 
+  const registrationTabs = <div className="mx-auto grid w-full max-w-md grid-cols-2 rounded-xl border border-slate-200 bg-slate-100 p-1" role="tablist" aria-label="Registration type"><button type="button" role="tab" aria-selected={registrationType === 'participant'} onClick={() => setSearchParams({ type: 'participant' })} className={`rounded-lg px-4 py-3 text-sm font-bold transition ${registrationType === 'participant' ? 'bg-white text-[#1a6b3c] shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>Participant</button><button type="button" role="tab" aria-selected={registrationType === 'trainer'} onClick={() => setSearchParams({ type: 'trainer' })} className={`rounded-lg px-4 py-3 text-sm font-bold transition ${registrationType === 'trainer' ? 'bg-white text-[#1a6b3c] shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>Trainer</button></div>;
+
+  if (registrationType === 'trainer') return <div className="flex min-h-[85vh] items-center justify-center bg-white px-4 py-12 sm:px-6 lg:px-8"><div className="w-full max-w-5xl space-y-6">{registrationTabs}<TrainerApply /></div></div>;
+
   return (
     <div className="py-12 px-4 sm:px-6 lg:px-8 bg-white min-h-[85vh] flex items-center justify-center">
       <div className="max-w-5xl w-full space-y-6">
+        {registrationTabs}
         
         {/* Header with Logo */}
         <div className="text-center space-y-3">
-          <Link to="/" className="inline-block">
+          {/* <Link to="/" className="inline-block">
             <img
               src="/logo.png"
               alt="National Training Week Logo"
               className="h-20 w-auto mx-auto object-contain"
             />
-          </Link>
+          </Link> */}
           <h2 className="text-2xl font-black text-black tracking-tight">
             Participant Account Registration
           </h2>
@@ -140,27 +149,21 @@ export const SignUp = () => {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <div>
                 <label className="block text-xs font-bold text-black uppercase mb-1">
-                  Phone Number
+                  Phone Number *
                 </label>
-                <input
-                  type="text"
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  placeholder="+252 61..."
-                  className={inputClass}
-                />
+                <PhoneInput value={form.phone} onChange={(phone) => setForm({ ...form, phone })} required />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-black uppercase mb-1">
-                  Gender
+                  Gender *
                 </label>
                 <select
                   name="gender"
                   value={form.gender}
                   onChange={handleChange}
                   className={inputClass}
+                  required
                 >
                   <option value="">Select Gender</option>
                   <option value="male">Male</option>
@@ -170,13 +173,14 @@ export const SignUp = () => {
 
               <div>
                 <label className="block text-xs font-bold text-black uppercase mb-1">
-                  Region
+                  Region *
                 </label>
                 <select
                   name="region"
                   value={form.region}
                   onChange={handleChange}
                   className={inputClass}
+                  required
                 >
                   <option value="">Select Region</option>
                   {SOMALIA_REGIONS.map((region) => <option key={region} value={region}>{region}</option>)}
@@ -194,6 +198,7 @@ export const SignUp = () => {
                   className={inputClass}
                   required
                 >
+                  <option value="">Select Participant Type</option>
                   <option value="university_student">University Student</option>
                   <option value="highschool_graduate">Fresh High-School Graduate</option>
                   <option value="developer_it">Developer / IT Specialist</option>
@@ -205,7 +210,7 @@ export const SignUp = () => {
 
               <div>
                 <label className="block text-xs font-bold text-black uppercase mb-1">
-                  University / School
+                  University / School *
                 </label>
                 <input
                   type="text"
@@ -214,12 +219,13 @@ export const SignUp = () => {
                   onChange={handleChange}
                   placeholder="e.g. University / Institution"
                   className={inputClass}
+                  required
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-black uppercase mb-1">
-                  Profession
+                  Profession *
                 </label>
                 <input
                   type="text"
@@ -228,6 +234,7 @@ export const SignUp = () => {
                   onChange={handleChange}
                   placeholder="e.g. Student / Software Eng"
                   className={inputClass}
+                  required
                 />
               </div>
             </div>

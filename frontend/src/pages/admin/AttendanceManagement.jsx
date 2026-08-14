@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../api/axios';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 
 export const AttendanceManagement = () => {
@@ -10,11 +11,12 @@ export const AttendanceManagement = () => {
   const [records, setRecords] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({ event: '', eventDay: '', training: '' });
 
   useEffect(() => {
     const fetchTrainings = async () => {
       try {
-        const res = await api.get('/admin/trainings');
+        const res = await api.get('/admin/trainings?limit=100');
         if (res.success && res.data?.length > 0) {
           setTrainings(res.data);
           setSelectedTraining(res.data[0]._id);
@@ -27,6 +29,12 @@ export const AttendanceManagement = () => {
     };
     fetchTrainings();
   }, []);
+
+  const filteredTrainings = useMemo(() => trainings.filter((item) => (!filters.event || String(item.event?._id || item.event) === filters.event) && (!filters.eventDay || String(item.eventDay?._id || item.eventDay) === filters.eventDay)), [trainings, filters.event, filters.eventDay]);
+  useEffect(() => {
+    if (filters.training) setSelectedTraining(filters.training);
+    else setSelectedTraining(filteredTrainings[0]?._id || '');
+  }, [filters.training, filteredTrainings]);
 
   const fetchAttendance = async (trainingId) => {
     if (!trainingId) return;
@@ -44,6 +52,9 @@ export const AttendanceManagement = () => {
   useEffect(() => {
     if (selectedTraining) {
       fetchAttendance(selectedTraining);
+    } else {
+      setRecords([]);
+      setStats(null);
     }
   }, [selectedTraining]);
 
@@ -73,16 +84,9 @@ export const AttendanceManagement = () => {
           </p>
         </div>
 
-        <select
-          value={selectedTraining}
-          onChange={(e) => setSelectedTraining(e.target.value)}
-          className="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold bg-white"
-        >
-          {trainings.map((t) => (
-            <option key={t._id} value={t._id}>{t.title}</option>
-          ))}
-        </select>
       </div>
+
+      <AdminProgramFilters value={filters} onChange={setFilters} />
 
       {stats && (
         <div className="grid grid-cols-4 gap-4 text-center">
@@ -130,6 +134,7 @@ export const AttendanceManagement = () => {
               ))}
             </tbody>
           </table>
+          {!selectedTraining && <p className="p-12 text-center text-sm text-slate-500">No training session matches these filters.</p>}
         </div>
       </div>
 

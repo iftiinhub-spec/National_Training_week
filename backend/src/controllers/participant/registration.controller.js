@@ -15,7 +15,7 @@ export const registerForTraining = async (req, res, next) => {
       .populate('eventDay', 'dayNumber theme date')
       .populate('event', 'registrationStart registrationDeadline startDate status');
     if (!training) return errorResponse(res, 'Training not found.', 404);
-    if (!['published', 'registration_open'].includes(training.status)) {
+    if (training.status !== 'registration_open') {
       return errorResponse(res, 'This training is not currently open for registration.', 400);
     }
     const now = new Date();

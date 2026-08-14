@@ -5,6 +5,7 @@ import Registration from '../../models/Registration.js';
 import Trainer from '../../models/Trainer.js';
 import { sendInvitationEmail, sendReminderEmail } from '../../utils/email.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
+import { getTrainingDateTime } from '../../utils/trainingDateTime.js';
 
 const checkModeratorAccess = async (trainingId, userId, role) => {
   if (role === 'admin') return true;
@@ -153,10 +154,10 @@ export const sendParticipantInvitations = async (req, res, next) => {
 
     const emails = registrations.map((r) => r.participant.email).filter(Boolean);
     const failed = [];
-    const trainingDate = training.date ? new Date(training.date).toISOString().slice(0, 10) : null;
-    const scheduledStart = meeting?.startTime || (trainingDate && training.startTime
-      ? new Date(`${trainingDate}T${training.startTime}:00+03:00`)
-      : training.date);
+    const scheduledStart = getTrainingDateTime(training.date, training.startTime);
+    if (!scheduledStart) {
+      return errorResponse(res, 'The training date or start time is invalid. Please update the training schedule.', 400);
+    }
 
     for (const email of emails) {
       let result;
@@ -168,7 +169,7 @@ export const sendParticipantInvitations = async (req, res, next) => {
           meetingUrl: meeting.meetingUrl,
           meetingId: meeting.meetingId,
           passcode: meeting.passcode,
-          startTime: meeting.startTime || training.date,
+          startTime: scheduledStart,
           platform: meeting.platform,
           notes: meeting.notes,
         });
