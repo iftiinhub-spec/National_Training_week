@@ -1,4 +1,6 @@
 import Certificate from '../../models/Certificate.js';
+import TrainerCertificate from '../../models/TrainerCertificate.js';
+import CertificateIssuanceJob from '../../models/CertificateIssuanceJob.js';
 import Registration from '../../models/Registration.js';
 import Attendance from '../../models/Attendance.js';
 import Training from '../../models/Training.js';
@@ -6,6 +8,8 @@ import { generateCertificateId } from '../../utils/generateCertificateId.js';
 import { generateCertificatePDF } from '../../utils/generatePDF.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { sendCertificateIssuedEmail } from '../../utils/email.js';
+import { enqueueCertificateIssuance } from '../../services/completeTrainingSession.js';
+import { withPdfGenerationLimit } from '../../utils/pdfGenerationLimit.js';
 
 // POST /api/admin/certificates/generate  — generate for eligible participant
 export const generateCertificate = async (req, res, next) => {
@@ -53,6 +57,11 @@ export const generateCertificate = async (req, res, next) => {
       verifyUrl,
       portalUrl: `${process.env.FRONTEND_URL}/portal/certificates`,
     });
+    await Certificate.updateOne({ _id: certificate._id }, emailResult.success ? {
+      $set: { emailStatus: 'sent', emailSentAt: new Date(), emailLastError: '' }, $inc: { emailAttempts: 1 },
+    } : {
+      $set: { emailStatus: 'failed', emailLastError: String(emailResult.error || 'Email delivery failed.').slice(0, 500) }, $inc: { emailAttempts: 1 },
+    });
 
     return successResponse(res, { certificate: populated, emailDelivered: emailResult.success }, emailResult.success ? 'Certificate issued and participant notified.' : 'Certificate issued, but its notification email could not be delivered.', 201);
   } catch (err) { next(err); }
@@ -62,38 +71,14 @@ export const generateCertificate = async (req, res, next) => {
 export const bulkGenerateCertificates = async (req, res, next) => {
   try {
     const { trainingId } = req.body;
-    const training = await Training.findById(trainingId).populate('event', 'name year');
+    const training = await Training.findById(trainingId);
     if (!training) return errorResponse(res, 'Training not found.', 404);
     if (training.status !== 'completed') {
       return errorResponse(res, 'Training must be completed before bulk generating certificates.', 400);
     }
 
-    const approvedRegs = await Registration.find({ training: trainingId, status: 'approved' }).populate('participant', 'fullName email');
-    let issued = 0, skipped = 0, notified = 0, errors = [];
-
-    for (const reg of approvedRegs) {
-      try {
-        const attendance = await Attendance.findOne({ participant: reg.participant, training: trainingId });
-        if (!attendance || attendance.status !== 'present') { skipped++; continue; }
-        const existing = await Certificate.findOne({ participant: reg.participant._id, training: trainingId });
-        if (existing) { skipped++; continue; }
-
-        const certId = generateCertificateId(training.event?.year || new Date().getFullYear());
-        await Certificate.create({ participant: reg.participant._id, training: trainingId, certificateId: certId, issuedBy: req.user._id });
-        issued++;
-        const emailResult = await sendCertificateIssuedEmail({
-          to: reg.participant.email,
-          participantName: reg.participant.fullName,
-          trainingTitle: training.title,
-          certificateId: certId,
-          verifyUrl: `${process.env.FRONTEND_URL}/verify-certificate?id=${certId}`,
-          portalUrl: `${process.env.FRONTEND_URL}/portal/certificates`,
-        });
-        if (emailResult.success) notified++;
-      } catch (e) { errors.push({ participant: reg.participant, error: e.message }); }
-    }
-
-    return successResponse(res, { issued, skipped, notified, errors }, `Issued ${issued} certificate${issued === 1 ? '' : 's'}; ${notified} participant notification${notified === 1 ? '' : 's'} delivered; ${skipped} skipped.`);
+    const job = await enqueueCertificateIssuance({ trainingId, requestedBy: req.user._id, restart: true });
+    return successResponse(res, { job: { id: job._id, status: job.status } }, 'Certificate issuance has been queued. Emails will be delivered safely in the background.');
   } catch (err) { next(err); }
 };
 
@@ -155,14 +140,14 @@ export const downloadCertificate = async (req, res, next) => {
 
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-certificate?id=${cert.certificateId}`;
 
-    const pdfBuffer = await generateCertificatePDF({
+    const pdfBuffer = await withPdfGenerationLimit(() => generateCertificatePDF({
       participantName: cert.participant.fullName,
       trainingTitle: cert.training.title,
       eventName: cert.training.event?.name || 'National Training Week',
       issuedDate: cert.issuedAt,
       certificateId: cert.certificateId,
       verifyUrl,
-    });
+    }));
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="certificate-${cert.certificateId}.pdf"`);
@@ -177,16 +162,41 @@ export const verifyCertificate = async (req, res, next) => {
       .populate('participant', 'fullName') // Only expose name, not full profile
       .populate({ path: 'training', populate: { path: 'event', select: 'name year' } });
 
-    if (!cert) return errorResponse(res, 'Certificate not found. It may be invalid.', 404);
-    if (cert.isRevoked) return errorResponse(res, 'This certificate has been revoked.', 400);
+    if (cert) {
+      if (cert.isRevoked) return errorResponse(res, 'This certificate has been revoked.', 400);
+      return successResponse(res, {
+        valid: true,
+        certificateId: cert.certificateId,
+        participantName: cert.participant.fullName,
+        recipientName: cert.participant.fullName,
+        certificateType: 'Certificate of Participation',
+        trainingTitle: cert.training.title,
+        eventName: cert.training.event?.name,
+        issuedAt: cert.issuedAt,
+      }, 'Certificate is valid.');
+    }
 
+    const trainerCert = await TrainerCertificate.findOne({ certificateId: req.params.certificateId })
+      .populate('trainer', 'name')
+      .populate({ path: 'training', populate: { path: 'event', select: 'name year' } });
+    if (!trainerCert) return errorResponse(res, 'Certificate not found. It may be invalid.', 404);
     return successResponse(res, {
       valid: true,
-      certificateId: cert.certificateId,
-      participantName: cert.participant.fullName,
-      trainingTitle: cert.training.title,
-      eventName: cert.training.event?.name,
-      issuedAt: cert.issuedAt,
+      certificateId: trainerCert.certificateId,
+      participantName: trainerCert.trainer.name,
+      recipientName: trainerCert.trainer.name,
+      certificateType: 'Certificate of Appreciation',
+      trainingTitle: trainerCert.training.title,
+      eventName: trainerCert.training.event?.name,
+      issuedAt: trainerCert.issuedAt,
     }, 'Certificate is valid.');
+  } catch (err) { next(err); }
+};
+
+export const getCertificateJob = async (req, res, next) => {
+  try {
+    const job = await CertificateIssuanceJob.findOne({ training: req.params.trainingId })
+      .select('status attempts nextRunAt completedAt lastError summary updatedAt').lean();
+    return successResponse(res, { job });
   } catch (err) { next(err); }
 };

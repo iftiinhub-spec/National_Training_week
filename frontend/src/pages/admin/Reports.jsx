@@ -8,6 +8,7 @@ import { ArrowDownTrayIcon, UserGroupIcon, CheckBadgeIcon, ClipboardDocumentChec
 import { useTheme } from '../../context/ThemeContext';
 
 const COLORS = ['#1a6b3c', '#2f855a', '#68a67d', '#94a3b8', '#334155', '#0f172a'];
+const PARTICIPANT_TYPE_LABELS = { university_student: 'University Student', highschool_graduate: 'High-School Graduate', developer_it: 'Developer / IT Specialist', professional: 'Professional', general_public: 'General Public', teacher_educator: 'Teacher / Educator', entrepreneur_business: 'Entrepreneur / Business Owner', health_worker: 'Health Worker', community_organization: 'Community Organization Representative', other: 'Other' };
 
 export const Reports = () => {
   const { isDark } = useTheme();
@@ -39,7 +40,7 @@ export const Reports = () => {
         ]);
         if (ovRes.success) setOverview(ovRes.data);
         if (regRes.success) setRegionData(regRes.data.byRegion || []);
-        if (typeRes.success) setTypeData(typeRes.data.byType || []);
+        if (typeRes.success) setTypeData((typeRes.data.byType || []).map((item) => ({ ...item, _id: PARTICIPANT_TYPE_LABELS[item._id] || item._id || 'Not specified' })));
         if (attRes.success) setAttendanceData(attRes.data);
         if (dailyRes.success) setDailyData(dailyRes.data.dailySummary || []);
         if (fbRes.success) setFeedbackData(fbRes.data);

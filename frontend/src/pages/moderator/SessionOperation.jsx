@@ -4,6 +4,7 @@ import api from '../../api/axios';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import {
   VideoCameraIcon,
   PaperAirplaneIcon,
@@ -16,6 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export const SessionOperation = () => {
+  const confirmAction = useConfirmDialog();
   const { trainingId } = useParams();
   const [training, setTraining] = useState(null);
   const [meeting, setMeeting] = useState(null);
@@ -174,7 +176,7 @@ export const SessionOperation = () => {
 
   const handleCompleteTraining = async () => {
     const presentCount = attendance.filter((record) => record.status === 'present').length;
-    const confirmed = window.confirm(`End this training session now? Attendance will be locked and certificates will be issued immediately to ${presentCount} approved participant${presentCount === 1 ? '' : 's'} currently marked present. This cannot be reopened.`);
+    const confirmed = await confirmAction({ title: 'Complete this session?', message: `Attendance will be locked. Certificates will be issued to ${presentCount} approved participant${presentCount === 1 ? '' : 's'} marked present, and the trainer will receive a Certificate of Appreciation. This session cannot be reopened.`, confirmLabel: 'Complete session', tone: 'warning' });
     if (!confirmed) return;
     setCompleting(true);
     try {
@@ -183,7 +185,7 @@ export const SessionOperation = () => {
         setTraining(res.data.training);
         setQrSession(null);
         setQrDataUrl('');
-        toast.success(res.message || 'Training completed and certificates generated.');
+        toast.success(res.message || 'Training completed and certificate delivery queued.');
         fetchSessionData();
       }
     } catch (err) {

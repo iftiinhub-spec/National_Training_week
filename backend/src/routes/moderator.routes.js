@@ -8,8 +8,11 @@ import { getMeeting, createMeeting, updateMeeting, deleteMeeting, releaseMeeting
 import { openQRSession, closeQRSession, getAttendance, updateAttendance, createManualAttendance } from '../controllers/admin/attendance.controller.js';
 import { getTrainingFeedback } from '../controllers/admin/feedback.controller.js';
 import { completeTraining } from '../controllers/admin/training.controller.js';
+import { validate } from '../middleware/validate.js';
+import { attendanceValidation, idParam, invitationValidation, manualAttendanceValidation, meetingValidation, validateObjectIdParam } from '../middleware/validationRules.js';
 
 const router = express.Router();
+['id', 'trainingId', 'attendanceId'].forEach((name) => router.param(name, validateObjectIdParam));
 router.use(protect, moderatorOnly);
 
 // Moderator Dashboard - assigned trainings
@@ -46,7 +49,7 @@ router.get('/trainings', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get('/trainings/:id', async (req, res, next) => {
+router.get('/trainings/:id', idParam(), validate, async (req, res, next) => {
   try {
     const training = await Training.findOne({ _id: req.params.id, moderator: req.user._id })
       .populate('event', 'name year theme')
@@ -59,7 +62,7 @@ router.get('/trainings/:id', async (req, res, next) => {
 });
 
 // Participant list for assigned training
-router.get('/trainings/:trainingId/participants', async (req, res, next) => {
+router.get('/trainings/:trainingId/participants', idParam('trainingId', 'training ID'), validate, async (req, res, next) => {
   try {
     const training = await Training.findOne({ _id: req.params.trainingId, moderator: req.user._id });
     if (!training) return errorResponse(res, 'Access denied.', 403);
@@ -72,23 +75,27 @@ router.get('/trainings/:trainingId/participants', async (req, res, next) => {
 });
 
 // Meeting management (reuse admin controllers which check moderator access)
-router.route('/trainings/:trainingId/meeting').get(getMeeting).post(createMeeting).put(updateMeeting).delete(deleteMeeting);
-router.patch('/trainings/:trainingId/meeting/release', releaseMeeting);
+router.route('/trainings/:trainingId/meeting')
+  .get(idParam('trainingId', 'training ID'), validate, getMeeting)
+  .post(idParam('trainingId', 'training ID'), meetingValidation, validate, createMeeting)
+  .put(idParam('trainingId', 'training ID'), meetingValidation, validate, updateMeeting)
+  .delete(idParam('trainingId', 'training ID'), validate, deleteMeeting);
+router.patch('/trainings/:trainingId/meeting/release', idParam('trainingId', 'training ID'), validate, releaseMeeting);
 
 // Communications
-router.post('/trainings/:trainingId/invitations/trainer', sendTrainerInvitation);
-router.post('/trainings/:trainingId/invitations/participants', sendParticipantInvitations);
-router.get('/trainings/:trainingId/communications', getCommunications);
+router.post('/trainings/:trainingId/invitations/trainer', idParam('trainingId', 'training ID'), validate, sendTrainerInvitation);
+router.post('/trainings/:trainingId/invitations/participants', idParam('trainingId', 'training ID'), invitationValidation, validate, sendParticipantInvitations);
+router.get('/trainings/:trainingId/communications', idParam('trainingId', 'training ID'), validate, getCommunications);
 
 // Attendance
-router.post('/trainings/:trainingId/qr-session/open', openQRSession);
-router.post('/trainings/:trainingId/qr-session/close', closeQRSession);
-router.get('/trainings/:trainingId/attendance', getAttendance);
-router.patch('/trainings/:trainingId/attendance/:attendanceId', updateAttendance);
-router.post('/trainings/:trainingId/attendance/manual', createManualAttendance);
-router.post('/trainings/:id/complete', completeTraining);
+router.post('/trainings/:trainingId/qr-session/open', idParam('trainingId', 'training ID'), validate, openQRSession);
+router.post('/trainings/:trainingId/qr-session/close', idParam('trainingId', 'training ID'), validate, closeQRSession);
+router.get('/trainings/:trainingId/attendance', idParam('trainingId', 'training ID'), validate, getAttendance);
+router.patch('/trainings/:trainingId/attendance/:attendanceId', idParam('trainingId', 'training ID'), idParam('attendanceId', 'attendance ID'), attendanceValidation, validate, updateAttendance);
+router.post('/trainings/:trainingId/attendance/manual', idParam('trainingId', 'training ID'), manualAttendanceValidation, validate, createManualAttendance);
+router.post('/trainings/:id/complete', idParam(), validate, completeTraining);
 
 // Feedback
-router.get('/trainings/:trainingId/feedback', getTrainingFeedback);
+router.get('/trainings/:trainingId/feedback', idParam('trainingId', 'training ID'), validate, getTrainingFeedback);
 
 export default router;

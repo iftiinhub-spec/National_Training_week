@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export const CategoriesManagement = () => {
+  const confirmAction = useConfirmDialog();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -60,7 +62,7 @@ export const CategoriesManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete category?')) return;
+    if (!await confirmAction({ title: 'Delete category?', message: 'This category will be permanently removed. Categories connected to training sessions may not be deletable.', confirmLabel: 'Delete category' })) return;
     try {
       await api.delete(`/admin/categories/${id}`);
       toast.success('Category deleted');

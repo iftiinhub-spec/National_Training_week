@@ -5,12 +5,15 @@ import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import PhoneInput from '../../components/common/PhoneInput';
 import TrainerApply from './TrainerApply';
+import { getCountries } from 'libphonenumber-js';
 
 const SOMALIA_REGIONS = [
   'Awdal', 'Bakool', 'Banaadir', 'Bari', 'Bay', 'Galguduud', 'Gedo', 'Hiiraan',
   'Lower Juba', 'Middle Juba', 'Lower Shabelle', 'Middle Shabelle', 'Mudug',
   'Nugaal', 'Sanaag', 'Sool', 'Togdheer', 'Woqooyi Galbeed',
 ];
+const countryNames = new Intl.DisplayNames(['en'], { type: 'region' });
+const COUNTRIES = getCountries().map((code) => ({ code, name: countryNames.of(code) || code })).sort((a, b) => a.name.localeCompare(b.name));
 
 export const SignUp = () => {
   const { register } = useAuth();
@@ -28,14 +31,17 @@ export const SignUp = () => {
     confirmPassword: '',
     phone: '',
     gender: '',
+    country: 'SO',
     region: '',
+    city: '',
     organization: '',
     profession: '',
     participantType: '',
   });
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm((current) => ({ ...current, [name]: value, ...(name === 'country' ? { region: '', city: '' } : {}) }));
   };
 
   const handleSubmit = async (e) => {
@@ -171,21 +177,9 @@ export const SignUp = () => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-black uppercase mb-1">
-                  Region *
-                </label>
-                <select
-                  name="region"
-                  value={form.region}
-                  onChange={handleChange}
-                  className={inputClass}
-                  required
-                >
-                  <option value="">Select Region</option>
-                  {SOMALIA_REGIONS.map((region) => <option key={region} value={region}>{region}</option>)}
-                </select>
-              </div>
+              <div><label className="block text-xs font-bold text-black uppercase mb-1">Country *</label><select name="country" value={form.country} onChange={handleChange} className={inputClass} required>{COUNTRIES.map(({ code, name }) => <option key={code} value={code}>{name}</option>)}</select></div>
+
+              {form.country === 'SO' ? <div><label className="block text-xs font-bold text-black uppercase mb-1">Region *</label><select name="region" value={form.region} onChange={handleChange} className={inputClass} required><option value="">Select Region</option>{SOMALIA_REGIONS.map((region) => <option key={region} value={region}>{region}</option>)}</select></div> : <div><label className="block text-xs font-bold text-black uppercase mb-1">City / Location</label><input name="city" value={form.city} onChange={handleChange} className={inputClass} placeholder="e.g. Nairobi" maxLength={100} /></div>}
 
               <div>
                 <label className="block text-xs font-bold text-black uppercase mb-1">
@@ -204,13 +198,17 @@ export const SignUp = () => {
                   <option value="developer_it">Developer / IT Specialist</option>
                   <option value="professional">Professional</option>
                   <option value="general_public">General Public</option>
+                  <option value="teacher_educator">Teacher / Educator</option>
+                  <option value="entrepreneur_business">Entrepreneur / Business Owner</option>
+                  <option value="health_worker">Health Worker</option>
+                  <option value="community_organization">Community Organization Representative</option>
                   <option value="other">Other</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-black uppercase mb-1">
-                  University / School *
+                  Organization / Institution {form.participantType === 'general_public' ? '(Optional)' : '*'}
                 </label>
                 <input
                   type="text"
@@ -219,7 +217,7 @@ export const SignUp = () => {
                   onChange={handleChange}
                   placeholder="e.g. University / Institution"
                   className={inputClass}
-                  required
+                  required={form.participantType !== 'general_public'}
                 />
               </div>
 

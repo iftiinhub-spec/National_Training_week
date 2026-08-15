@@ -1,5 +1,10 @@
 import rateLimit from 'express-rate-limit';
 
+const accountOrIpKey = (req) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  return email ? `account:${email}` : `ip:${req.ip}`;
+};
+
 // Strict rate limiter for auth endpoints (login, register, password reset)
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -11,12 +16,13 @@ export const authRateLimiter = rateLimit({
     message: 'Too many attempts. Please try again in 15 minutes.',
   },
   skipSuccessfulRequests: true,
+  keyGenerator: accountOrIpKey,
 });
 
 // General API rate limiter
 export const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000,
+  max: Math.max(100, Number(process.env.API_RATE_LIMIT_MAX) || 5_000),
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -34,6 +40,7 @@ export const apiRateLimiter = rateLimit({
 export const qrRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5,
+  keyGenerator: (req) => req.user?._id ? `participant:${req.user._id}` : `ip:${req.ip}`,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

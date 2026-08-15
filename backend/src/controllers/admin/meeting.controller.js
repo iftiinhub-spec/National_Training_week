@@ -13,6 +13,12 @@ const checkModeratorAccess = async (trainingId, userId, role) => {
   return training && String(training.moderator) === String(userId);
 };
 
+const meetingPayload = (input) => Object.fromEntries(
+  ['platform', 'meetingUrl', 'meetingId', 'passcode', 'startTime', 'endTime', 'notes']
+    .filter((field) => input[field] !== undefined)
+    .map((field) => [field, input[field]])
+);
+
 // GET /api/admin/trainings/:trainingId/meeting  OR  /api/moderator/trainings/:trainingId/meeting
 export const getMeeting = async (req, res, next) => {
   try {
@@ -37,7 +43,7 @@ export const createMeeting = async (req, res, next) => {
     const existing = await Meeting.findOne({ training: trainingId });
     if (existing) return errorResponse(res, 'A meeting already exists. Use PUT to update it.', 409);
 
-    const meeting = await Meeting.create({ ...req.body, training: trainingId, createdBy: req.user._id });
+    const meeting = await Meeting.create({ ...meetingPayload(req.body), training: trainingId, createdBy: req.user._id });
     return successResponse(res, { meeting }, 'Meeting created successfully.', 201);
   } catch (err) { next(err); }
 };
@@ -51,7 +57,7 @@ export const updateMeeting = async (req, res, next) => {
 
     const meeting = await Meeting.findOneAndUpdate(
       { training: trainingId },
-      req.body,
+      meetingPayload(req.body),
       { new: true, runValidators: true }
     );
     if (!meeting) return errorResponse(res, 'Meeting not found.', 404);

@@ -64,7 +64,7 @@ export const generateCertificatePDF = async ({
     doc.fillColor(green).font('Helvetica-Bold').fontSize(8.5)
       .text('THIS OFFICIAL CERTIFICATE IS PRESENTED TO', 100, 137, { width: width - 200, align: 'center', characterSpacing: 1.45 });
     doc.fillColor(black).font('Times-Bold').fontSize(33)
-      .text('Certificate of Completion', 100, 158, { width: width - 200, align: 'center' });
+      .text('Certificate of Participation', 100, 158, { width: width - 200, align: 'center' });
 
     const safeName = participantName || 'Participant Name';
     const nameSize = safeName.length > 38 ? 25 : 30;

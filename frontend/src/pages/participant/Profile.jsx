@@ -4,10 +4,13 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import { CameraIcon, CheckIcon, EyeIcon, EyeSlashIcon, KeyIcon, PencilIcon, ShieldCheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import PhoneInput from '../../components/common/PhoneInput';
+import { getCountries } from 'libphonenumber-js';
 
 const REGIONS = ['Awdal', 'Bakool', 'Banaadir', 'Bari', 'Bay', 'Galguduud', 'Gedo', 'Hiiraan', 'Lower Juba', 'Middle Juba', 'Lower Shabelle', 'Middle Shabelle', 'Mudug', 'Nugaal', 'Sanaag', 'Sool', 'Togdheer', 'Woqooyi Galbeed'];
+const countryNames = new Intl.DisplayNames(['en'], { type: 'region' });
+const COUNTRIES = getCountries().map((code) => ({ code, name: countryNames.of(code) || code })).sort((a, b) => a.name.localeCompare(b.name));
 const photoUrl = (path) => path ? (path.startsWith('http') ? path : `/${path.replace(/^\//, '')}`) : null;
-const participantLabel = (value) => ({ university_student: 'University Student', highschool_graduate: 'Fresh High-School Graduate', developer_it: 'Developer / IT Specialist', professional: 'Professional', general_public: 'General Public', other: 'Other' }[value] || 'Not provided');
+const participantLabel = (value) => ({ university_student: 'University Student', highschool_graduate: 'Fresh High-School Graduate', developer_it: 'Developer / IT Specialist', professional: 'Professional', general_public: 'General Public', teacher_educator: 'Teacher / Educator', entrepreneur_business: 'Entrepreneur / Business Owner', health_worker: 'Health Worker', community_organization: 'Community Organization Representative', other: 'Other' }[value] || 'Not provided');
 
 export const Profile = () => {
   const { user, updateProfile } = useAuth();
@@ -19,11 +22,11 @@ export const Profile = () => {
   const [profileSubmitting, setProfileSubmitting] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState({ current: false, next: false, confirm: false });
-  const [profileForm, setProfileForm] = useState({ fullName: user?.fullName || '', phone: user?.phone || '', gender: user?.gender || '', region: user?.region || '', organization: user?.organization || '', profession: user?.profession || '', participantType: user?.participantType || 'university_student' });
+  const [profileForm, setProfileForm] = useState({ fullName: user?.fullName || '', phone: user?.phone || '', gender: user?.gender || '', country: user?.country || 'SO', region: user?.region || '', city: user?.city || '', organization: user?.organization || '', profession: user?.profession || '', participantType: user?.participantType || 'university_student' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
   const cancelEdit = () => {
-    setProfileForm({ fullName: user?.fullName || '', phone: user?.phone || '', gender: user?.gender || '', region: user?.region || '', organization: user?.organization || '', profession: user?.profession || '', participantType: user?.participantType || 'university_student' });
+    setProfileForm({ fullName: user?.fullName || '', phone: user?.phone || '', gender: user?.gender || '', country: user?.country || 'SO', region: user?.region || '', city: user?.city || '', organization: user?.organization || '', profession: user?.profession || '', participantType: user?.participantType || 'university_student' });
     setProfilePhoto(null);
     setPhotoPreview(photoUrl(user?.profilePhoto));
     setEditing(false);
@@ -64,7 +67,7 @@ export const Profile = () => {
 
   const fields = [
     ['Full name', user?.fullName], ['Email address', user?.email], ['Phone number', user?.phone],
-    ['Gender', user?.gender?.replaceAll('_', ' ')], ['Region', user?.region], ['Participant type', participantLabel(user?.participantType)],
+    ['Gender', user?.gender?.replaceAll('_', ' ')], ['Country', countryNames.of(user?.country || 'SO')], [user?.country === 'SO' || !user?.country ? 'Region' : 'City / Location', user?.country === 'SO' || !user?.country ? user?.region : user?.city], ['Participant type', participantLabel(user?.participantType)],
     ['University / School', user?.organization], ['Profession', user?.profession],
   ];
   const inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950';
@@ -90,8 +93,9 @@ export const Profile = () => {
           <label>Email address<input className={`${inputClass} mt-2 cursor-not-allowed bg-slate-100 text-slate-500`} value={user?.email || ''} disabled /></label>
           <label>Phone number<PhoneInput className="mt-2" value={profileForm.phone} onChange={(phone) => setProfileForm({ ...profileForm, phone })} /></label>
           <label>Gender<select className={`${inputClass} mt-2`} value={profileForm.gender} onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option></select></label>
-          <label>Region<select className={`${inputClass} mt-2`} value={profileForm.region} onChange={(e) => setProfileForm({ ...profileForm, region: e.target.value })}><option value="">Select region</option>{REGIONS.map((region) => <option key={region}>{region}</option>)}</select></label>
-          <label>Participant type<select className={`${inputClass} mt-2`} value={profileForm.participantType} onChange={(e) => setProfileForm({ ...profileForm, participantType: e.target.value })}><option value="university_student">University Student</option><option value="highschool_graduate">Fresh High-School Graduate</option><option value="developer_it">Developer / IT Specialist</option><option value="professional">Professional</option><option value="general_public">General Public</option><option value="other">Other</option></select></label>
+          <label>Country<select className={`${inputClass} mt-2`} value={profileForm.country} onChange={(e) => setProfileForm({ ...profileForm, country: e.target.value, region: '', city: '' })}>{COUNTRIES.map(({ code, name }) => <option key={code} value={code}>{name}</option>)}</select></label>
+          {profileForm.country === 'SO' ? <label>Region<select className={`${inputClass} mt-2`} value={profileForm.region} onChange={(e) => setProfileForm({ ...profileForm, region: e.target.value })}><option value="">Select region</option>{REGIONS.map((region) => <option key={region}>{region}</option>)}</select></label> : <label>City / Location<input className={`${inputClass} mt-2`} value={profileForm.city} onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })} /></label>}
+          <label>Participant type<select className={`${inputClass} mt-2`} value={profileForm.participantType} onChange={(e) => setProfileForm({ ...profileForm, participantType: e.target.value })}><option value="university_student">University Student</option><option value="highschool_graduate">Fresh High-School Graduate</option><option value="developer_it">Developer / IT Specialist</option><option value="professional">Professional</option><option value="general_public">General Public</option><option value="teacher_educator">Teacher / Educator</option><option value="entrepreneur_business">Entrepreneur / Business Owner</option><option value="health_worker">Health Worker</option><option value="community_organization">Community Organization Representative</option><option value="other">Other</option></select></label>
           <label>University / School<input className={`${inputClass} mt-2`} value={profileForm.organization} onChange={(e) => setProfileForm({ ...profileForm, organization: e.target.value })} /></label>
           <label>Profession<input className={`${inputClass} mt-2`} value={profileForm.profession} onChange={(e) => setProfileForm({ ...profileForm, profession: e.target.value })} /></label>
         </div>

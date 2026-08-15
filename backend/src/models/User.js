@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { isValidInternationalPhone, normalizePhone } from '../utils/phone.js';
+import { HUMAN_NAME_MESSAGE, isValidHumanName, normalizeHumanName } from '../utils/humanName.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -8,7 +9,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Full name is required'],
       trim: true,
+      set: normalizeHumanName,
       maxlength: [100, 'Full name cannot exceed 100 characters'],
+      validate: { validator: isValidHumanName, message: HUMAN_NAME_MESSAGE },
     },
     email: {
       type: String,
@@ -38,6 +41,8 @@ const userSchema = new mongoose.Schema(
     trainerProfile: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainer', default: null },
     gender: { type: String, enum: ['male', 'female', ''] },
     region: { type: String, trim: true },
+    country: { type: String, trim: true, uppercase: true, default: 'SO', maxlength: 2 },
+    city: { type: String, trim: true, maxlength: 100, default: '' },
     organization: { type: String, trim: true },
     profession: { type: String, trim: true },
     participantType: {
@@ -48,6 +53,10 @@ const userSchema = new mongoose.Schema(
         'university_student',
         'developer_it',
         'highschool_graduate',
+        'teacher_educator',
+        'entrepreneur_business',
+        'health_worker',
+        'community_organization',
         'other',
         '',
       ],

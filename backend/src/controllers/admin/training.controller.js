@@ -7,12 +7,20 @@ import Meeting from '../../models/Meeting.js';
 import Communication from '../../models/Communication.js';
 import Feedback from '../../models/Feedback.js';
 import Certificate from '../../models/Certificate.js';
+import TrainerCertificate from '../../models/TrainerCertificate.js';
+import CertificateIssuanceJob from '../../models/CertificateIssuanceJob.js';
 import Recording from '../../models/Recording.js';
 import QRSession from '../../models/QRSession.js';
+import Trainer from '../../models/Trainer.js';
+import User from '../../models/User.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { completeTrainingSession } from '../../services/completeTrainingSession.js';
 import { getTrainingDateTime, normalizeTrainingTime } from '../../utils/trainingDateTime.js';
 import { getRegistrationWindowState } from '../../utils/registrationWindow.js';
+import { escapeRegex } from '../../utils/search.js';
+import { pick } from '../../utils/pick.js';
+
+const trainingPayload = (input) => pick(input, ['title', 'description', 'event', 'eventDay', 'category', 'trainer', 'moderator', 'date', 'startTime', 'endTime', 'audience', 'level', 'language', 'capacity', 'registrationRequired', 'status']);
 
 const normalizeTimes = (data) => {
   for (const field of ['startTime', 'endTime']) {
@@ -95,7 +103,7 @@ export const getTrainings = async (req, res, next) => {
     if (req.query.eventDay) filter.eventDay = req.query.eventDay;
     if (req.query.status) filter.status = req.query.status;
     if (req.query.category) filter.category = req.query.category;
-    if (req.query.search) filter.title = { $regex: req.query.search, $options: 'i' };
+    if (req.query.search) filter.title = { $regex: escapeRegex(req.query.search), $options: 'i' };
 
     const [trainings, total] = await Promise.all([
       Training.find(filter)
@@ -129,7 +137,7 @@ export const getTraining = async (req, res, next) => {
 // POST /api/admin/trainings
 export const createTraining = async (req, res, next) => {
   try {
-    const data = normalizeTimes({ ...req.body });
+    const data = normalizeTimes(trainingPayload(req.body));
     await validateTrainingDay(data);
     if (req.file) data.coverImage = `uploads/coverImage/${req.file.filename}`;
     const training = await Training.create(data);
@@ -140,7 +148,7 @@ export const createTraining = async (req, res, next) => {
 // PUT /api/admin/trainings/:id
 export const updateTraining = async (req, res, next) => {
   try {
-    const data = normalizeTimes({ ...req.body });
+    const data = normalizeTimes(trainingPayload(req.body));
     const existing = await Training.findById(req.params.id);
     if (!existing) return errorResponse(res, 'Training not found.', 404);
     await validateTrainingDay(data, existing);
@@ -183,7 +191,7 @@ export const updateTrainingStatus = async (req, res, next) => {
 
     if (status === 'completed') {
       const result = await completeTrainingSession({ trainingId: training._id, completedBy: req.user._id });
-      return successResponse(res, result, `Training completed. ${result.summary.issued} certificate${result.summary.issued === 1 ? '' : 's'} issued.`);
+      return successResponse(res, result, `Training completed. Certificates for ${result.summary.eligible} eligible participant${result.summary.eligible === 1 ? '' : 's'} have been queued.`);
     }
     if (training.status === 'completed') return errorResponse(res, 'A completed training cannot be reopened because attendance is locked and certificates may already be issued.', 400);
     training.status = status;
@@ -202,7 +210,7 @@ export const completeTraining = async (req, res, next) => {
     const timedStatusError = validateTimedStatus(training, 'completed');
     if (timedStatusError) return errorResponse(res, timedStatusError, 400);
     const result = await completeTrainingSession({ trainingId: training._id, completedBy: req.user._id });
-    return successResponse(res, result, `Training completed. ${result.summary.issued} certificate${result.summary.issued === 1 ? '' : 's'} issued and ${result.summary.notified} notification${result.summary.notified === 1 ? '' : 's'} delivered.`);
+    return successResponse(res, result, `Training completed. Certificates for ${result.summary.eligible} eligible participant${result.summary.eligible === 1 ? '' : 's'} have been queued for delivery.`);
   } catch (err) { next(err); }
 };
 
@@ -210,6 +218,14 @@ export const completeTraining = async (req, res, next) => {
 export const assignTrainingStaff = async (req, res, next) => {
   try {
     const { trainerId, moderatorId } = req.body;
+    if (trainerId) {
+      const trainer = await Trainer.findOne({ _id: trainerId, accessStatus: 'approved', isActive: true });
+      if (!trainer) return errorResponse(res, 'Select an active, approved trainer.', 400);
+    }
+    if (moderatorId) {
+      const moderator = await User.findOne({ _id: moderatorId, role: 'moderator', isActive: true });
+      if (!moderator) return errorResponse(res, 'Select an active moderator.', 400);
+    }
     const update = {};
     if (trainerId !== undefined) update.trainer = trainerId || null;
     if (moderatorId !== undefined) update.moderator = moderatorId || null;
@@ -230,7 +246,7 @@ export const deleteTraining = async (req, res, next) => {
     if (['ongoing', 'completed'].includes(training.status)) {
       return errorResponse(res, 'Cannot delete an ongoing or completed training.', 400);
     }
-    const relatedModels = [Registration, Attendance, Meeting, Communication, Feedback, Certificate, Recording, QRSession];
+    const relatedModels = [Registration, Attendance, Meeting, Communication, Feedback, Certificate, TrainerCertificate, CertificateIssuanceJob, Recording, QRSession];
     const relatedCounts = await Promise.all(relatedModels.map((Model) => Model.countDocuments({ training: training._id })));
     const relatedCount = relatedCounts.reduce((total, count) => total + count, 0);
     if (relatedCount) {

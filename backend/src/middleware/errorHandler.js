@@ -34,6 +34,12 @@ const errorHandler = (err, req, res, next) => {
     message = 'Token has expired.';
   }
 
+  // Hide database, filesystem, SMTP, and implementation details for
+  // unexpected production failures.
+  if (statusCode >= 500 && process.env.NODE_ENV === 'production') {
+    message = 'Internal server error.';
+  }
+
   // Do NOT expose stack traces or internal details to clients
   const response = {
     success: false,

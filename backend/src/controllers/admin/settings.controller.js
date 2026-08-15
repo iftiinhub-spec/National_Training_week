@@ -1,14 +1,14 @@
 import SiteSettings from '../../models/SiteSettings.js';
 import { errorResponse, successResponse } from '../../utils/apiResponse.js';
 import { encryptSetting } from '../../utils/settingsEncryption.js';
-import { emailLayout, sendEmail } from '../../utils/email.js';
+import { closeEmailTransporter, emailLayout, sendEmail } from '../../utils/email.js';
 
 const defaults = {
   key: 'global',
   organizerName: 'National Training Week',
-  contactEmail: 'ntw@trainingweek.so',
-  replyToEmail: 'ntw@trainingweek.so',
-  location: 'Mogadishu, Somalia',
+  contactEmail: 'info@ntw.hu.edu.so',
+  replyToEmail: 'info@ntw.hu.edu.so',
+  location: 'Daru Shura Campus, Villa Baidoa, Wadajir, Mogadishu, Somalia',
   facebookUrl: '',
   tiktokUrl: '',
   instagramUrl: '',
@@ -58,6 +58,7 @@ export const updateSettings = async (req, res, next) => {
       { key: 'global' }, { $set: updates }, { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
     );
     const saved = await SiteSettings.findById(settings._id).select('+smtpPassEncrypted');
+    closeEmailTransporter();
     return successResponse(res, { settings: safeSettings(saved) }, 'Website and email settings updated.');
   } catch (error) { next(error); }
 };

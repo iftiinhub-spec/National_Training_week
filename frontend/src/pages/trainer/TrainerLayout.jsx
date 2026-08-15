@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { AcademicCapIcon, ArrowLeftOnRectangleIcon, Squares2X2Icon, UserCircleIcon } from '@heroicons/react/24/solid';
+import { AcademicCapIcon, ArrowLeftOnRectangleIcon, CheckBadgeIcon, Squares2X2Icon, UserCircleIcon } from '@heroicons/react/24/solid';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import { useAuth } from '../../context/AuthContext';
 
@@ -13,6 +13,7 @@ export default function TrainerLayout() {
   const items = [
     { name: 'Dashboard', path: '/trainer', icon: Squares2X2Icon },
     { name: 'My Sessions', path: '/trainer/sessions', icon: AcademicCapIcon },
+    { name: 'Certificates', path: '/trainer/certificates', icon: CheckBadgeIcon },
   ];
   const active = (path) => location.pathname === path;
 
@@ -44,7 +45,7 @@ export default function TrainerLayout() {
       <main className="min-w-0 p-4 pb-28 sm:p-6 sm:pb-28 md:pb-6 lg:p-8 xl:p-10"><div className="mx-auto w-full max-w-[90rem]"><Outlet /></div></main>
     </div>
 
-    <nav aria-label="Trainer mobile navigation" className="participant-bottom-nav border-t border-slate-200 bg-white/95 pt-1.5 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur-md md:hidden"><div className="grid grid-cols-3">{[...items, { name: 'Profile', path: '/trainer/profile', icon: UserCircleIcon }].map((item) => { const Icon = item.icon; const isActive = active(item.path); return <Link key={item.path} to={item.path} aria-current={isActive ? 'page' : undefined} className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-1 py-1 text-[11px] font-bold ${isActive ? 'text-[#1da156]' : 'text-black'}`}><Icon className="h-6 w-6" /><span className="text-center">{item.name}</span></Link>; })}</div></nav>
+    <nav aria-label="Trainer mobile navigation" className="participant-bottom-nav border-t border-slate-200 bg-white/95 pt-1.5 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur-md md:hidden"><div className="grid grid-cols-4">{[...items, { name: 'Profile', path: '/trainer/profile', icon: UserCircleIcon }].map((item) => { const Icon = item.icon; const isActive = active(item.path); return <Link key={item.path} to={item.path} aria-current={isActive ? 'page' : undefined} className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-1 py-1 text-[10px] font-bold sm:text-[11px] ${isActive ? 'text-[#1da156]' : 'text-black'}`}><Icon className="h-6 w-6" /><span className="text-center">{item.name}</span></Link>; })}</div></nav>
   </div>;
 }
 

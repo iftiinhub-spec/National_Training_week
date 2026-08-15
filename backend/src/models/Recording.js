@@ -14,6 +14,9 @@ const recordingSchema = new mongoose.Schema(
     thumbnail: { type: String, default: null },
     isPublished: { type: Boolean, default: false },
     publishedAt: { type: Date, default: null },
+    isArchived: { type: Boolean, default: false },
+    archivedAt: { type: Date, default: null },
+    archivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -23,7 +26,7 @@ const recordingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-recordingSchema.index({ isPublished: 1 });
+recordingSchema.index({ isPublished: 1, isArchived: 1 });
 
 const Recording = mongoose.model('Recording', recordingSchema);
 export default Recording;

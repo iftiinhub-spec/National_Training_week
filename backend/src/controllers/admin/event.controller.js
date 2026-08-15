@@ -4,6 +4,10 @@ import Training from '../../models/Training.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { syncEventStatus } from '../../utils/eventLifecycle.js';
 import { eventDayTimelineError, eventStatusError, eventTimelineError } from '../../utils/eventTimeline.js';
+import { pick } from '../../utils/pick.js';
+
+const eventPayload = (input) => pick(input, ['name', 'theme', 'year', 'startDate', 'startTime', 'endDate', 'registrationStart', 'registrationDeadline', 'description', 'status', 'isActive', 'isCurrent']);
+const eventDayPayload = (input) => pick(input, ['dayNumber', 'theme', 'date']);
 
 const dateKey = (value) => {
   const date = new Date(value);
@@ -140,7 +144,7 @@ export const createEvent = async (req, res, next) => {
   try {
     validateEventDates(req.body);
     rejectNewPastDate(req.body.startDate, null, 'Event start date');
-    const data = prepareRegistrationWindow({ ...req.body });
+    const data = prepareRegistrationWindow(eventPayload(req.body));
     data.isCurrent = req.body.isCurrent === true || req.body.isCurrent === 'true';
     if (data.isCurrent) await Event.updateMany({}, { $set: { isCurrent: false } });
     const event = await Event.create(data);
@@ -160,7 +164,7 @@ export const updateEvent = async (req, res, next) => {
       $or: [{ date: { $lt: new Date(range.start) } }, { date: { $gt: new Date(`${range.end}T23:59:59.999Z`) } }],
     });
     if (conflictingDay) return errorResponse(res, 'Update the existing event days first; at least one day falls outside the new event date range.', 400);
-    const data = prepareRegistrationWindow({ ...req.body }, existing);
+    const data = prepareRegistrationWindow(eventPayload(req.body), existing);
     data.isCurrent = req.body.isCurrent === true || req.body.isCurrent === 'true';
     if (data.isCurrent) {
       await Event.updateMany({ _id: { $ne: req.params.id } }, { $set: { isCurrent: false } });
@@ -204,7 +208,7 @@ export const createEventDay = async (req, res, next) => {
     validateDayForEvent(event, req.body.date);
     rejectNewPastDate(req.body.date, null, 'Event day date');
     await ensureUniqueEventDay({ eventId: event._id, dayNumber: req.body.dayNumber, date: req.body.date });
-    const day = await EventDay.create({ ...req.body, event: req.params.eventId });
+    const day = await EventDay.create({ ...eventDayPayload(req.body), event: req.params.eventId });
     return successResponse(res, { day }, 'Event day created successfully.', 201);
   } catch (err) { next(err); }
 };
@@ -221,7 +225,7 @@ export const updateEventDay = async (req, res, next) => {
     await ensureUniqueEventDay({ eventId: event._id, dayNumber: req.body.dayNumber, date: req.body.date, excludeId: existingDay._id });
     const day = await EventDay.findOneAndUpdate(
       { _id: req.params.dayId, event: req.params.eventId },
-      req.body,
+      eventDayPayload(req.body),
       { new: true, runValidators: true }
     );
     if (!day) return errorResponse(res, 'Event day not found.', 404);

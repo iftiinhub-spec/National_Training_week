@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { ClockIcon } from '@heroicons/react/24/outline';
@@ -7,12 +7,13 @@ import PublicPageHeader from '../../components/common/PublicPageHeader';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
 
 export const Program = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [eventData, setEventData]     = useState(null);
   const [programDays, setProgramDays] = useState([]);
   const [activeDay, setActiveDay]     = useState(null);
   const [loading, setLoading]         = useState(true);
   const [events, setEvents]           = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState(searchParams.get('event') || '');
 
   useEffect(() => {
     api.get('/public/events').then((res) => {
@@ -34,6 +35,8 @@ export const Program = () => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [selectedEvent]);
+
+  const selectEdition = (value) => { setSelectedEvent(value); setSearchParams(value ? { event: value } : {}); };
 
   const currentDay = programDays.find((p) => p.day._id === activeDay) || programDays[0];
 
@@ -59,7 +62,7 @@ export const Program = () => {
           {events.length > 1 && (
             <label className="mt-6 inline-flex items-center gap-3 rounded-xl bg-white/10 border border-white/20 px-4 py-2">
               <span className="text-xs font-bold">View edition</span>
-              <select aria-label="Select event edition" value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} className="bg-white text-black rounded-lg px-3 py-1.5 text-sm font-semibold">
+              <select aria-label="Select event edition" value={selectedEvent} onChange={(e) => selectEdition(e.target.value)} className="bg-white text-black rounded-lg px-3 py-1.5 text-sm font-semibold">
                 <option value="">Current edition</option>
                 {events.map((event) => <option key={event._id} value={event._id}>{event.year} — {event.theme}</option>)}
               </select>

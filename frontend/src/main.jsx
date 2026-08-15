@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { EventProvider } from './context/EventContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ConfirmDialogProvider } from './context/ConfirmDialogContext';
 import App from './App.jsx';
 import './index.css';
 
@@ -14,7 +15,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <AuthProvider>
           <EventProvider>
-            <App />
+            <ConfirmDialogProvider><App /></ConfirmDialogProvider>
           </EventProvider>
         </AuthProvider>
       </BrowserRouter>

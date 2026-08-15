@@ -3,9 +3,9 @@ import mongoose from 'mongoose';
 const siteSettingsSchema = new mongoose.Schema({
   key: { type: String, default: 'global', unique: true, immutable: true },
   organizerName: { type: String, trim: true, default: 'National Training Week' },
-  contactEmail: { type: String, trim: true, lowercase: true, default: 'ntw@trainingweek.so' },
-  replyToEmail: { type: String, trim: true, lowercase: true, default: 'ntw@trainingweek.so' },
-  location: { type: String, trim: true, default: 'Mogadishu, Somalia' },
+  contactEmail: { type: String, trim: true, lowercase: true, default: 'info@ntw.hu.edu.so' },
+  replyToEmail: { type: String, trim: true, lowercase: true, default: 'info@ntw.hu.edu.so' },
+  location: { type: String, trim: true, default: 'Daru Shura Campus, Villa Baidoa, Wadajir, Mogadishu, Somalia' },
   facebookUrl: { type: String, trim: true, default: '' },
   tiktokUrl: { type: String, trim: true, default: '' },
   instagramUrl: { type: String, trim: true, default: '' },

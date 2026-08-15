@@ -4,15 +4,19 @@ import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import toast from 'react-hot-toast';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import {
   VideoCameraIcon,
   XMarkIcon,
   CalendarIcon,
   ClockIcon,
   AcademicCapIcon,
+  ArrowTopRightOnSquareIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
 export const MyRegistrations = () => {
+  const confirmAction = useConfirmDialog();
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
@@ -52,7 +56,7 @@ export const MyRegistrations = () => {
   };
 
   const handleCancel = async (regId) => {
-    if (!window.confirm('Are you sure you want to cancel your registration for this session?')) return;
+    if (!await confirmAction({ title: 'Cancel registration?', message: 'You will lose your place in this session. You may only register again if registration is still open and capacity remains.', confirmLabel: 'Cancel registration' })) return;
     try {
       const res = await api.patch(`/participant/registrations/${regId}/cancel`);
       if (res.success) {
@@ -109,6 +113,20 @@ export const MyRegistrations = () => {
                       </span>
                     )}
                   </div>
+
+                  {reg.status === 'approved' && tr.materials?.length > 0 && (
+                    <section className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4" aria-label={`Learning materials for ${tr.title}`}>
+                      <div className="flex items-center gap-2 text-sm font-bold text-slate-900"><DocumentTextIcon className="h-5 w-5 text-[#1a6b3c]" />Learning materials</div>
+                      <ul className="mt-3 space-y-2">
+                        {tr.materials.map((material) => <li key={material._id}>
+                          <a href={material.url} target="_blank" rel="noopener noreferrer" className="group flex min-h-11 items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-white px-3.5 py-2.5 text-sm transition hover:border-[#1a6b3c]/40 hover:shadow-sm">
+                            <span className="min-w-0"><span className="block truncate font-bold text-[#1a6b3c]">{material.title}</span>{material.description && <span className="mt-0.5 block text-xs leading-5 text-slate-500">{material.description}</span>}</span>
+                            <ArrowTopRightOnSquareIcon className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:text-[#1a6b3c]" />
+                          </a>
+                        </li>)}
+                      </ul>
+                    </section>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 shrink-0">

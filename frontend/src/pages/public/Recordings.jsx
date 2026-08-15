@@ -4,15 +4,24 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
 import { PlayIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { useSearchParams } from 'react-router-dom';
 
 export const Recordings = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(searchParams.get('event') || '');
+  const [days, setDays] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [trainers, setTrainers] = useState([]);
+  const [filters, setFilters] = useState({ eventDay: '', category: '', trainer: '', language: '' });
 
   useEffect(() => {
     const fetchRecordings = async () => {
       try {
-        const res = await api.get('/public/recordings');
+        const params = new URLSearchParams({ ...(selectedEvent ? { event: selectedEvent } : {}), ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)) });
+        const res = await api.get(`/public/recordings${params.toString() ? `?${params}` : ''}`);
         if (res.success) {
           setRecordings(res.data || []);
         }
@@ -23,7 +32,15 @@ export const Recordings = () => {
       }
     };
     fetchRecordings();
-  }, []);
+  }, [selectedEvent, filters]);
+
+  useEffect(() => { api.get('/public/events').then((res) => { if (res.success) setEvents(res.data.events || []); }).catch(() => {}); }, []);
+  useEffect(() => { api.get('/public/categories?activeOnly=true').then((res) => { if (res.success) setCategories(res.data.categories || []); }).catch(() => {}); }, []);
+  useEffect(() => {
+    setFilters({ eventDay: '', category: '', trainer: '', language: '' });
+    if (!selectedEvent) { setDays([]); setTrainers([]); return; }
+    Promise.all([api.get(`/public/events/${selectedEvent}`), api.get(`/public/trainers?event=${selectedEvent}`)]).then(([eventRes, trainerRes]) => { setDays(eventRes.data?.days || []); setTrainers(trainerRes.data?.trainers || []); }).catch(() => {});
+  }, [selectedEvent]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -36,6 +53,14 @@ export const Recordings = () => {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-14 space-y-8">
+
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-5">
+          <label className="text-xs font-bold text-slate-700">Event edition<select value={selectedEvent} onChange={(e) => { setSelectedEvent(e.target.value); setSearchParams(e.target.value ? { event: e.target.value } : {}); }} className="mt-1 block min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold"><option value="">All editions</option>{events.map((event) => <option key={event._id} value={event._id}>{event.year} — {event.theme}</option>)}</select></label>
+          <label className="text-xs font-bold text-slate-700">Program day<select disabled={!selectedEvent} value={filters.eventDay} onChange={(e) => setFilters({ ...filters, eventDay: e.target.value })} className="mt-1 block min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:opacity-50"><option value="">All days</option>{days.map((day) => <option key={day._id} value={day._id}>Day {day.dayNumber} — {day.theme}</option>)}</select></label>
+          <label className="text-xs font-bold text-slate-700">Category<select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })} className="mt-1 block min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All categories</option>{categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select></label>
+          <label className="text-xs font-bold text-slate-700">Trainer<select disabled={!selectedEvent} value={filters.trainer} onChange={(e) => setFilters({ ...filters, trainer: e.target.value })} className="mt-1 block min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:opacity-50"><option value="">All trainers</option>{trainers.map((trainer) => <option key={trainer._id} value={trainer._id}>{trainer.name}</option>)}</select></label>
+          <label className="text-xs font-bold text-slate-700">Language<select value={filters.language} onChange={(e) => setFilters({ ...filters, language: e.target.value })} className="mt-1 block min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All languages</option><option value="English">English</option><option value="Somali">Somali</option><option value="Somali / English">Somali / English</option></select></label>
+        </div>
 
         {loading ? (
           <LoadingSpinner label="Loading published recordings..." />
