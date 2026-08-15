@@ -3,6 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { CalendarDaysIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const minimumFutureDateTime = () => {
@@ -39,6 +40,7 @@ const toNairobiInput = (value) => value
   : '';
 
 export const EventsManagement = () => {
+  const confirmAction = useConfirmDialog();
   const [events, setEvents] = useState([]);
   const [eventDaysMap, setEventDaysMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -195,7 +197,7 @@ export const EventsManagement = () => {
   };
 
   const handleDeleteEvent = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this event edition?')) return;
+    if (!await confirmAction({ title: 'Delete event edition?', message: 'This edition will be permanently removed. An edition with related program data cannot be deleted.', confirmLabel: 'Delete edition' })) return;
     try {
       await api.delete(`/admin/events/${id}`);
       toast.success('Event deleted');
@@ -230,7 +232,7 @@ export const EventsManagement = () => {
   };
 
   const handleDeleteDay = async (eventId, dayId) => {
-    if (!window.confirm('Delete this event day?')) return;
+    if (!await confirmAction({ title: 'Delete event day?', message: 'This program day will be permanently removed. A day with assigned sessions cannot be deleted.', confirmLabel: 'Delete day' })) return;
     try {
       await api.delete(`/admin/events/${eventId}/days/${dayId}`);
       toast.success('Event day deleted');

@@ -1,5 +1,6 @@
 import User from '../../models/User.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
+import { escapeRegex } from '../../utils/search.js';
 
 // --- Participant Management ---
 export const getParticipants = async (req, res, next) => {
@@ -8,8 +9,8 @@ export const getParticipants = async (req, res, next) => {
     const filter = { role: 'participant' };
     if (req.query.search) {
       filter.$or = [
-        { fullName: { $regex: req.query.search, $options: 'i' } },
-        { email: { $regex: req.query.search, $options: 'i' } },
+        { fullName: { $regex: escapeRegex(req.query.search), $options: 'i' } },
+        { email: { $regex: escapeRegex(req.query.search), $options: 'i' } },
       ];
     }
     if (req.query.isActive !== undefined) filter.isActive = req.query.isActive === 'true';
@@ -49,8 +50,8 @@ export const getModerators = async (req, res, next) => {
     const filter = { role: 'moderator' };
     if (req.query.search) {
       filter.$or = [
-        { fullName: { $regex: req.query.search, $options: 'i' } },
-        { email: { $regex: req.query.search, $options: 'i' } },
+        { fullName: { $regex: escapeRegex(req.query.search), $options: 'i' } },
+        { email: { $regex: escapeRegex(req.query.search), $options: 'i' } },
       ];
     }
     const [moderators, total] = await Promise.all([

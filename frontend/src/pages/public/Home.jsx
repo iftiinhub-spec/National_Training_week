@@ -8,11 +8,14 @@ import {
   AcademicCapIcon,
   BuildingLibraryIcon,
   CodeBracketIcon,
-  RocketLaunchIcon,
+  BriefcaseIcon,
+  BookOpenIcon,
   CalendarDaysIcon,
   GlobeAltIcon,
   ShieldCheckIcon,
   ClockIcon,
+  UserGroupIcon,
+  HeartIcon,
 } from '@heroicons/react/24/outline';
 
 /* ── Countdown hook ──────────────────────────────── */
@@ -65,10 +68,13 @@ const SectionTitle = ({ tag, title, subtitle, light = false }) => (
 );
 
 const AUDIENCE = [
+  { Icon: UserGroupIcon,      label: 'General Public',                   desc: 'Understand AI through accessible sessions with no technical background required.' },
+  { Icon: BookOpenIcon,       label: 'Teachers & Educators',             desc: 'Use practical AI tools for lesson planning, assessment, and classroom work.' },
   { Icon: AcademicCapIcon,    label: 'University Students & Scholars', desc: 'Gain cutting-edge skills relevant to academic research and industry.' },
   { Icon: BuildingLibraryIcon, label: 'High-School Graduates',          desc: 'Prepare for university and discover future-proof tech careers.' },
   { Icon: CodeBracketIcon,    label: 'Developers & IT Professionals',   desc: 'Master AI implementation, APIs, ML algorithms, and practical tools.' },
-  { Icon: RocketLaunchIcon,   label: 'Entrepreneurs & Professionals',   desc: 'Leverage AI to scale business operations and public services.' },
+  { Icon: BriefcaseIcon,      label: 'Entrepreneurs & Business Owners', desc: 'Use AI to improve operations, marketing, and customer service.' },
+  { Icon: HeartIcon,          label: 'Health & Community Organizations', desc: 'Explore AI tools for frontline awareness, outreach, and communication.' },
 ];
 
 /* ══════════════════════════════════════════════════ */
@@ -76,19 +82,23 @@ export const Home = () => {
   const { event, days, sessionCount } = useCurrentEvent();
   const [trainers, setTrainers] = useState([]);
   const [loadingTrainers, setLoadingTrainers] = useState(true);
+  const [sponsors, setSponsors] = useState([]);
   const [activeFacultyDay, setActiveFacultyDay] = useState('');
   const now = Date.now();
   const registrationOpensAt = event?.registrationStart ? new Date(event.registrationStart).getTime() : null;
   const registrationClosesAt = event?.registrationDeadline ? new Date(event.registrationDeadline).getTime() : null;
   const eventStartsAt = event?.startDate ? new Date(`${event.startDate.slice(0, 10)}T${event.startTime || '09:00'}:00+03:00`).getTime() : null;
   const eventEndsAt = event?.endDate ? new Date(`${event.endDate.slice(0, 10)}T23:59:59+03:00`).getTime() : null;
-  const countdownStage = !event ? null
-    : registrationOpensAt && now < registrationOpensAt ? { label: 'Registration opens in', target: registrationOpensAt, registrationOpen: false }
-      : registrationClosesAt && now < registrationClosesAt ? { label: 'Registration closes in', target: registrationClosesAt, registrationOpen: true }
-        : eventStartsAt && now < eventStartsAt ? { label: 'Training Week begins in', target: eventStartsAt, registrationOpen: false }
-          : eventEndsAt && now <= eventEndsAt ? { message: 'National Training Week is underway', registrationOpen: false }
-            : { message: 'This edition has been completed', registrationOpen: false };
-  const countdownTarget = countdownStage?.target || null;
+  const formatStageDate = (timestamp) => timestamp ? new Date(timestamp).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) : '';
+  const todayKey = new Date(now).toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
+  const currentProgramDay = days.find((day) => day.date && new Date(day.date).toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }) === todayKey);
+  const lifecycleStage = !event ? null
+    : registrationOpensAt && now < registrationOpensAt ? { key: 'scheduled', label: 'Registration opens in', target: registrationOpensAt, detail: `Registration opens on ${formatStageDate(registrationOpensAt)}.`, accent: 'text-sky-300' }
+      : registrationClosesAt && now < registrationClosesAt ? { key: 'open', label: 'Registration closes in', target: registrationClosesAt, detail: `Register before ${formatStageDate(registrationClosesAt)} to select your session.`, accent: 'text-emerald-300' }
+        : eventStartsAt && now < eventStartsAt ? { key: 'awaiting', label: 'Training Week begins in', target: eventStartsAt, detail: 'Registration is closed. Approved participants can review their selected sessions in the portal.', accent: 'text-amber-300' }
+          : eventEndsAt && now <= eventEndsAt ? { key: 'live', message: 'National Training Week is underway', detail: currentProgramDay ? `Day ${currentProgramDay.dayNumber} — ${currentProgramDay.theme}` : 'View the current program and join your approved sessions.' }
+            : { key: 'completed', message: `${event.name || `National Training Week ${event.year}`} has concluded`, detail: 'Published sessions remain freely available in the permanent recording library.' };
+  const countdownTarget = lifecycleStage?.target || null;
   const countdown = useCountdown(countdownTarget);
   const eventDates = event?.startDate && event?.endDate
     ? `${new Date(event.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
@@ -104,6 +114,16 @@ export const Home = () => {
   }, [event?._id]);
 
   useEffect(() => {
+    if (!event?._id) {
+      setSponsors([]);
+      return;
+    }
+    api.get(`/public/sponsors?event=${event._id}`)
+      .then((response) => { if (response.success) setSponsors(response.data.sponsors || []); })
+      .catch(() => setSponsors([]));
+  }, [event?._id]);
+
+  useEffect(() => {
     if (days.length && !days.some((day) => day._id === activeFacultyDay)) {
       setActiveFacultyDay(days[0]._id);
     }
@@ -113,7 +133,6 @@ export const Home = () => {
     !activeFacultyDay || trainer.sessions?.some((session) => session.eventDay?._id === activeFacultyDay)
   ));
   const selectedFacultyDay = days.find((day) => day._id === activeFacultyDay);
-
   return (
     <div className="bg-white min-h-screen">
 
@@ -124,21 +143,15 @@ export const Home = () => {
         <div className="mx-auto flex min-h-[680px] max-w-7xl items-center justify-start px-4 py-20 text-left sm:px-8">
           <div className="max-w-3xl animate-fade-up">
             <h1 className="text-5xl font-black leading-[.98] tracking-[-.04em] sm:text-6xl lg:text-7xl">National<br /><span className="text-[#1da156]">Training Week</span></h1>
-            <p className="mt-6 max-w-2xl text-lg font-bold leading-snug text-white sm:text-xl">{event?.theme || 'Skills, knowledge, and opportunity—accessible nationwide.'}</p>
+            <p className="mt-6 max-w-2xl text-lg font-bold leading-snug text-white sm:text-xl">{event ? <><span className="text-white/65">Theme:</span> {event.theme}</> : 'Skills, knowledge, and opportunity—accessible nationwide.'}</p>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75 sm:text-base">{event?.description || 'An annual virtual learning platform connecting students, graduates, and professionals with expert-led training across technology, education, health, business, and community development.'}</p>
             {event && <div className="mt-6 flex flex-wrap justify-start gap-x-6 gap-y-2 text-xs font-bold text-white/80"><span>{eventDates}</span><span>{days.length} day{days.length === 1 ? '' : 's'} · {sessionCount} session{sessionCount === 1 ? '' : 's'}</span><span className="capitalize text-[#1da156]">{eventStatus}</span></div>}
-            {event && (!countdownTarget || countdown.complete ? (
-              <div className="mx-auto mt-7 inline-flex rounded-xl border border-white/20 bg-black/35 px-5 py-3 text-sm font-bold text-white backdrop-blur-sm">
-                {countdownStage?.message || 'The next registration stage is starting now'}
-              </div>
-            ) : (
-              <div className="mt-7">
-                <p className="mb-3 text-sm font-extrabold uppercase tracking-[.14em] text-[#1da156]">{countdownStage?.label}</p>
-                <div className="flex max-w-xl items-center justify-start gap-1.5 sm:gap-2" aria-label={countdownStage?.label}><Digit v={countdown.months} label="Months" /><Digit v={countdown.days} label="Days" /><Digit v={countdown.hours} label="Hours" /><Digit v={countdown.minutes} label="Mins" /><Digit v={countdown.seconds} label="Secs" /></div>
-              </div>
-            ))}
+            {event && <div className="mt-7 max-w-2xl" aria-live="polite">
+              {countdownTarget && !countdown.complete ? <div><p className={`mb-3 text-sm font-extrabold uppercase tracking-[.14em] ${lifecycleStage.accent}`}>{lifecycleStage.label}</p><div className="flex max-w-xl items-center justify-start gap-1.5 sm:gap-2" aria-label={lifecycleStage.label}><Digit v={countdown.months} label="Months" /><Digit v={countdown.days} label="Days" /><Digit v={countdown.hours} label="Hours" /><Digit v={countdown.minutes} label="Mins" /><Digit v={countdown.seconds} label="Secs" /></div></div> : <h2 className="text-xl font-black text-white sm:text-2xl">{lifecycleStage.message || 'The next event stage is starting now'}</h2>}
+              <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">{lifecycleStage.detail}</p>
+            </div>}
             <div className="mt-8 flex flex-col justify-start gap-3 sm:flex-row">
-              {event ? <>{countdownStage?.registrationOpen && <Link to="/signup" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Register free</Link>}<Link to="/program" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Explore the program</Link></> : <><Link to="/about" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Discover the program</Link><Link to="/contact" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Contact the program office</Link></>}
+              {event ? <>{lifecycleStage.key === 'open' && <Link to="/signup" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Register free</Link>}{['scheduled', 'open'].includes(lifecycleStage.key) && <Link to="/program" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Explore the program</Link>}{lifecycleStage.key === 'awaiting' && <><Link to="/program" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-amber-400 px-7 text-sm font-extrabold text-black transition hover:bg-white">Explore the program</Link><Link to="/portal/trainings" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Open my sessions</Link></>}{lifecycleStage.key === 'live' && <><Link to="/program" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">View today&apos;s program</Link><Link to="/portal/trainings" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Open my sessions</Link></>}{lifecycleStage.key === 'completed' && <><Link to="/recordings" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-7 text-sm font-extrabold text-black transition hover:bg-[#1da156] hover:text-white">Watch recordings</Link><Link to="/past-editions" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">View past editions</Link></>}</> : <><Link to="/about" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Discover the program</Link><Link to="/contact" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Contact the program office</Link></>}
             </div>
           </div>
         </div>
@@ -161,6 +174,7 @@ export const Home = () => {
             subtitle={`Each day advances the current edition theme: ${event?.theme || 'national skills and innovation'}.`}
           />
           <ScheduleTabs fallbackDays={days} />
+          <p className="mt-8 flex items-center justify-center gap-2 text-center text-xs font-semibold text-slate-600"><ClockIcon className="h-4 w-4 text-[#1da156]" />All session times are shown in EAT / UTC+3 — Mogadishu time.</p>
           <div className="mt-12 text-center">
             <Link
               to="/program"
@@ -281,11 +295,11 @@ export const Home = () => {
             title="Learning designed for every stage"
             subtitle="From foundational digital literacy to advanced technical practice, the program welcomes learners across Somalia."
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="flex flex-wrap items-stretch justify-center gap-6">
             {AUDIENCE.map((a, i) => (
               <div
                 key={i}
-                className="group rounded-2xl border border-black/10 bg-white p-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:border-[#1da156] hover:shadow-xl"
+                className="group w-full rounded-2xl border border-black/10 bg-white p-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:border-[#1da156] hover:shadow-xl sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)]"
               >
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#1da156]/10 transition-colors group-hover:bg-[#1da156]">
                   <a.Icon className="w-7 h-7 text-[#1da156] group-hover:text-white transition-colors" />
@@ -298,6 +312,32 @@ export const Home = () => {
         </div>
       </section>
 
+      {/* Sponsors are shown late in the page journey: visible, but secondary to the event program. */}
+      {sponsors.length > 0 && (
+        <section className="bg-white py-20 text-black" aria-labelledby="sponsors-heading">
+          <div className="mx-auto max-w-7xl px-4 sm:px-8">
+            <div className="mx-auto mb-12 max-w-3xl text-center">
+              <p className="mb-4 inline-flex rounded-full bg-[#1da156]/10 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-[#1da156]">Working together</p>
+              <h2 id="sponsors-heading" className="text-3xl font-bold leading-tight tracking-[-.025em] text-black sm:text-4xl">Sponsors & Partners</h2>
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-black/60">Organizations helping make National Training Week accessible to learners across Somalia.</p>
+            </div>
+            <div className="flex flex-wrap items-start justify-center gap-x-10 gap-y-12 sm:gap-x-16 lg:gap-x-20">
+              {sponsors.map((sponsor) => {
+                const content = (
+                  <>
+                    <div className={`flex w-full items-center justify-center ${sponsor.isFeatured ? 'h-20 sm:h-24' : 'h-16 sm:h-20'}`}>
+                      <img src={sponsor.logo.startsWith('http') ? sponsor.logo : `/${sponsor.logo.replace(/^\//, '')}`} alt={`${sponsor.name} logo`} loading="lazy" className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105" />
+                    </div>
+                  </>
+                );
+                const className = `group flex flex-col justify-center transition-opacity hover:opacity-80 focus:rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1da156] focus-visible:ring-offset-4 ${sponsor.isFeatured ? 'w-36 sm:w-44' : 'w-28 sm:w-32'}`;
+                return sponsor.websiteUrl ? <a key={sponsor._id} href={sponsor.websiteUrl} target="_blank" rel="noopener noreferrer" className={className} aria-label={`Visit ${sponsor.name} website`}>{content}</a> : <div key={sponsor._id} className={className}>{content}</div>;
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ══ CERTIFICATE CTA STRIP ═══════════════════ */}
       <section className="bg-[#1da156] py-20 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col lg:flex-row items-center justify-between gap-8">
@@ -306,12 +346,13 @@ export const Home = () => {
               <ShieldCheckIcon className="w-4 h-4" /> Official Certification
             </span>
             <h2 className="text-3xl sm:text-4xl font-black leading-tight mb-3">
-              Earn Verified Certificates of Completion
+              Earn a Verifiable Certificate of Participation
             </h2>
             <p className="text-white/90 text-sm leading-relaxed">
-              Participants who attend live sessions receive an official Certificate with a unique
-              verification code and QR identifier — recognised by employers across Somalia.
+              Participants who attend live sessions and meet the attendance requirement receive an official
+              Certificate of Participation with a unique verification code and QR identifier.
             </p>
+            <p className="mt-3 text-xs leading-6 text-white/75">All sessions are recorded and published in a free, permanently available learning library. Certificates are available for qualifying live attendance only.</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 shrink-0">
             <Link

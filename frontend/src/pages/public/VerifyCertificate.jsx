@@ -119,9 +119,11 @@ export const VerifyCertificate = () => {
                 <span className="text-xs text-black/50 uppercase font-bold">Recipient Name</span>
                 <p className="font-bold text-black text-base flex items-center gap-1.5">
                   <UserIcon className="w-4 h-4 text-[#1da156]" />
-                  {result.participantName}
+                  {result.recipientName || result.participantName}
                 </p>
               </div>
+
+              {result.certificateType && <div className="space-y-1 sm:col-span-2"><span className="text-xs text-black/50 uppercase font-bold">Certificate Type</span><p className="font-bold text-black">{result.certificateType}</p></div>}
 
               <div className="space-y-1 sm:col-span-2">
                 <span className="text-xs text-black/50 uppercase font-bold">Training Session</span>

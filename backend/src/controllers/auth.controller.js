@@ -12,7 +12,7 @@ const signToken = (id) =>
 // POST /api/auth/register — Participant self-registration only
 export const register = async (req, res, next) => {
   try {
-    const { fullName, email, password, phone, gender, region, organization, profession, participantType } = req.body;
+    const { fullName, email, password, phone, gender, country, region, city, organization, profession, participantType } = req.body;
 
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
@@ -22,7 +22,7 @@ export const register = async (req, res, next) => {
     const user = await User.create({
       fullName, email, passwordHash: password,
       role: 'participant', accountStatus: 'approved',
-      phone, gender, region, organization, profession, participantType,
+      phone, gender, country, region: country === 'SO' ? region : '', city: country === 'SO' ? '' : city, organization, profession, participantType,
     });
 
     await sendWelcomeEmail({ to: user.email, participantName: user.fullName });
@@ -68,9 +68,11 @@ export const getMe = async (req, res, next) => {
 // PUT /api/auth/profile
 export const updateProfile = async (req, res, next) => {
   try {
-    const allowed = ['fullName', 'phone', 'gender', 'region', 'organization', 'profession', 'participantType'];
+    const allowed = ['fullName', 'phone', 'gender', 'country', 'region', 'city', 'organization', 'profession', 'participantType'];
     const updates = {};
     allowed.forEach((field) => { if (req.body[field] !== undefined) updates[field] = req.body[field]; });
+    if (updates.country === 'SO') updates.city = '';
+    else if (updates.country) updates.region = '';
 
     if (req.file) {
       updates.profilePhoto = `uploads/profilePhoto/${req.file.filename}`;

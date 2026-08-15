@@ -4,14 +4,16 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
-import { PlusIcon, VideoCameraIcon, EyeIcon, EyeSlashIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import { PlusIcon, VideoCameraIcon, EyeIcon, EyeSlashIcon, ArchiveBoxArrowDownIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 export const RecordingsManagement = () => {
+  const confirmAction = useConfirmDialog();
   const [recordings, setRecordings] = useState([]);
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [filters, setFilters] = useState({ event: '', eventDay: '', training: '' });
+  const [filters, setFilters] = useState({ event: '', eventDay: '', training: '', archived: 'false' });
 
   const [form, setForm] = useState({
     training: '',
@@ -69,15 +71,20 @@ export const RecordingsManagement = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete recording reference?')) return;
+  const handleArchive = async (id) => {
+    if (!await confirmAction({ title: 'Archive recording?', message: 'The recording will be unpublished and removed from the public library. You can restore it later.', confirmLabel: 'Archive recording', tone: 'warning' })) return;
     try {
       await api.delete(`/admin/recordings/${id}`);
-      toast.success('Recording deleted');
+      toast.success('Recording archived safely.');
       fetchData();
     } catch (err) {
-      toast.error(err.message || 'Delete failed');
+      toast.error(err.message || 'Archive failed');
     }
+  };
+
+  const handleRestore = async (id) => {
+    try { const res = await api.patch(`/admin/recordings/${id}/restore`); toast.success(res.message); fetchData(); }
+    catch (err) { toast.error(err.message || 'Restore failed'); }
   };
 
   if (loading) return <LoadingSpinner label="Loading recordings library..." />;
@@ -101,6 +108,7 @@ export const RecordingsManagement = () => {
       </div>
 
       <AdminProgramFilters value={filters} onChange={setFilters} />
+      <div className="flex justify-end"><select value={filters.archived} onChange={(e) => setFilters((current) => ({ ...current, archived: e.target.value }))} className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700"><option value="false">Active recordings</option><option value="true">Archived recordings</option><option value="all">All recordings</option></select></div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {recordings.map((rec) => (
@@ -108,9 +116,9 @@ export const RecordingsManagement = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                  rec.isPublished ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                  rec.isArchived ? 'bg-amber-100 text-amber-800' : rec.isPublished ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
                 }`}>
-                  {rec.isPublished ? 'Published' : 'Draft / Hidden'}
+                  {rec.isArchived ? 'Archived' : rec.isPublished ? 'Published' : 'Draft / Hidden'}
                 </span>
                 <VideoCameraIcon className="w-5 h-5 text-slate-400" />
               </div>
@@ -123,17 +131,15 @@ export const RecordingsManagement = () => {
             </div>
 
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-              <button
+              {!rec.isArchived && <button
                 onClick={() => handleTogglePublish(rec._id)}
                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg text-xs flex items-center gap-1"
               >
                 {rec.isPublished ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                 <span>{rec.isPublished ? 'Unpublish' : 'Publish'}</span>
-              </button>
+              </button>}
 
-              <button onClick={() => handleDelete(rec._id)} className="p-1.5 text-slate-400 hover:text-rose-600">
-                <TrashIcon className="w-4 h-4" />
-              </button>
+              {rec.isArchived ? <button onClick={() => handleRestore(rec._id)} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-[#1a6b3c] hover:bg-emerald-50"><ArrowPathIcon className="h-4 w-4" /> Restore</button> : <button onClick={() => handleArchive(rec._id)} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-amber-50 hover:text-amber-700"><ArchiveBoxArrowDownIcon className="h-4 w-4" /> Archive</button>}
             </div>
           </div>
         ))}

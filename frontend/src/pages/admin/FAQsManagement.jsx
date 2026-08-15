@@ -3,12 +3,14 @@ import { EyeIcon, EyeSlashIcon, PencilIcon, PlusIcon, TrashIcon, XMarkIcon } fro
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
 const emptyForm = { question: '', answer: '', category: 'General', displayOrder: 0, isPublished: true };
 const FAQ_CATEGORIES = ['General', 'Registration', 'Training Sessions', 'Attendance', 'Certificates', 'Trainer Applications', 'Technical Support'];
 const inputClass = 'mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15';
 
 export default function FAQsManagement() {
+  const confirmAction = useConfirmDialog();
   const [faqs, setFaqs] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState(null);
@@ -80,7 +82,7 @@ export default function FAQsManagement() {
   };
 
   const deleteFAQ = async (faq) => {
-    if (!window.confirm(`Delete this FAQ?\n\n${faq.question}`)) return;
+    if (!await confirmAction({ title: 'Delete FAQ?', message: `This question will be permanently removed:\n\n${faq.question}`, confirmLabel: 'Delete FAQ' })) return;
     try {
       await api.delete(`/admin/faqs/${faq._id}`);
       if (editing?._id === faq._id) resetForm();

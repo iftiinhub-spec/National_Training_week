@@ -5,13 +5,18 @@ import { FaFacebookF, FaInstagram, FaLinkedinIn, FaTiktok, FaXTwitter } from 're
 import { useCurrentEvent } from '../../context/EventContext';
 import api from '../../api/axios';
 
+const OFFICIAL_CONTACT = {
+  email: 'info@ntw.hu.edu.so',
+  location: 'Daru Shura Campus, Villa Baidoa, Wadajir, Mogadishu, Somalia',
+};
+
 export const Footer = () => {
   const year = new Date().getFullYear();
   const { event, days } = useCurrentEvent();
   const [settings, setSettings] = useState({
     organizerName: 'National Training Week',
-    contactEmail: 'ntw@trainingweek.so',
-    location: 'Mogadishu, Somalia',
+    contactEmail: OFFICIAL_CONTACT.email,
+    location: OFFICIAL_CONTACT.location,
     facebookUrl: '',
     tiktokUrl: '',
     instagramUrl: '',
@@ -21,7 +26,15 @@ export const Footer = () => {
 
   useEffect(() => {
     api.get('/public/settings')
-      .then((response) => setSettings((current) => ({ ...current, ...response.data?.settings })))
+      .then((response) => setSettings((current) => {
+        const incoming = response.data?.settings || {};
+        return {
+          ...current,
+          ...incoming,
+          contactEmail: !incoming.contactEmail || incoming.contactEmail === 'ntw@trainingweek.so' ? OFFICIAL_CONTACT.email : incoming.contactEmail,
+          location: !incoming.location || incoming.location === 'Mogadishu, Somalia' ? OFFICIAL_CONTACT.location : incoming.location,
+        };
+      }))
       .catch(() => {});
   }, []);
   const dates = event?.startDate && event?.endDate
@@ -51,7 +64,7 @@ export const Footer = () => {
           </div>
           <div className="text-center md:text-right">
             <p className="text-sm text-[#1da156] font-bold">
-              {event?.theme || 'Annual learning and professional development'}
+              {event ? <>Theme: {event.theme}</> : 'Annual learning and professional development'}
             </p>
             <p className="text-xs text-white/60 mt-1">{dates}{event ? ' · Online' : ''}</p>
           </div>
@@ -84,6 +97,7 @@ export const Footer = () => {
               { name: 'Home',                  path: '/' },
               { name: 'About NTW',             path: '/about' },
               { name: programLabel,            path: '/program' },
+              { name: 'Past Editions',          path: '/past-editions' },
               { name: 'Browse Trainings',      path: '/trainings' },
               { name: 'Recorded Sessions',     path: '/recordings' },
             ].map((l) => (

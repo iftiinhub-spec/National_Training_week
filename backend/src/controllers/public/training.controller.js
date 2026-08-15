@@ -1,4 +1,5 @@
 import Training from '../../models/Training.js';
+import { escapeRegex } from '../../utils/search.js';
 import Event from '../../models/Event.js';
 import EventDay from '../../models/EventDay.js';
 import Registration from '../../models/Registration.js';
@@ -24,12 +25,17 @@ export const getPublicTrainings = async (req, res, next) => {
     const filter = { status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] } };
 
     if (req.query.event) filter.event = req.query.event;
+    else {
+      const currentEvent = await findCurrentEvent();
+      if (!currentEvent) return paginatedResponse(res, [], 0, page, limit);
+      filter.event = currentEvent._id;
+    }
     if (req.query.eventDay) filter.eventDay = req.query.eventDay;
     if (req.query.category) filter.category = req.query.category;
     if (req.query.level) filter.level = req.query.level;
     if (req.query.language) filter.language = req.query.language;
     if (req.query.audience) filter.audience = { $regex: req.query.audience, $options: 'i' };
-    if (req.query.search) filter.title = { $regex: req.query.search, $options: 'i' };
+    if (req.query.search) filter.title = { $regex: escapeRegex(req.query.search), $options: 'i' };
     if (req.query.status) filter.status = req.query.status;
 
     const [trainings, total] = await Promise.all([

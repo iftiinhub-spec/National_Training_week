@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { isValidInternationalPhone, normalizePhone } from '../utils/phone.js';
+import { HUMAN_NAME_MESSAGE, isValidHumanName, normalizeHumanName } from '../utils/humanName.js';
 
 const trainerSchema = new mongoose.Schema(
   {
@@ -17,6 +18,9 @@ const trainerSchema = new mongoose.Schema(
     phone: {
       type: String,
       trim: true,
+      set: normalizeHumanName,
+      maxlength: [100, 'Trainer name cannot exceed 100 characters'],
+      validate: { validator: isValidHumanName, message: HUMAN_NAME_MESSAGE },
       set: normalizePhone,
       validate: { validator: (value) => !value || isValidInternationalPhone(value), message: 'Enter a valid phone number for its country code.' },
     },

@@ -18,6 +18,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.disable('x-powered-by');
+if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
 
 // Security headers
 app.use(helmet({
@@ -32,7 +34,12 @@ const configuredOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL 
   .filter(Boolean);
 const allowedOrigins = process.env.NODE_ENV === 'production'
   ? configuredOrigins
-  : [...new Set([...configuredOrigins, 'http://localhost:5173', 'http://localhost:3000'])];
+  : [...new Set([
+    ...configuredOrigins,
+    'http://localhost:5173', 'http://127.0.0.1:5173',
+    'http://localhost:5187', 'http://127.0.0.1:5187',
+    'http://localhost:3000', 'http://127.0.0.1:3000',
+  ])];
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -47,12 +54,12 @@ app.use(cors({
 }));
 
 // Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Logging
 if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('dev'));
+  app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 }
 
 // Serve uploaded files statically

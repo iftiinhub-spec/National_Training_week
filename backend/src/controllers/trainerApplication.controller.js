@@ -6,9 +6,14 @@ import Registration from '../models/Registration.js';
 import Attendance from '../models/Attendance.js';
 import Feedback from '../models/Feedback.js';
 import Meeting from '../models/Meeting.js';
+import TrainerCertificate from '../models/TrainerCertificate.js';
 import { errorResponse, successResponse } from '../utils/apiResponse.js';
+import { generateTrainerAppreciationPDF } from '../utils/generateTrainerAppreciationPDF.js';
+import { withPdfGenerationLimit } from '../utils/pdfGenerationLimit.js';
+import { pick } from '../utils/pick.js';
 
 const expertiseList = (value) => Array.isArray(value) ? value : String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
+const materialPayload = (input) => pick(input, ['title', 'url', 'description']);
 
 export const applyAsTrainer = async (req, res, next) => {
   try {
@@ -59,6 +64,39 @@ export const updateTrainerProfile = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+export const getTrainerCertificates = async (req, res, next) => {
+  try {
+    const trainer = await ownTrainer(req.user);
+    if (!trainer) return errorResponse(res, 'Approved trainer profile not found.', 403);
+    const certificates = await TrainerCertificate.find({ trainer: trainer._id })
+      .populate({ path: 'training', select: 'title date event', populate: { path: 'event', select: 'name year' } })
+      .sort({ issuedAt: -1 });
+    return successResponse(res, { certificates });
+  } catch (error) { next(error); }
+};
+
+export const downloadTrainerCertificate = async (req, res, next) => {
+  try {
+    const trainer = await ownTrainer(req.user);
+    if (!trainer) return errorResponse(res, 'Approved trainer profile not found.', 403);
+    const certificate = await TrainerCertificate.findOne({ _id: req.params.id, trainer: trainer._id })
+      .populate({ path: 'training', select: 'title event', populate: { path: 'event', select: 'name year' } });
+    if (!certificate) return errorResponse(res, 'Certificate not found or not accessible.', 404);
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify-certificate?id=${certificate.certificateId}`;
+    const pdfBuffer = await withPdfGenerationLimit(() => generateTrainerAppreciationPDF({
+      trainerName: trainer.name,
+      trainingTitle: certificate.training.title,
+      eventName: certificate.training.event?.name || 'National Training Week',
+      issuedDate: certificate.issuedAt,
+      certificateId: certificate.certificateId,
+      verifyUrl,
+    }));
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="trainer-certificate-${certificate.certificateId}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) { next(error); }
+};
+
 const assignedTraining = async (user, trainingId) => {
   const trainer = await ownTrainer(user);
   if (!trainer) return null;
@@ -71,7 +109,7 @@ export const createMaterial = async (req, res, next) => {
     const assigned = await assignedTraining(req.user, req.params.trainingId);
     if (!assigned) return errorResponse(res, 'Assigned training not found.', 404);
     if (assigned.training.status === 'completed') return errorResponse(res, 'Materials cannot be changed after completion.', 400);
-    const material = await TrainingMaterial.create({ ...req.body, training: assigned.training._id, trainer: assigned.trainer._id });
+    const material = await TrainingMaterial.create({ ...materialPayload(req.body), training: assigned.training._id, trainer: assigned.trainer._id });
     return successResponse(res, { material }, 'Material added.', 201);
   } catch (error) { next(error); }
 };
@@ -80,7 +118,7 @@ export const updateMaterial = async (req, res, next) => {
   try {
     const assigned = await assignedTraining(req.user, req.params.trainingId);
     if (!assigned || assigned.training.status === 'completed') return errorResponse(res, 'Material cannot be changed.', 400);
-    const material = await TrainingMaterial.findOneAndUpdate({ _id: req.params.materialId, training: assigned.training._id, trainer: assigned.trainer._id }, req.body, { new: true, runValidators: true });
+    const material = await TrainingMaterial.findOneAndUpdate({ _id: req.params.materialId, training: assigned.training._id, trainer: assigned.trainer._id }, materialPayload(req.body), { new: true, runValidators: true });
     if (!material) return errorResponse(res, 'Material not found.', 404);
     return successResponse(res, { material }, 'Material updated.');
   } catch (error) { next(error); }

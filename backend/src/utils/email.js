@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { createHash } from 'node:crypto';
 import SiteSettings from '../models/SiteSettings.js';
 import { decryptSetting } from './settingsEncryption.js';
 
@@ -22,6 +23,19 @@ export const emailLayout = ({ eyebrow = 'Official communication', title, preview
 const emailLogoPath = fileURLToPath(new URL('../../../frontend/public/logo-dark.png', import.meta.url));
 
 const isRelayTransport = () => process.env.EMAIL_TRANSPORT === 'smtp-relay';
+let pooledTransporter = null;
+let pooledTransportKey = '';
+let settingsCache = { value: null, expiresAt: 0 };
+
+const getEmailSettings = async () => {
+  if (settingsCache.expiresAt > Date.now()) return settingsCache.value;
+  const value = await SiteSettings.findOne({ key: 'global' })
+    .select('emailSenderName replyToEmail smtpUser +smtpPassEncrypted')
+    .lean()
+    .catch(() => null);
+  settingsCache = { value, expiresAt: Date.now() + 30_000 };
+  return value;
+};
 
 const createTransporter = ({ user, pass } = {}) => {
   const options = {
@@ -32,32 +46,59 @@ const createTransporter = ({ user, pass } = {}) => {
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 20_000,
+    pool: true,
+    maxConnections: Math.max(1, Number(process.env.SMTP_MAX_CONNECTIONS) || 3),
+    maxMessages: Math.max(1, Number(process.env.SMTP_MAX_MESSAGES_PER_CONNECTION) || 100),
+    rateDelta: 1_000,
+    rateLimit: Math.max(1, Number(process.env.SMTP_RATE_LIMIT_PER_SECOND) || 5),
   };
   if (!isRelayTransport()) options.auth = { user, pass };
   return nodemailer.createTransport(options);
 };
 
 export const sendEmail = async ({ to, subject, html, text }) => {
-  let transporter;
+  if (process.env.EMAIL_DELIVERY_MODE === 'disabled') {
+    return { success: true, messageId: `disabled-${Date.now()}` };
+  }
   try {
-    const settings = await SiteSettings.findOne({ key: 'global' }).select('emailSenderName replyToEmail smtpUser +smtpPassEncrypted').lean().catch(() => null);
+    const settings = await getEmailSettings();
     const relayTransport = isRelayTransport();
     const senderAddress = relayTransport ? '' : (settings?.smtpUser || process.env.SMTP_USER);
     let senderPassword = relayTransport ? '' : process.env.SMTP_PASS;
     if (!relayTransport && settings?.smtpPassEncrypted) {
       try { senderPassword = decryptSetting(settings.smtpPassEncrypted); } catch { throw new Error('Saved email credential could not be decrypted. Re-enter the App Password in Admin Settings.'); }
     }
-    transporter = createTransporter({ user: senderAddress, pass: senderPassword });
+    const transportKey = createHash('sha256').update(JSON.stringify({
+      relayTransport,
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_SECURE,
+      requireTLS: process.env.SMTP_REQUIRE_TLS,
+      senderAddress,
+      senderPassword,
+    })).digest('hex');
+    if (!pooledTransporter || pooledTransportKey !== transportKey) {
+      pooledTransporter?.close();
+      pooledTransporter = createTransporter({ user: senderAddress, pass: senderPassword });
+      pooledTransportKey = transportKey;
+    }
     const from = !relayTransport && settings?.emailSenderName && senderAddress
       ? `"${settings.emailSenderName.replaceAll('"', '')}" <${senderAddress}>`
       : process.env.EMAIL_FROM;
     const attachments = fs.existsSync(emailLogoPath) ? [{ filename: 'hormuud-ntw-logo.png', path: emailLogoPath, cid: 'ntw-logo' }] : [];
-    const info = await transporter.sendMail({ from, replyTo: settings?.replyToEmail || undefined, to: Array.isArray(to) ? to.join(', ') : to, subject, html, text: text || html.replace(/<[^>]*>/g, ''), attachments });
+    const info = await pooledTransporter.sendMail({ from, replyTo: settings?.replyToEmail || undefined, to: Array.isArray(to) ? to.join(', ') : to, subject, html, text: text || html.replace(/<[^>]*>/g, ''), attachments });
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Email send error:', error.message);
     return { success: false, error: error.message };
-  } finally { transporter?.close(); }
+  }
+};
+
+export const closeEmailTransporter = () => {
+  pooledTransporter?.close();
+  pooledTransporter = null;
+  pooledTransportKey = '';
+  settingsCache = { value: null, expiresAt: 0 };
 };
 
 export const sendInvitationEmail = ({ to, trainingTitle, eventName, meetingUrl, meetingId, passcode, startTime, platform, notes }) => {
@@ -92,4 +133,10 @@ export const sendCertificateIssuedEmail = ({ to, participantName, trainingTitle,
   to,
   subject: `Your certificate is ready: ${trainingTitle}`,
   html: emailLayout({ eyebrow: 'Verified achievement', title: 'Your certificate is ready', preview: `Certificate issued for ${trainingTitle}`, body: `<p style="margin-top:0">Hello ${escapeHtml(participantName || 'Participant')},</p><p>Congratulations. Your attendance and completion have been verified, and your official certificate is now available.</p>${emailInfoCard([['Training', trainingTitle], ['Certificate ID', certificateId]])}${emailButton('View and download certificate', portalUrl)}<p style="font-size:13px">Public verification: <a href="${escapeHtml(verifyUrl)}" style="color:#1a6b3c">${escapeHtml(verifyUrl)}</a></p>` }),
+});
+
+export const sendTrainerCertificateIssuedEmail = ({ to, trainerName, trainingTitle, certificateId, verifyUrl, portalUrl }) => sendEmail({
+  to,
+  subject: `Certificate of Appreciation: ${trainingTitle}`,
+  html: emailLayout({ eyebrow: 'Trainer recognition', title: 'Your Certificate of Appreciation is ready', preview: `Thank you for delivering ${trainingTitle}`, body: `<p style="margin-top:0">Hello ${escapeHtml(trainerName || 'Trainer')},</p><p>Thank you for sharing your expertise during National Training Week. Your session has been completed, and your official Certificate of Appreciation is now available.</p>${emailInfoCard([['Session', trainingTitle], ['Certificate ID', certificateId]])}${emailButton('View and download certificate', portalUrl)}<p style="font-size:13px">Public verification: <a href="${escapeHtml(verifyUrl)}" style="color:#1a6b3c">${escapeHtml(verifyUrl)}</a></p>` }),
 });

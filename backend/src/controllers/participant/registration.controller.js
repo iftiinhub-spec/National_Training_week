@@ -2,6 +2,7 @@ import Training from '../../models/Training.js';
 import Registration from '../../models/Registration.js';
 import Attendance from '../../models/Attendance.js';
 import Meeting from '../../models/Meeting.js';
+import TrainingMaterial from '../../models/TrainingMaterial.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
 
@@ -84,10 +85,30 @@ export const getMyRegistrations = async (req, res, next) => {
             { path: 'category', select: 'name' },
           ],
         })
-        .sort({ registeredAt: -1 }).skip(skip).limit(limit),
+        .sort({ registeredAt: -1 }).skip(skip).limit(limit).lean(),
       Registration.countDocuments(filter),
     ]);
-    return paginatedResponse(res, registrations, total, page, limit);
+    const approvedTrainingIds = registrations
+      .filter((registration) => registration.status === 'approved' && registration.training)
+      .map((registration) => registration.training._id);
+    const materials = approvedTrainingIds.length
+      ? await TrainingMaterial.find({ training: { $in: approvedTrainingIds } })
+        .select('training title url description createdAt').sort({ createdAt: -1 }).lean()
+      : [];
+    const materialsByTraining = materials.reduce((grouped, material) => {
+      const key = String(material.training);
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(material);
+      return grouped;
+    }, {});
+    const securedRegistrations = registrations.map((registration) => ({
+      ...registration,
+      training: registration.training ? {
+        ...registration.training,
+        materials: registration.status === 'approved' ? (materialsByTraining[String(registration.training._id)] || []) : [],
+      } : null,
+    }));
+    return paginatedResponse(res, securedRegistrations, total, page, limit);
   } catch (err) { next(err); }
 };
 
@@ -107,12 +128,17 @@ export const getMyRegistration = async (req, res, next) => {
 
     // If approved and meeting is released, include meeting info
     let meeting = null;
+    let materials = [];
     if (reg.status === 'approved') {
-      meeting = await Meeting.findOne({ training: reg.training._id, isReleased: true })
-        .select('platform meetingUrl meetingId passcode startTime endTime notes');
+      [meeting, materials] = await Promise.all([
+        Meeting.findOne({ training: reg.training._id, isReleased: true })
+          .select('platform meetingUrl meetingId passcode startTime endTime notes'),
+        TrainingMaterial.find({ training: reg.training._id })
+          .select('title url description createdAt').sort({ createdAt: -1 }),
+      ]);
     }
 
-    return successResponse(res, { registration: reg, meeting });
+    return successResponse(res, { registration: reg, meeting, materials });
   } catch (err) { next(err); }
 };
 

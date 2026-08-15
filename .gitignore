@@ -3,6 +3,10 @@ node_modules/
 **/node_modules/
 
 # Environment variables & credentials
+.env
+**/.env
+!.env.example
+!**/.env.example
 
 
 # Production builds
@@ -31,3 +35,6 @@ Thumbs.db
 scratch/
 backend/scratch/
 read_docs.ps1
+**/tmp/
+**/design-previews/
+**/samples/

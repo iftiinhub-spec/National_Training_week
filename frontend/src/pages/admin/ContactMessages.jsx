@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 export const ContactMessages = () => {
+  const confirmAction = useConfirmDialog();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +38,7 @@ export const ContactMessages = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete contact message?')) return;
+    if (!await confirmAction({ title: 'Delete contact message?', message: 'This message will be permanently removed and cannot be recovered.', confirmLabel: 'Delete message' })) return;
     try {
       await api.delete(`/admin/contact-messages/${id}`);
       toast.success('Message deleted.');

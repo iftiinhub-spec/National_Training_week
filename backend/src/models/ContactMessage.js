@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
+import { HUMAN_NAME_MESSAGE, isValidHumanName, normalizeHumanName } from '../utils/humanName.js';
 
 const contactMessageSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
+    name: { type: String, required: true, trim: true, set: normalizeHumanName, maxlength: 100, validate: { validator: isValidHumanName, message: HUMAN_NAME_MESSAGE } },
     email: {
       type: String,
       required: true,

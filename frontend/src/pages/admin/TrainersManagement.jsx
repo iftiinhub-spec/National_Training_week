@@ -5,6 +5,7 @@ import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
 import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import PhoneInput from '../../components/common/PhoneInput';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
 // Resolve the photo URL — Vite proxies /uploads → backend in dev; same origin in prod
 const photoUrl = (path) => {
@@ -29,6 +30,7 @@ const EMPTY_FORM = {
 };
 
 export const TrainersManagement = () => {
+  const confirmAction = useConfirmDialog();
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -141,7 +143,7 @@ export const TrainersManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this trainer profile?')) return;
+    if (!await confirmAction({ title: 'Delete trainer profile?', message: 'This trainer profile will be permanently removed. Trainers assigned to sessions may not be deletable.', confirmLabel: 'Delete trainer' })) return;
     try {
       await api.delete(`/admin/trainers/${id}`);
       toast.success('Trainer profile deleted');

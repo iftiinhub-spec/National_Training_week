@@ -1,14 +1,19 @@
 import Trainer from '../../models/Trainer.js';
 import Training from '../../models/Training.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
+import { escapeRegex } from '../../utils/search.js';
 import User from '../../models/User.js';
+import Event from '../../models/Event.js';
+import { pick } from '../../utils/pick.js';
+
+const trainerPayload = (input) => pick(input, ['name', 'email', 'phone', 'password', 'title', 'organization', 'biography', 'expertise', 'isActive', 'accessStatus']);
 
 export const getTrainers = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
     const filter = {};
     if (req.query.active === 'true') filter.isActive = true;
-    if (req.query.search) filter.name = { $regex: req.query.search, $options: 'i' };
+    if (req.query.search) filter.name = { $regex: escapeRegex(req.query.search), $options: 'i' };
     const [trainers, total] = await Promise.all([
       Trainer.find(filter).populate('user', 'isActive').sort({ name: 1 }).skip(skip).limit(limit),
       Trainer.countDocuments(filter),
@@ -24,6 +29,12 @@ export const getPublicTrainers = async (req, res, next) => {
       trainer: { $ne: null },
     };
     if (req.query.event) sessionFilter.event = req.query.event;
+    else {
+      const currentEvent = await Event.findOne({ status: { $ne: 'draft' }, isActive: { $ne: false }, isCurrent: true })
+        || await Event.findOne({ status: { $ne: 'draft' }, isActive: { $ne: false }, endDate: { $gte: new Date() } }).sort({ startDate: 1 })
+        || await Event.findOne({ status: { $ne: 'draft' }, isActive: { $ne: false } }).sort({ year: -1 });
+      if (currentEvent) sessionFilter.event = currentEvent._id;
+    }
     if (req.query.eventDay) sessionFilter.eventDay = req.query.eventDay;
     const sessions = await Training.find(sessionFilter)
       .select('title date startTime endTime trainer event eventDay category status')
@@ -32,7 +43,7 @@ export const getPublicTrainers = async (req, res, next) => {
       .populate('category', 'name')
       .sort({ date: 1, startTime: 1 });
     const trainerIds = [...new Set(sessions.map((session) => String(session.trainer)))];
-    const trainers = await Trainer.find({ _id: { $in: trainerIds }, isActive: true }).sort({ name: 1 }).lean();
+    const trainers = await Trainer.find({ _id: { $in: trainerIds } }).sort({ name: 1 }).lean();
     const enriched = trainers.map((trainer) => ({
       ...trainer,
       sessions: sessions.filter((session) => String(session.trainer) === String(trainer._id)),
@@ -43,7 +54,7 @@ export const getPublicTrainers = async (req, res, next) => {
 
 export const getPublicTrainer = async (req, res, next) => {
   try {
-    const trainer = await Trainer.findOne({ _id: req.params.id, isActive: true }).lean();
+    const trainer = await Trainer.findById(req.params.id).lean();
     if (!trainer) return errorResponse(res, 'Trainer not found.', 404);
     const sessionFilter = {
       trainer: trainer._id,
@@ -56,6 +67,7 @@ export const getPublicTrainer = async (req, res, next) => {
       .populate('eventDay', 'dayNumber theme date')
       .populate('category', 'name')
       .sort({ date: 1, startTime: 1 });
+    if (!sessions.length) return errorResponse(res, 'Trainer not found.', 404);
     return successResponse(res, { trainer: { ...trainer, sessions } });
   } catch (err) { next(err); }
 };
@@ -70,7 +82,7 @@ export const getTrainer = async (req, res, next) => {
 
 export const createTrainer = async (req, res, next) => {
   try {
-    const data = { ...req.body };
+    const data = trainerPayload(req.body);
     if (!data.password) return errorResponse(res, 'Password is required when creating a trainer account.', 400);
     if (data.password.length < 8) return errorResponse(res, 'Password must be at least 8 characters.', 400);
     if (await User.exists({ email: data.email.toLowerCase() })) return errorResponse(res, 'An account with this email already exists.', 409);
@@ -92,7 +104,7 @@ export const createTrainer = async (req, res, next) => {
 
 export const updateTrainer = async (req, res, next) => {
   try {
-    const data = { ...req.body };
+    const data = trainerPayload(req.body);
     const password = data.password;
     if (req.file) data.photo = `uploads/photo/${req.file.filename}`;
     if (data.expertise && typeof data.expertise === 'string') {

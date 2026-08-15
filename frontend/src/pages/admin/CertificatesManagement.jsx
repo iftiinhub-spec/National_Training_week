@@ -11,6 +11,7 @@ export const CertificatesManagement = () => {
   const [selectedTraining, setSelectedTraining] = useState('');
   const [loading, setLoading] = useState(true);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [issuanceJob, setIssuanceJob] = useState(null);
   const [revokeTarget, setRevokeTarget] = useState(null);
   const [revokeReason, setRevokeReason] = useState('');
   const [revoking, setRevoking] = useState(false);
@@ -25,7 +26,7 @@ export const CertificatesManagement = () => {
       if (certRes.success) setCertificates(certRes.data || []);
       if (trRes.success) {
         setTrainings(trRes.data || []);
-        if (trRes.data?.length > 0) setSelectedTraining(trRes.data[0]._id);
+        if (trRes.data?.length > 0) setSelectedTraining((current) => current || trRes.data[0]._id);
       }
     } catch (err) {
       toast.error('Failed to load certificates data.');
@@ -38,6 +39,28 @@ export const CertificatesManagement = () => {
     fetchCertificates();
   }, []);
 
+  useEffect(() => {
+    if (!selectedTraining) { setIssuanceJob(null); return undefined; }
+    let active = true;
+    let interval;
+    const loadJob = async () => {
+      try {
+        const response = await api.get(`/admin/certificates/jobs/${selectedTraining}`);
+        if (active) {
+          const nextJob = response.data?.job || null;
+          setIssuanceJob(nextJob);
+          if (['completed', 'completed_with_errors'].includes(nextJob?.status)) {
+            clearInterval(interval);
+            fetchCertificates();
+          }
+        }
+      } catch { if (active) setIssuanceJob(null); }
+    };
+    loadJob();
+    interval = setInterval(loadJob, 3_000);
+    return () => { active = false; clearInterval(interval); };
+  }, [selectedTraining]);
+
   const handleBulkGenerate = async () => {
     if (!selectedTraining) {
       toast.error('Select a completed training to bulk generate certificates.');
@@ -48,7 +71,7 @@ export const CertificatesManagement = () => {
     try {
       const res = await api.post('/admin/certificates/bulk-generate', { trainingId: selectedTraining });
       if (res.success) {
-        toast.success(res.message || 'Bulk certificate issuance complete!');
+        toast.success(res.message || 'Certificate issuance queued.');
         fetchCertificates();
       }
     } catch (err) {
@@ -113,9 +136,10 @@ export const CertificatesManagement = () => {
             disabled={bulkSubmitting || !selectedTraining}
             className="px-6 py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold text-xs rounded-xl shadow transition-colors disabled:opacity-50"
           >
-            {bulkSubmitting ? 'Issuing Certificates...' : 'Run Bulk Certificate Generator'}
+            {bulkSubmitting ? 'Queuing Certificates...' : 'Run Bulk Certificate Generator'}
           </button>
         </div>
+        {issuanceJob && <div aria-live="polite" className={`rounded-xl border px-4 py-3 text-xs ${issuanceJob.status === 'completed' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : issuanceJob.status === 'completed_with_errors' ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-sky-200 bg-sky-50 text-sky-800'}`}><strong className="capitalize">{issuanceJob.status.replaceAll('_', ' ')}</strong>{issuanceJob.summary && <span> · {issuanceJob.summary.participantCertificates || 0}/{issuanceJob.summary.eligible || 0} certificates · {issuanceJob.summary.participantEmailsSent || 0} emails delivered</span>}{issuanceJob.summary?.participantEmailsFailed > 0 && <span> · {issuanceJob.summary.participantEmailsFailed} failed</span>}</div>}
       </div>
 
       {/* Certificates Table */}

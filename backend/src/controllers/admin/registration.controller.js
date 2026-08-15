@@ -63,6 +63,20 @@ export const updateRegistrationStatus = async (req, res, next) => {
       }
     }
 
+    // Validate same-day exclusivity before persisting the approval.
+    if (status === 'approved') {
+      const sameDayTrainingIds = await Training.find({
+        _id: { $ne: reg.training._id }, eventDay: reg.training.eventDay,
+      }).distinct('_id');
+      const approvedConflict = await Registration.findOne({
+        _id: { $ne: reg._id }, participant: reg.participant._id,
+        training: { $in: sameDayTrainingIds }, status: 'approved',
+      }).populate('training', 'title');
+      if (approvedConflict) {
+        return errorResponse(res, `This participant is already approved for “${approvedConflict.training.title}” on the same event day.`, 409);
+      }
+    }
+
     const previousStatus = reg.status;
     reg.status = status;
     reg.updatedBy = req.user._id;

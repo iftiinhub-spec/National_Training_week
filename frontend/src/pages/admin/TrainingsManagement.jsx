@@ -5,6 +5,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const TRAINING_STATUSES = [
@@ -71,6 +72,7 @@ const toTimeInputValue = (value = '') => {
 const assetUrl = (value) => value ? (value.startsWith('http') ? value : `/${value.replace(/^\//, '')}`) : '';
 
 export const TrainingsManagement = () => {
+  const confirmAction = useConfirmDialog();
   const [trainings, setTrainings] = useState([]);
   const [events, setEvents] = useState([]);
   const [eventDays, setEventDays] = useState([]);
@@ -258,7 +260,7 @@ export const TrainingsManagement = () => {
   };
 
   const handleStatusChange = async (trainingId, newStatus) => {
-    if (newStatus === 'completed' && !window.confirm('Mark this training as completed? Attendance will be locked and certificates will be issued immediately to approved participants marked present.')) return;
+    if (newStatus === 'completed' && !await confirmAction({ title: 'Complete this training?', message: 'Attendance will be locked. Participant certificates and the trainer Certificate of Appreciation will be queued for safe background delivery. This training cannot be reopened.', confirmLabel: 'Complete training', tone: 'warning' })) return;
     try {
       const res = await api.patch(`/admin/trainings/${trainingId}/status`, { status: newStatus });
       if (res.success) {
@@ -271,7 +273,7 @@ export const TrainingsManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this training session?')) return;
+    if (!await confirmAction({ title: 'Delete training session?', message: 'This session will be permanently removed. Sessions with operational records cannot be deleted.', confirmLabel: 'Delete session' })) return;
     try {
       await api.delete(`/admin/trainings/${id}`);
       toast.success('Training deleted');

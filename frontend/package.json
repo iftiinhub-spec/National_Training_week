@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
+    "test:e2e": "node scripts/run-playwright.mjs",
+    "test:e2e:report": "playwright show-report",
     "test:e2e:readiness": "node scripts/e2e-production-readiness.mjs",
     "test:e2e:dark-mode": "node scripts/e2e-dark-mode.mjs",
     "preview": "vite preview"
@@ -20,7 +22,6 @@
     "libphonenumber-js": "^1.13.10",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-hook-form": "^7.85.0",
     "react-hot-toast": "^2.6.0",
     "react-icons": "^5.7.0",
     "react-router-dom": "^7.18.2",

@@ -8,12 +8,14 @@ import {
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
   Squares2X2Icon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout, isAdmin, isModerator, isParticipant, isTrainer } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -27,11 +29,14 @@ export const Navbar = () => {
     { name: 'Home',               path: '/' },
     { name: 'About',              path: '/about' },
     { name: 'Program',            path: '/program' },
+    { name: 'Past Editions',      path: '/past-editions' },
     { name: 'Trainings',          path: '/trainings' },
     { name: 'Recordings',         path: '/recordings' },
     { name: 'Verify Certificate', path: '/verify-certificate' },
     { name: 'Contact',            path: '/contact' },
   ];
+  const primaryLinks = navLinks.filter((link) => ['/', '/about', '/program', '/trainings', '/contact'].includes(link.path));
+  const moreLinks = navLinks.filter((link) => ['/past-editions', '/recordings', '/verify-certificate'].includes(link.path));
 
   const getDashboardPath = () => {
     if (isAdmin) return '/admin';
@@ -62,7 +67,7 @@ export const Navbar = () => {
 
           {/* Desktop nav */}
           <nav className="hidden xl:flex items-center gap-1">
-            {navLinks.map((link) => {
+            {primaryLinks.map((link) => {
               const isActive = location.pathname === link.path;
               return (
                 <Link
@@ -81,6 +86,13 @@ export const Navbar = () => {
                 </Link>
               );
             })}
+            <div className="relative" onMouseLeave={() => setMoreMenuOpen(false)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setMoreMenuOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') { setMoreMenuOpen(false); event.currentTarget.querySelector('button')?.focus(); } }}>
+              <button type="button" onClick={() => setMoreMenuOpen((open) => !open)} aria-expanded={moreMenuOpen} aria-haspopup="menu" className={`relative flex items-center gap-1 px-3.5 py-2 text-[13px] font-bold transition-colors ${moreLinks.some((link) => location.pathname === link.path) ? 'text-[#1da156]' : 'text-black hover:text-[#1da156]'}`}>
+                More <ChevronDownIcon className={`h-4 w-4 transition-transform ${moreMenuOpen ? 'rotate-180' : ''}`} />
+                {moreLinks.some((link) => location.pathname === link.path) && <span className="absolute bottom-0 left-3.5 right-3.5 h-0.5 rounded-full bg-[#1da156]" />}
+              </button>
+              {moreMenuOpen && <div role="menu" className="absolute left-1/2 top-full mt-2 w-56 -translate-x-1/2 overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-xl">{moreLinks.map((link) => <Link key={link.path} to={link.path} role="menuitem" onClick={() => setMoreMenuOpen(false)} className={`block px-4 py-3 text-sm font-semibold transition-colors ${location.pathname === link.path ? 'bg-emerald-50 text-[#1da156]' : 'text-slate-700 hover:bg-slate-50 hover:text-[#1da156]'}`}>{link.name}</Link>)}</div>}
+            </div>
           </nav>
 
           {/* Desktop Auth */}
