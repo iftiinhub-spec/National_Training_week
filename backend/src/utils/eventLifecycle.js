@@ -1,3 +1,5 @@
+import Training from '../models/Training.js';
+
 export const getAutomaticEventStatus = (event, now = new Date()) => {
   if (!event || event.status === 'draft' || event.status === 'completed') return event?.status;
   const eventStart = event.startDate
@@ -17,8 +19,14 @@ export const syncEventStatus = async (event) => {
   if (!event) return event;
   const status = getAutomaticEventStatus(event);
   if (status && status !== event.status) {
+    const previousStatus = event.status;
     event.status = status;
     await event.save();
+    // When the event's registration window opens, publish sessions open for registration too,
+    // instead of requiring an admin to flip each one individually.
+    if (status === 'registration_open' && previousStatus !== 'registration_open') {
+      await Training.updateMany({ event: event._id, status: 'published' }, { $set: { status: 'registration_open' } });
+    }
   }
   return event;
 };
