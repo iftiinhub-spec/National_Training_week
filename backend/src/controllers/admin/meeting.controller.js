@@ -104,6 +104,10 @@ export const sendTrainerInvitation = async (req, res, next) => {
 
     const training = await Training.findById(trainingId).populate('trainer').populate('event', 'name');
     if (!training) return errorResponse(res, 'Training not found.', 404);
+    const trainerInviteEndsAt = getTrainingDateTime(training.date, training.endTime);
+    if (trainerInviteEndsAt && trainerInviteEndsAt <= new Date()) {
+      return errorResponse(res, 'This session has already ended. Invitations can no longer be sent.', 400);
+    }
     if (!training.trainer) return errorResponse(res, 'No trainer assigned to this training.', 400);
     if (!training.trainer.email) return errorResponse(res, 'Trainer has no email address.', 400);
 
@@ -148,6 +152,10 @@ export const sendParticipantInvitations = async (req, res, next) => {
 
     const training = await Training.findById(trainingId).populate('event', 'name');
     if (!training) return errorResponse(res, 'Training not found.', 404);
+    const participantInviteEndsAt = getTrainingDateTime(training.date, training.endTime);
+    if (participantInviteEndsAt && participantInviteEndsAt <= new Date()) {
+      return errorResponse(res, 'This session has already ended. Invitations can no longer be sent.', 400);
+    }
 
     const meeting = await Meeting.findOne({ training: trainingId });
     if (type === 'invitation' && !meeting) return errorResponse(res, 'Create the meeting details before sending invitations.', 400);
