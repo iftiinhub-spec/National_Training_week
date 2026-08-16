@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "seed:admin": "node src/seed_admin.js",
+    "backfill:seats": "node src/backfill_filled_seats.js",
     "check:deps": "node -e \"require('mongodb/lib/resource_management'); require('mongoose'); console.log('backend dependencies ok')\"",
     "test": "node --test test/*.test.js"
   },

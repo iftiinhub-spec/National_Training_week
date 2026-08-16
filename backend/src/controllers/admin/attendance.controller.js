@@ -106,7 +106,8 @@ export const getAttendance = async (req, res, next) => {
       .populate('participant', 'fullName email phone profilePhoto participantType')
       .populate('markedBy', 'fullName role')
       .populate('updatedBy', 'fullName role')
-      .sort({ 'participant.fullName': 1 });
+      .limit(5000);
+    records.sort((a, b) => (a.participant?.fullName || '').localeCompare(b.participant?.fullName || ''));
 
     const stats = {
       total: records.length,

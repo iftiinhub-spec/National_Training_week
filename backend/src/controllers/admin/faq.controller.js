@@ -15,14 +15,14 @@ export const getFAQs = async (req, res, next) => {
     if (req.query.status === 'published') filter.isPublished = true;
     if (req.query.status === 'draft') filter.isPublished = false;
     if (req.query.category) filter.category = req.query.category;
-    const faqs = await FAQ.find(filter).sort({ displayOrder: 1, createdAt: 1 });
+    const faqs = await FAQ.find(filter).sort({ displayOrder: 1, createdAt: 1 }).limit(500);
     return successResponse(res, { faqs });
   } catch (error) { next(error); }
 };
 
 export const getPublicFAQs = async (req, res, next) => {
   try {
-    const faqs = await FAQ.find({ isPublished: true }).sort({ displayOrder: 1, createdAt: 1 });
+    const faqs = await FAQ.find({ isPublished: true }).sort({ displayOrder: 1, createdAt: 1 }).limit(500);
     return successResponse(res, { faqs });
   } catch (error) { next(error); }
 };

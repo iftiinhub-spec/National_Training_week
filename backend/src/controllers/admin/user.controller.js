@@ -111,6 +111,7 @@ export const resetModeratorPassword = async (req, res, next) => {
     const user = await User.findOne({ _id: req.params.id, role: 'moderator' });
     if (!user) return errorResponse(res, 'Moderator not found.', 404);
     user.passwordHash = newPassword;
+    user.tokenVersion += 1;
     await user.save();
     return successResponse(res, null, 'Moderator password reset successfully.');
   } catch (err) { next(err); }

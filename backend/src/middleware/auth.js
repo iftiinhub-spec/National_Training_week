@@ -33,6 +33,13 @@ export const protect = async (req, res, next) => {
       });
     }
 
+    if (decoded.tv !== user.tokenVersion) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session expired. Please sign in again.',
+      });
+    }
+
     req.user = user;
     next();
   } catch (error) {
@@ -53,7 +60,7 @@ export const optionalAuth = async (req, res, next) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findById(decoded.id).select('-passwordHash');
-      if (user && user.isActive) {
+      if (user && user.isActive && decoded.tv === user.tokenVersion) {
         req.user = user;
       }
     }

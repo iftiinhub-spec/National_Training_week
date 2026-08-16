@@ -34,6 +34,11 @@ const errorHandler = (err, req, res, next) => {
     message = 'Token has expired.';
   }
 
+  // Log the real cause server-side before the response (below) masks it for clients.
+  if (statusCode >= 500) {
+    console.error(`[${req.method} ${req.originalUrl}]`, err);
+  }
+
   // Hide database, filesystem, SMTP, and implementation details for
   // unexpected production failures.
   if (statusCode >= 500 && process.env.NODE_ENV === 'production') {

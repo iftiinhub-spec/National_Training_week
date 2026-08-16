@@ -53,15 +53,7 @@ export const updateRegistrationStatus = async (req, res, next) => {
     if (!reg) return errorResponse(res, 'Registration not found.', 404);
     if (reg.status === 'cancelled') return errorResponse(res, 'Cannot update a cancelled registration.', 400);
 
-    // Capacity check when approving
-    if (status === 'approved' && reg.training.capacity) {
-      const approvedCount = await Registration.countDocuments({
-        training: reg.training._id, status: 'approved',
-      });
-      if (approvedCount >= reg.training.capacity) {
-        return errorResponse(res, 'Training capacity is full.', 400);
-      }
-    }
+    const previousStatus = reg.status;
 
     // Validate same-day exclusivity before persisting the approval.
     if (status === 'approved') {
@@ -77,7 +69,21 @@ export const updateRegistrationStatus = async (req, res, next) => {
       }
     }
 
-    const previousStatus = reg.status;
+    // Atomically reserve a seat when newly approving, so two concurrent
+    // approvals can't both pass a stale capacity check.
+    if (status === 'approved' && previousStatus !== 'approved' && reg.training.capacity) {
+      const reserved = await Training.findOneAndUpdate(
+        { _id: reg.training._id, $expr: { $lt: ['$filledSeats', '$capacity'] } },
+        { $inc: { filledSeats: 1 } },
+      );
+      if (!reserved) return errorResponse(res, 'Training capacity is full.', 400);
+    }
+
+    // Release a seat when moving a previously-approved registration away from approved.
+    if (previousStatus === 'approved' && status !== 'approved' && reg.training.capacity) {
+      await Training.findByIdAndUpdate(reg.training._id, { $inc: { filledSeats: -1 } });
+    }
+
     reg.status = status;
     reg.updatedBy = req.user._id;
     await reg.save();
@@ -99,22 +105,6 @@ export const updateRegistrationStatus = async (req, res, next) => {
           date: reg.training.date,
           startTime: reg.training.startTime,
         });
-      }
-    }
-
-    if (status === 'approved') {
-      const sameDayTrainingIds = await Training.find({
-        _id: { $ne: reg.training._id },
-        eventDay: reg.training.eventDay,
-      }).distinct('_id');
-      const approvedConflict = await Registration.findOne({
-        _id: { $ne: reg._id },
-        participant: reg.participant._id,
-        training: { $in: sameDayTrainingIds },
-        status: 'approved',
-      }).populate('training', 'title');
-      if (approvedConflict) {
-        return errorResponse(res, `This participant is already approved for “${approvedConflict.training.title}” on the same event day.`, 409);
       }
     }
 

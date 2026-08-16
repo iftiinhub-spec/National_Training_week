@@ -34,7 +34,7 @@ export const getPublicTrainings = async (req, res, next) => {
     if (req.query.category) filter.category = req.query.category;
     if (req.query.level) filter.level = req.query.level;
     if (req.query.language) filter.language = req.query.language;
-    if (req.query.audience) filter.audience = { $regex: req.query.audience, $options: 'i' };
+    if (req.query.audience) filter.audience = { $regex: escapeRegex(req.query.audience), $options: 'i' };
     if (req.query.search) filter.title = { $regex: escapeRegex(req.query.search), $options: 'i' };
     if (req.query.status) filter.status = req.query.status;
 
@@ -77,7 +77,7 @@ export const getPublicTraining = async (req, res, next) => {
 // GET /api/public/events — public event list
 export const getPublicEvents = async (req, res, next) => {
   try {
-    const events = await Event.find(publicEventFilter).sort({ year: -1 });
+    const events = await Event.find(publicEventFilter).sort({ year: -1 }).limit(500);
     return successResponse(res, { events });
   } catch (err) { next(err); }
 };

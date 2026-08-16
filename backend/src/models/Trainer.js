@@ -8,6 +8,9 @@ const trainerSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Trainer name is required'],
       trim: true,
+      set: normalizeHumanName,
+      maxlength: [100, 'Trainer name cannot exceed 100 characters'],
+      validate: { validator: isValidHumanName, message: HUMAN_NAME_MESSAGE },
     },
     email: {
       type: String,
@@ -18,9 +21,6 @@ const trainerSchema = new mongoose.Schema(
     phone: {
       type: String,
       trim: true,
-      set: normalizeHumanName,
-      maxlength: [100, 'Trainer name cannot exceed 100 characters'],
-      validate: { validator: isValidHumanName, message: HUMAN_NAME_MESSAGE },
       set: normalizePhone,
       validate: { validator: (value) => !value || isValidInternationalPhone(value), message: 'Enter a valid phone number for its country code.' },
     },
@@ -42,6 +42,9 @@ const trainerSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+trainerSchema.index({ email: 1 });
+trainerSchema.index({ accessStatus: 1 });
 
 const Trainer = mongoose.model('Trainer', trainerSchema);
 export default Trainer;

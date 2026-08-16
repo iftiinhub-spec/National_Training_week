@@ -159,54 +159,55 @@ export const sendParticipantInvitations = async (req, res, next) => {
     if (registrations.length === 0) return errorResponse(res, 'No approved participants found.', 400);
 
     const emails = registrations.map((r) => r.participant.email).filter(Boolean);
-    const failed = [];
     const scheduledStart = getTrainingDateTime(training.date, training.startTime);
     if (!scheduledStart) {
       return errorResponse(res, 'The training date or start time is invalid. Please update the training schedule.', 400);
     }
 
-    for (const email of emails) {
-      let result;
-      if (type === 'invitation' && meeting) {
-        result = await sendInvitationEmail({
-          to: email,
-          trainingTitle: training.title,
-          eventName: training.event?.name || 'National Training Week',
-          meetingUrl: meeting.meetingUrl,
-          meetingId: meeting.meetingId,
-          passcode: meeting.passcode,
-          startTime: scheduledStart,
-          platform: meeting.platform,
-          notes: meeting.notes,
-        });
-      } else {
-        result = await sendReminderEmail({
-          to: email,
-          trainingTitle: training.title,
-          startTime: scheduledStart,
-          type,
-        });
+    // Send in the background so a large participant list can't time out this request.
+    // Progress/result is recorded on the Communication log, which the frontend already polls.
+    (async () => {
+      const failed = [];
+      for (const email of emails) {
+        let result;
+        if (type === 'invitation' && meeting) {
+          result = await sendInvitationEmail({
+            to: email,
+            trainingTitle: training.title,
+            eventName: training.event?.name || 'National Training Week',
+            meetingUrl: meeting.meetingUrl,
+            meetingId: meeting.meetingId,
+            passcode: meeting.passcode,
+            startTime: scheduledStart,
+            platform: meeting.platform,
+            notes: meeting.notes,
+          });
+        } else {
+          result = await sendReminderEmail({
+            to: email,
+            trainingTitle: training.title,
+            startTime: scheduledStart,
+            type,
+          });
+        }
+        if (!result.success) failed.push(email);
       }
-      if (!result.success) failed.push(email);
-    }
 
-    await Communication.create({
-      training: trainingId,
-      type,
-      recipientType: selectedIds?.length > 0 ? 'selected' : 'all_approved',
-      recipients: emails,
-      subject: `${type === 'invitation' ? 'Invitation' : 'Reminder'}: ${training.title}`,
-      body: `Sent to ${emails.length} participants`,
-      sentBy: req.user._id,
-      deliveryStatus: failed.length === 0 ? 'sent' : failed.length === emails.length ? 'failed' : 'partial',
-      failedRecipients: failed,
-    });
+      await Communication.create({
+        training: trainingId,
+        type,
+        recipientType: selectedIds?.length > 0 ? 'selected' : 'all_approved',
+        recipients: emails,
+        subject: `${type === 'invitation' ? 'Invitation' : 'Reminder'}: ${training.title}`,
+        body: `Sent to ${emails.length} participants`,
+        sentBy: req.user._id,
+        deliveryStatus: failed.length === 0 ? 'sent' : failed.length === emails.length ? 'failed' : 'partial',
+        failedRecipients: failed,
+      });
+    })().catch((error) => console.error('Bulk invitation send failed:', error.message));
 
-    if (failed.length === emails.length) {
-      return errorResponse(res, 'Participant invitations could not be delivered. Check the SMTP configuration.', 502);
-    }
-    return successResponse(res, { total: emails.length, failed: failed.length },
-      `Sent to ${emails.length - failed.length} of ${emails.length} participants.`);
+    return successResponse(res, { total: emails.length },
+      `Sending to ${emails.length} participant${emails.length === 1 ? '' : 's'}. Check Communications for delivery status.`);
   } catch (err) { next(err); }
 };
 
@@ -219,7 +220,8 @@ export const getCommunications = async (req, res, next) => {
 
     const comms = await Communication.find({ training: trainingId })
       .populate('sentBy', 'fullName role')
-      .sort({ sentAt: -1 });
+      .sort({ sentAt: -1 })
+      .limit(500);
     return successResponse(res, { communications: comms });
   } catch (err) { next(err); }
 };
