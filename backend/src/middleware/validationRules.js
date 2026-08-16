@@ -158,7 +158,7 @@ export const trainingValidation = [
   objectId(body, 'category', 'category ID').optional({ checkFalsy: true }),
   objectId(body, 'trainer', 'trainer ID').optional({ checkFalsy: true }),
   objectId(body, 'moderator', 'moderator ID').optional({ checkFalsy: true }),
-  body('date').isISO8601(),
+  body('date').optional().isISO8601(),
   body('startTime').matches(/^([01]\d|2[0-3]):[0-5]\d$/),
   body('endTime').matches(/^([01]\d|2[0-3]):[0-5]\d$/),
   body('audience').optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
