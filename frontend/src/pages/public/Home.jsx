@@ -305,7 +305,7 @@ export const Home = () => {
                   <a.Icon className="w-7 h-7 text-[#1da156] group-hover:text-white transition-colors" />
                 </div>
                 <h3 className="mb-2 text-sm font-bold text-black">{a.label}</h3>
-                <p className="text-xs leading-relaxed text-black/65">{a.desc}</p>
+                <p className="text-sm leading-relaxed text-black/65">{a.desc}</p>
               </div>
             ))}
           </div>
