@@ -1,4 +1,4 @@
-import { emailButton, emailInfoCard, emailLayout, sendEmail } from './email.js';
+import { emailButton, emailInfoCard, emailLayout, escapeHtml, sendEmail } from './email.js';
 
 export const sendRegistrationStatusEmail = ({ to, participantName, trainingTitle, status, date, startTime }) => {
   const approved = status === 'approved';
@@ -9,6 +9,6 @@ export const sendRegistrationStatusEmail = ({ to, participantName, trainingTitle
   return sendEmail({
     to,
     subject: `${title}: ${trainingTitle}`,
-    html: emailLayout({ eyebrow: approved ? 'Place confirmed' : 'Pending review', title, preview: `${title} for ${trainingTitle}`, body: `<p style="margin-top:0">Hello ${participantName || 'Participant'},</p><p>${message}</p>${emailInfoCard([['Training', trainingTitle], ['Date', date ? new Date(date).toLocaleDateString() : ''], ['Start time', startTime], ['Status', approved ? 'Approved' : 'Pending approval']])}${emailButton('View my trainings', `${process.env.FRONTEND_URL}/portal/trainings`)}` }),
+    html: emailLayout({ eyebrow: approved ? 'Place confirmed' : 'Pending review', title, preview: `${title} for ${trainingTitle}`, body: `<p style="margin-top:0">Hello ${escapeHtml(participantName || 'Participant')},</p><p>${message}</p>${emailInfoCard([['Training', trainingTitle], ['Date', date ? new Date(date).toLocaleDateString() : ''], ['Start time', startTime], ['Status', approved ? 'Approved' : 'Pending approval']])}${emailButton('View my trainings', `${process.env.FRONTEND_URL}/portal/trainings`)}` }),
   });
 };

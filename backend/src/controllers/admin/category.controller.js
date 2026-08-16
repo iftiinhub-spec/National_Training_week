@@ -7,7 +7,7 @@ const categoryPayload = (input) => pick(input, ['name', 'description', 'isActive
 export const getCategories = async (req, res, next) => {
   try {
     const filter = req.query.activeOnly === 'true' ? { isActive: true } : {};
-    const categories = await Category.find(filter).sort({ name: 1 });
+    const categories = await Category.find(filter).sort({ name: 1 }).limit(500);
     return successResponse(res, { categories });
   } catch (err) { next(err); }
 };

@@ -24,7 +24,8 @@ export const getSponsors = async (req, res, next) => {
     const sponsors = await Sponsor.find(filter)
       .populate('event', 'name year')
       .populate('createdBy', 'fullName')
-      .sort({ displayOrder: 1, isFeatured: -1, name: 1 });
+      .sort({ displayOrder: 1, isFeatured: -1, name: 1 })
+      .limit(500);
     return successResponse(res, { sponsors });
   } catch (err) { next(err); }
 };
@@ -90,7 +91,8 @@ export const getPublicSponsors = async (req, res, next) => {
     if (req.query.event) filter.event = req.query.event;
     const sponsors = await Sponsor.find(filter)
       .select('name logo websiteUrl description category displayOrder isFeatured event')
-      .sort({ displayOrder: 1, isFeatured: -1, name: 1 });
+      .sort({ displayOrder: 1, isFeatured: -1, name: 1 })
+      .limit(500);
     return successResponse(res, { sponsors });
   } catch (err) { next(err); }
 };

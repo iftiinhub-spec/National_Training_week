@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { apiRateLimiter } from './middleware/rateLimiter.js';
@@ -78,7 +79,12 @@ app.use('/api/public', publicRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'National Training Week API is running', timestamp: new Date().toISOString() });
+  const dbConnected = mongoose.connection.readyState === 1;
+  res.status(dbConnected ? 200 : 503).json({
+    success: dbConnected,
+    message: dbConnected ? 'National Training Week API is running' : 'Database connection unavailable',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // 404 handler

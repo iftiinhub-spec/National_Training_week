@@ -68,6 +68,7 @@ const userSchema = new mongoose.Schema(
       default: 'approved',
     },
     isActive: { type: Boolean, default: true },
+    tokenVersion: { type: Number, default: 0 },
     passwordResetToken: { type: String, select: false },
     passwordResetExpires: { type: Date, select: false },
   },
@@ -93,6 +94,8 @@ userSchema.methods.toJSON = function () {
   delete obj.passwordResetExpires;
   return obj;
 };
+
+userSchema.index({ role: 1 });
 
 const User = mongoose.model('User', userSchema);
 export default User;

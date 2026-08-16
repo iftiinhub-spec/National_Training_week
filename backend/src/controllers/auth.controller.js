@@ -6,8 +6,8 @@ import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { sendWelcomeEmail } from '../utils/welcomeEmail.js';
 import Trainer from '../models/Trainer.js';
 
-const signToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
+const signToken = (id, tokenVersion) =>
+  jwt.sign({ id, tv: tokenVersion }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
 
 // POST /api/auth/register — Participant self-registration only
 export const register = async (req, res, next) => {
@@ -52,7 +52,7 @@ export const login = async (req, res, next) => {
     if (!user.isActive) {
       return errorResponse(res, 'Your account has been deactivated. Please contact support.', 401);
     }
-    const token = signToken(user._id);
+    const token = signToken(user._id, user.tokenVersion);
     const userData = user.toJSON();
     return successResponse(res, { user: userData, token }, 'Login successful.');
   } catch (err) { next(err); }
@@ -92,6 +92,7 @@ export const changePassword = async (req, res, next) => {
       return errorResponse(res, 'Current password is incorrect.', 400);
     }
     user.passwordHash = newPassword;
+    user.tokenVersion += 1;
     await user.save();
     return successResponse(res, null, 'Password changed successfully.');
   } catch (err) { next(err); }
@@ -143,9 +144,10 @@ export const resetPassword = async (req, res, next) => {
     user.passwordHash = password;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
+    user.tokenVersion += 1;
     await user.save();
 
-    const jwtToken = signToken(user._id);
+    const jwtToken = signToken(user._id, user.tokenVersion);
     return successResponse(res, { token: jwtToken }, 'Password reset successful.');
   } catch (err) { next(err); }
 };

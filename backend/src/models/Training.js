@@ -55,6 +55,7 @@ const trainingSchema = new mongoose.Schema(
     },
     language: { type: String, default: 'English' },
     capacity: { type: Number, default: null },
+    filledSeats: { type: Number, default: 0 },
     registrationRequired: { type: Boolean, default: true },
     status: {
       type: String,
@@ -79,6 +80,7 @@ const trainingSchema = new mongoose.Schema(
 trainingSchema.index({ event: 1, status: 1 });
 trainingSchema.index({ eventDay: 1 });
 trainingSchema.index({ status: 1 });
+trainingSchema.index({ trainer: 1 });
 
 const Training = mongoose.model('Training', trainingSchema);
 export default Training;

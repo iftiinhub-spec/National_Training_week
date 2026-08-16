@@ -37,6 +37,7 @@ export default function TrainerApply() {
   };
   const submit = async (event) => {
     event.preventDefault();
+    if (form.password.length < 8) return toast.error('Password must be at least 8 characters.');
     if (form.password !== form.confirmPassword) return toast.error('Passwords do not match.');
     setSaving(true);
     try {

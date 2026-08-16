@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 
@@ -7,7 +7,14 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('ntw_user');
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      localStorage.removeItem('ntw_user');
+      localStorage.removeItem('ntw_token');
+      return null;
+    }
   });
   const [token, setToken] = useState(() => localStorage.getItem('ntw_token') || null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +39,7 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, [token]);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     try {
       const res = await api.post('/auth/login', { email, password });
       if (res.success && res.data) {
@@ -48,9 +55,9 @@ export const AuthProvider = ({ children }) => {
       toast.error(err.message || 'Login failed');
       throw err;
     }
-  };
+  }, []);
 
-  const register = async (formData) => {
+  const register = useCallback(async (formData) => {
     try {
       const res = await api.post('/auth/register', formData);
       if (res.success) {
@@ -61,17 +68,17 @@ export const AuthProvider = ({ children }) => {
       toast.error(err.message || 'Registration failed');
       throw err;
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('ntw_token');
     localStorage.removeItem('ntw_user');
     toast.success('Logged out successfully');
-  };
+  }, []);
 
-  const updateProfile = async (formData) => {
+  const updateProfile = useCallback(async (formData) => {
     try {
       const isFormData = formData instanceof FormData;
       const res = await api.put('/auth/profile', formData, {
@@ -87,9 +94,9 @@ export const AuthProvider = ({ children }) => {
       toast.error(err.message || 'Profile update failed');
       throw err;
     }
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     token,
     loading,
@@ -102,7 +109,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateProfile,
-  };
+  }), [user, token, loading, login, register, logout, updateProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -48,7 +48,8 @@ export const getTrainingFeedback = async (req, res, next) => {
 
     const feedback = await Feedback.find({ training: trainingId })
       .populate('participant', 'fullName email profilePhoto')
-      .sort({ submittedAt: -1 });
+      .sort({ submittedAt: -1 })
+      .limit(5000);
 
     const stats = feedback.length > 0 ? {
       count: feedback.length,

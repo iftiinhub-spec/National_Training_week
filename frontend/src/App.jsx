@@ -7,6 +7,7 @@ import { useTheme } from './context/ThemeContext';
 // Layouts
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+import AppErrorBoundary from './components/common/AppErrorBoundary';
 const ParticipantLayout = lazy(() => import('./pages/participant/ParticipantLayout'));
 const ModeratorLayout = lazy(() => import('./pages/moderator/ModeratorLayout'));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
@@ -66,7 +67,7 @@ const SponsorsManagement = lazy(() => import('./pages/admin/SponsorsManagement')
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, isAuthenticated, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <div className="flex min-h-screen items-center justify-center text-sm font-semibold text-slate-500">Checking your session...</div>;
   if (!isAuthenticated) return <Navigate to="/signin" replace />;
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/" replace />;
@@ -118,7 +119,7 @@ const PublicLayout = () => {
 export const App = () => {
   const { isDark } = useTheme();
   return (
-    <>
+    <AppErrorBoundary>
       <ScrollToTop />
       <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: isDark ? '#1a1a1a' : '#ffffff', color: isDark ? '#f7f7f7' : '#0f172a', border: `1px solid ${isDark ? '#3a3a3a' : '#e2e8f0'}` } }} />
       <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm font-semibold text-slate-500">Loading…</div>}>
@@ -196,7 +197,7 @@ export const App = () => {
 
       </Routes>
       </Suspense>
-    </>
+    </AppErrorBoundary>
   );
 };
 

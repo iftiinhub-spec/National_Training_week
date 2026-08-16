@@ -194,6 +194,7 @@ export const TrainersManagement = () => {
                     <img
                       src={imgSrc}
                       alt={tr.name}
+                      loading="lazy"
                       className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md"
                     />
                   ) : (

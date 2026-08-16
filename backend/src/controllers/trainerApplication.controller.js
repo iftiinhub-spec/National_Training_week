@@ -8,6 +8,7 @@ import Feedback from '../models/Feedback.js';
 import Meeting from '../models/Meeting.js';
 import TrainerCertificate from '../models/TrainerCertificate.js';
 import { errorResponse, successResponse } from '../utils/apiResponse.js';
+import { sendAdminNewTrainerApplicationEmail, sendTrainerApplicationReceivedEmail } from '../utils/trainerStatusEmail.js';
 import { generateTrainerAppreciationPDF } from '../utils/generateTrainerAppreciationPDF.js';
 import { withPdfGenerationLimit } from '../utils/pdfGenerationLimit.js';
 import { pick } from '../utils/pick.js';
@@ -24,6 +25,8 @@ export const applyAsTrainer = async (req, res, next) => {
       const trainer = await Trainer.create({ name: req.body.name, email, phone: req.body.phone, title: req.body.title, organization: req.body.organization, biography: req.body.biography, expertise: expertiseList(req.body.expertise), photo: req.file ? `uploads/photo/${req.file.filename}` : null, user: user._id, accessStatus: 'pending', isActive: false });
       user.trainerProfile = trainer._id;
       await user.save({ validateBeforeSave: false });
+      await sendTrainerApplicationReceivedEmail({ to: trainer.email, trainerName: trainer.name });
+      await sendAdminNewTrainerApplicationEmail({ trainerName: trainer.name, trainerEmail: trainer.email });
       return successResponse(res, { application: { id: trainer._id, status: trainer.accessStatus } }, 'Trainer application submitted for administrator review.', 201);
     } catch (error) { await User.findByIdAndDelete(user._id); throw error; }
   } catch (error) { next(error); }
@@ -36,16 +39,40 @@ export const getTrainerDashboard = async (req, res, next) => {
     const trainer = await ownTrainer(req.user);
     if (!trainer) return errorResponse(res, 'Approved trainer profile not found.', 403);
     const sessions = await Training.find({ trainer: trainer._id }).populate('event', 'name year').populate('eventDay', 'dayNumber theme date').populate('category', 'name').sort({ date: 1, startTime: 1 }).lean();
-    const enriched = await Promise.all(sessions.map(async (session) => {
-      const [participants, attendance, feedback, meeting, materials] = await Promise.all([
-        Registration.find({ training: session._id, status: 'approved' }).populate('participant', 'fullName').select('participant').lean(),
-        Attendance.countDocuments({ training: session._id, status: 'present' }),
-        Feedback.find({ training: session._id }).select('contentRating trainerRating comments suggestions').lean(),
-        Meeting.findOne({ training: session._id }).select('platform meetingUrl meetingId passcode startTime endTime notes').lean(),
-        TrainingMaterial.find({ training: session._id, trainer: trainer._id }).sort({ createdAt: -1 }).lean(),
-      ]);
-      return { ...session, participants, attendancePresent: attendance, feedback, meeting, materials };
-    }));
+    const sessionIds = sessions.map((session) => session._id);
+    const [participants, presentCounts, feedback, meetings, materials] = await Promise.all([
+      Registration.find({ training: { $in: sessionIds }, status: 'approved' }).populate('participant', 'fullName').select('participant training').lean(),
+      Attendance.aggregate([
+        { $match: { training: { $in: sessionIds }, status: 'present' } },
+        { $group: { _id: '$training', count: { $sum: 1 } } },
+      ]),
+      Feedback.find({ training: { $in: sessionIds } }).select('contentRating trainerRating comments suggestions training').lean(),
+      Meeting.find({ training: { $in: sessionIds } }).select('platform meetingUrl meetingId passcode startTime endTime notes training').lean(),
+      TrainingMaterial.find({ training: { $in: sessionIds }, trainer: trainer._id }).sort({ createdAt: -1 }).lean(),
+    ]);
+
+    const groupByTraining = (list) => list.reduce((map, item) => {
+      const key = String(item.training);
+      (map[key] ||= []).push(item);
+      return map;
+    }, {});
+    const participantsByTraining = groupByTraining(participants);
+    const feedbackByTraining = groupByTraining(feedback);
+    const materialsByTraining = groupByTraining(materials);
+    const meetingByTraining = Object.fromEntries(meetings.map((meeting) => [String(meeting.training), meeting]));
+    const presentByTraining = Object.fromEntries(presentCounts.map((row) => [String(row._id), row.count]));
+
+    const enriched = sessions.map((session) => {
+      const key = String(session._id);
+      return {
+        ...session,
+        participants: participantsByTraining[key] || [],
+        attendancePresent: presentByTraining[key] || 0,
+        feedback: feedbackByTraining[key] || [],
+        meeting: meetingByTraining[key] || null,
+        materials: materialsByTraining[key] || [],
+      };
+    });
     return successResponse(res, { trainer, sessions: enriched });
   } catch (error) { next(error); }
 };
