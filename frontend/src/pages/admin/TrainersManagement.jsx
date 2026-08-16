@@ -3,8 +3,9 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, EyeSlashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import PhoneInput from '../../components/common/PhoneInput';
+import PhotoCropModal from '../../components/common/PhotoCropModal';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
 // Resolve the photo URL — Vite proxies /uploads → backend in dev; same origin in prod
@@ -37,6 +38,7 @@ export const TrainersManagement = () => {
   const [editingTrainer, setEditingTrainer] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [cropSrc, setCropSrc] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -92,9 +94,20 @@ export const TrainersManagement = () => {
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setCropSrc(URL.createObjectURL(file));
+  };
+  const applyCroppedPhoto = (file) => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
     setPhotoFile(file);
     // Local object URL preview before upload
     setPhotoPreview(URL.createObjectURL(file));
+    if (fileRef.current) fileRef.current.value = '';
+  };
+  const cancelCrop = () => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+    if (fileRef.current) fileRef.current.value = '';
   };
 
   const handleSubmit = async (e) => {
@@ -231,6 +244,17 @@ export const TrainersManagement = () => {
                   {/* Actions */}
                   <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                     <select value={tr.accessStatus || 'pending'} onChange={(e) => reviewAccess(tr._id, e.target.value)} className="min-h-10 min-w-28 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold sm:flex-none"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="suspended">Suspended</option></select>
+                    {imgSrc && (
+                      <a
+                        href={imgSrc}
+                        download
+                        className="flex min-h-10 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-emerald-50 hover:text-[#1a6b3c]"
+                        title="Download photo"
+                      >
+                        <ArrowDownTrayIcon className="w-4 h-4" />
+                        Download
+                      </a>
+                    )}
                     <button
                       onClick={() => openEditModal(tr)}
                       className="flex min-h-10 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-emerald-50 hover:text-[#1a6b3c]"
@@ -411,6 +435,7 @@ export const TrainersManagement = () => {
           </div>
         </div>
       )}
+      {cropSrc && <PhotoCropModal imageSrc={cropSrc} onCancel={cancelCrop} onCropped={applyCroppedPhoto} />}
     </div>
   );
 };
