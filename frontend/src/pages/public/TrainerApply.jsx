@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { CameraIcon, EyeIcon, EyeSlashIcon, UserCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import api from '../../api/axios';
 import PhoneInput from '../../components/common/PhoneInput';
+import PhotoCropModal from '../../components/common/PhotoCropModal';
 
 const TITLES = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.', 'Eng.'];
 const EMPTY_FORM = { title: '', name: '', email: '', phone: '', organization: '', expertise: '', biography: '', password: '', confirmPassword: '' };
@@ -14,6 +15,7 @@ export default function TrainerApply() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [cropSrc, setCropSrc] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -25,9 +27,20 @@ export default function TrainerApply() {
     if (!file) return;
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { event.target.value = ''; return toast.error('Choose a JPEG, PNG, or WebP image.'); }
     if (file.size > 5 * 1024 * 1024) { event.target.value = ''; return toast.error('Profile photo must be 5 MB or smaller.'); }
+    setCropSrc(URL.createObjectURL(file));
+  };
+  const applyCroppedPhoto = (file) => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhoto(file);
     setPhotoPreview(URL.createObjectURL(file));
+    if (fileRef.current) fileRef.current.value = '';
+  };
+  const cancelCrop = () => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+    if (fileRef.current) fileRef.current.value = '';
   };
   const removePhoto = () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
@@ -90,6 +103,7 @@ export default function TrainerApply() {
       <button disabled={saving} className="mt-4 w-full rounded-xl bg-[#1da156] py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-black disabled:opacity-60">{saving ? 'Submitting...' : 'Submit application'}</button>
       <div className="mt-4 border-t border-black/10 pt-4 text-center text-xs text-black/70">Already applied? <Link to="/signin" className="font-bold text-[#1da156] hover:underline">Sign in</Link></div>
     </form>
+    {cropSrc && <PhotoCropModal imageSrc={cropSrc} onCancel={cancelCrop} onCropped={applyCroppedPhoto} />}
   </>;
 }
 
