@@ -20,7 +20,7 @@ router.get('/dashboard', getParticipantDashboard);
 
 // Registrations
 router.post('/registrations', registrationCreateValidation, validate, registerForTraining);
-router.get('/registrations', paginationValidation, query('status').optional().isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getMyRegistrations);
+router.get('/registrations', paginationValidation, query('status').optional({ checkFalsy: true }).isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getMyRegistrations);
 router.get('/registrations/:id', idParam(), validate, getMyRegistration);
 router.patch('/registrations/:id/cancel', idParam(), validate, cancelRegistration);
 

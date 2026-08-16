@@ -69,7 +69,7 @@ router.post('/trainings/:trainingId/attendance/manual', idParam('trainingId', 't
 router.get('/trainings/:trainingId/feedback', getTrainingFeedback);
 
 // Registrations
-router.route('/registrations').get(paginationValidation, ...optionalObjectIdQueries('event', 'eventDay', 'training', 'participant'), query('status').optional().isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getRegistrations);
+router.route('/registrations').get(paginationValidation, ...optionalObjectIdQueries('event', 'eventDay', 'training', 'participant'), query('status').optional({ checkFalsy: true }).isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getRegistrations);
 router.route('/registrations/:id').get(idParam(), validate, getRegistration);
 router.patch('/registrations/:id/status', idParam(), registrationStatusValidation, validate, updateRegistrationStatus);
 
