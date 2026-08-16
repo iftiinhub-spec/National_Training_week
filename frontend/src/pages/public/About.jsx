@@ -73,7 +73,7 @@ export const About = () => {
         <div className="mx-auto max-w-7xl px-4 sm:px-8">
           <SectionHeading eyebrow="Audience Scope">Target Participant Groups</SectionHeading>
           <div className="flex flex-wrap items-stretch justify-center gap-6">
-            {AUDIENCE.map(({ Icon, role, text }) => <article key={role} className="group w-full rounded-2xl border border-black/10 bg-white p-8 text-center transition-all hover:border-[#1da156] hover:shadow-lg sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)]"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-black/5 transition-colors group-hover:bg-[#1da156]"><Icon className="h-7 w-7 text-[#1da156] transition-colors group-hover:text-white" /></div><h3 className="mb-2 text-sm font-bold text-black transition-colors group-hover:text-[#1da156]">{role}</h3><p className="text-xs leading-6 text-black/60">{text}</p></article>)}
+            {AUDIENCE.map(({ Icon, role, text }) => <article key={role} className="group w-full rounded-2xl border border-black/10 bg-white p-8 text-center transition-all hover:border-[#1da156] hover:shadow-lg sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)]"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-black/5 transition-colors group-hover:bg-[#1da156]"><Icon className="h-7 w-7 text-[#1da156] transition-colors group-hover:text-white" /></div><h3 className="mb-2 text-sm font-bold text-black transition-colors group-hover:text-[#1da156]">{role}</h3><p className="text-sm leading-6 text-black/60">{text}</p></article>)}
           </div>
         </div>
       </section>
