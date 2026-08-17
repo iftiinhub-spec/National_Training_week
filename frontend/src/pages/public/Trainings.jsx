@@ -85,6 +85,7 @@ export const Trainings = () => {
   const [search, setSearch]                   = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedLevel, setSelectedLevel]     = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('');
   const [selectedStatus, setSelectedStatus]   = useState('');
   const [events, setEvents]                   = useState([]);
   const [selectedEvent, setSelectedEvent]     = useState('');
@@ -96,13 +97,14 @@ export const Trainings = () => {
       if (search)           params.append('search', search);
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedLevel)    params.append('level', selectedLevel);
+      if (selectedLanguage) params.append('language', selectedLanguage);
       if (selectedStatus)   params.append('status', selectedStatus);
       if (selectedEvent || currentEvent?._id) params.append('event', selectedEvent || currentEvent._id);
       const res = await api.get(`/public/trainings?${params}`);
       if (res.success) setTrainings(res.data || []);
     } catch {}
     finally { setLoading(false); }
-  }, [search, selectedCategory, selectedLevel, selectedStatus, selectedEvent, currentEvent?._id]);
+  }, [search, selectedCategory, selectedLevel, selectedLanguage, selectedStatus, selectedEvent, currentEvent?._id]);
 
   useEffect(() => {
     api.get('/public/events').then((r) => { if (r.success) setEvents(r.data.events || []); }).catch(() => {});
@@ -113,7 +115,7 @@ export const Trainings = () => {
 
   useEffect(() => { fetchTrainings(); }, [fetchTrainings]);
 
-  const reset = () => { setSearch(''); setSelectedCategory(''); setSelectedLevel(''); setSelectedStatus(''); };
+  const reset = () => { setSearch(''); setSelectedCategory(''); setSelectedLevel(''); setSelectedLanguage(''); setSelectedStatus(''); };
 
   return (
     <div className="bg-white min-h-screen">
@@ -171,6 +173,17 @@ export const Trainings = () => {
               <option value="advanced">Advanced</option>
             </select>
 
+            {/* Language */}
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-black/10 text-sm bg-white text-black focus:outline-none focus:ring-2 focus:ring-[#1da156]/40"
+            >
+              <option value="">All Languages</option>
+              <option value="Somali">Somali</option>
+              <option value="English">English</option>
+            </select>
+
             {/* Status */}
             <select
               value={selectedStatus}
@@ -190,7 +203,7 @@ export const Trainings = () => {
               Search
             </button>
 
-            {(search || selectedCategory || selectedLevel || selectedStatus) && (
+            {(search || selectedCategory || selectedLevel || selectedLanguage || selectedStatus) && (
               <button
                 type="button"
                 onClick={reset}

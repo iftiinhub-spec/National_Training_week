@@ -80,13 +80,14 @@ export const TrainingsManagement = () => {
   const [trainers, setTrainers] = useState([]);
   const [moderators, setModerators] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ event: '', eventDay: '', training: '' });
+  const [filters, setFilters] = useState({ event: '', eventDay: '', training: '', level: '', language: '' });
 
   const [showModal, setShowModal] = useState(false);
   const [editingTraining, setEditingTraining] = useState(null);
   const [coverImageFile, setCoverImageFile] = useState(null);
   const [coverImagePreview, setCoverImagePreview] = useState('');
   const coverImageInputRef = useRef(null);
+  const [languageMode, setLanguageMode] = useState('Somali');
 
   useEffect(() => () => {
     if (coverImagePreview.startsWith('blob:')) URL.revokeObjectURL(coverImagePreview);
@@ -174,6 +175,7 @@ export const TrainingsManagement = () => {
     setEventDays(days);
     setCoverImageFile(null);
     setCoverImagePreview('');
+    setLanguageMode('Somali');
 
     setForm({
       title: '',
@@ -187,7 +189,7 @@ export const TrainingsManagement = () => {
       endTime: '',
       audience: 'General Public & University Students',
       level: 'general',
-      language: 'Somali / English',
+      language: 'Somali',
       capacity: 100,
     });
     setShowModal(true);
@@ -203,6 +205,9 @@ export const TrainingsManagement = () => {
       if (daysRes?.success) setEventDays(daysRes.data.days || []);
     }
 
+    const trainingLanguage = tr.language || 'Somali';
+    setLanguageMode(['Somali', 'English'].includes(trainingLanguage) ? trainingLanguage : 'Other');
+
     setForm({
       title: tr.title || '',
       description: tr.description || '',
@@ -215,7 +220,7 @@ export const TrainingsManagement = () => {
       endTime: toTimeInputValue(tr.endTime),
       audience: tr.audience || 'General Public & University Students',
       level: tr.level || 'general',
-      language: tr.language || 'Somali / English',
+      language: trainingLanguage,
       capacity: tr.capacity || 100,
     });
     setShowModal(true);
@@ -284,7 +289,7 @@ export const TrainingsManagement = () => {
   };
 
   if (loading) return <LoadingSpinner label="Loading training sessions..." />;
-  const filteredTrainings = trainings.filter((item) => (!filters.event || String(item.event?._id || item.event) === filters.event) && (!filters.eventDay || String(item.eventDay?._id || item.eventDay) === filters.eventDay));
+  const filteredTrainings = trainings.filter((item) => (!filters.event || String(item.event?._id || item.event) === filters.event) && (!filters.eventDay || String(item.eventDay?._id || item.eventDay) === filters.eventDay) && (!filters.level || item.level === filters.level) && (!filters.language || item.language === filters.language));
 
   return (
     <div className="space-y-6">
@@ -306,6 +311,29 @@ export const TrainingsManagement = () => {
       </div>
 
       <AdminProgramFilters value={filters} onChange={setFilters} includeSession={false} />
+
+      <div className="flex flex-wrap gap-3">
+        <select
+          value={filters.level}
+          onChange={(e) => setFilters({ ...filters, level: e.target.value })}
+          className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-black outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15"
+        >
+          <option value="">All levels</option>
+          <option value="general">General</option>
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
+        </select>
+        <select
+          value={filters.language}
+          onChange={(e) => setFilters({ ...filters, language: e.target.value })}
+          className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-black outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15"
+        >
+          <option value="">All languages</option>
+          <option value="Somali">Somali</option>
+          <option value="English">English</option>
+        </select>
+      </div>
 
       {/* Trainings Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
@@ -512,6 +540,48 @@ export const TrainingsManagement = () => {
                     className="w-full p-2.5 rounded-lg border border-slate-300"
                     required
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block font-bold uppercase text-slate-700 mb-1">Level</label>
+                  <select
+                    value={form.level}
+                    onChange={(e) => setForm({ ...form, level: e.target.value })}
+                    className="w-full p-2.5 rounded-lg border border-slate-300 bg-white"
+                  >
+                    <option value="general">General</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold uppercase text-slate-700 mb-1">Language</label>
+                  <select
+                    value={languageMode}
+                    onChange={(e) => {
+                      const mode = e.target.value;
+                      setLanguageMode(mode);
+                      setForm({ ...form, language: mode === 'Other' ? '' : mode });
+                    }}
+                    className="w-full p-2.5 rounded-lg border border-slate-300 bg-white"
+                  >
+                    <option value="Somali">Somali</option>
+                    <option value="English">English</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {languageMode === 'Other' && (
+                    <input
+                      type="text"
+                      value={form.language}
+                      onChange={(e) => setForm({ ...form, language: e.target.value })}
+                      placeholder="Enter language name"
+                      className="mt-2 w-full p-2.5 rounded-lg border border-slate-300"
+                      required
+                    />
+                  )}
                 </div>
               </div>
 
