@@ -41,7 +41,7 @@ export const AdminDashboard = () => {
   if (loading) return <LoadingSpinner label="Loading database statistics..." />;
 
   const statCards = [
-    { name: 'Participants', value: stats?.totalParticipants || 0, icon: UserGroupIcon, link: '/admin/registrations' },
+    { name: 'Participants', value: stats?.totalParticipants || 0, icon: UserGroupIcon, link: '/admin/participants' },
     { name: 'Training Sessions', value: stats?.totalTrainings || 0, icon: AcademicCapIcon, link: '/admin/trainings' },
     { name: 'Registrations', value: stats?.totalRegistrations || 0, icon: ClipboardDocumentCheckIcon, link: '/admin/registrations' },
     { name: 'Pending Review', value: stats?.pendingRegistrations || 0, icon: ClipboardDocumentCheckIcon, link: '/admin/registrations?status=pending' },

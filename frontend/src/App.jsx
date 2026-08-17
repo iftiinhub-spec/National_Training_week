@@ -52,6 +52,7 @@ const EventsManagement = lazy(() => import('./pages/admin/EventsManagement'));
 const TrainingsManagement = lazy(() => import('./pages/admin/TrainingsManagement'));
 const TrainersManagement = lazy(() => import('./pages/admin/TrainersManagement'));
 const ModeratorsManagement = lazy(() => import('./pages/admin/ModeratorsManagement'));
+const ParticipantsManagement = lazy(() => import('./pages/admin/ParticipantsManagement'));
 const RegistrationsManagement = lazy(() => import('./pages/admin/RegistrationsManagement'));
 const AttendanceManagement = lazy(() => import('./pages/admin/AttendanceManagement'));
 const CertificatesManagement = lazy(() => import('./pages/admin/CertificatesManagement'));
@@ -179,6 +180,7 @@ export const App = () => {
           <Route path="trainings" element={<TrainingsManagement />} />
           <Route path="trainers" element={<TrainersManagement />} />
           <Route path="moderators" element={<ModeratorsManagement />} />
+          <Route path="participants" element={<ParticipantsManagement />} />
           <Route path="registrations" element={<RegistrationsManagement />} />
           <Route path="attendance" element={<AttendanceManagement />} />
           <Route path="certificates" element={<CertificatesManagement />} />
