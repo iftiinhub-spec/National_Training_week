@@ -52,6 +52,7 @@ export const AdminLayout = () => {
       items: [
         { name: 'Trainer Profiles', path: '/admin/trainers', icon: UserGroupIcon },
         { name: 'Moderator Accounts', path: '/admin/moderators', icon: UserGroupIcon },
+        { name: 'Participants', path: '/admin/participants', icon: UserGroupIcon },
         { name: 'Registrations', path: '/admin/registrations', icon: ClipboardDocumentCheckIcon },
       ],
     },
