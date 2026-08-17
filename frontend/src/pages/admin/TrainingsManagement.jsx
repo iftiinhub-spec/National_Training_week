@@ -310,30 +310,7 @@ export const TrainingsManagement = () => {
         </button>
       </div>
 
-      <AdminProgramFilters value={filters} onChange={setFilters} includeSession={false} />
-
-      <div className="flex flex-wrap gap-3">
-        <select
-          value={filters.level}
-          onChange={(e) => setFilters({ ...filters, level: e.target.value })}
-          className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-black outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15"
-        >
-          <option value="">All levels</option>
-          <option value="general">General</option>
-          <option value="beginner">Beginner</option>
-          <option value="intermediate">Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-        <select
-          value={filters.language}
-          onChange={(e) => setFilters({ ...filters, language: e.target.value })}
-          className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-black outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15"
-        >
-          <option value="">All languages</option>
-          <option value="Somali">Somali</option>
-          <option value="English">English</option>
-        </select>
-      </div>
+      <AdminProgramFilters value={filters} onChange={setFilters} includeSession={false} includeLevel includeLanguage />
 
       {/* Trainings Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
