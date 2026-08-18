@@ -25,9 +25,12 @@ import VerifyCertificate from './pages/public/VerifyCertificate';
 import Contact from './pages/public/Contact';
 import SignIn from './pages/public/SignIn';
 import SignUp from './pages/public/SignUp';
+import ForgotPassword from './pages/public/ForgotPassword';
+import ResetPassword from './pages/public/ResetPassword';
 import QRCheckIn from './pages/public/QRCheckIn';
 import FAQ from './pages/public/FAQ';
 import PastEditions from './pages/public/PastEditions';
+import NotFound from './pages/public/NotFound';
 
 // Participant Pages
 const ParticipantDashboard = lazy(() => import('./pages/participant/ParticipantDashboard'));
@@ -108,8 +111,11 @@ const PublicLayout = () => {
           <Route path="/past-editions"       element={<div className="pt-[88px]"><PastEditions /></div>} />
           <Route path="/signin"              element={<div className="pt-[88px]"><SignIn /></div>} />
           <Route path="/signup"              element={<div className="pt-[88px]"><SignUp /></div>} />
+          <Route path="/forgot-password"     element={<div className="pt-[88px]"><ForgotPassword /></div>} />
+          <Route path="/reset-password/:token" element={<div className="pt-[88px]"><ResetPassword /></div>} />
           <Route path="/qr-checkin"          element={<div className="pt-[88px]"><QRCheckIn /></div>} />
           <Route path="/trainer-application" element={<Navigate to="/signup?type=trainer" replace />} />
+          <Route path="*"                    element={<div className="pt-[88px]"><NotFound /></div>} />
         </Routes>
       </main>
       <Footer />

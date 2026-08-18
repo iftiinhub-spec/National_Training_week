@@ -71,7 +71,7 @@ export const SignIn = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@domain.com"
+                  placeholder="name@gmail.com"
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1da156]/40 text-black bg-white"
                   required
                 />
@@ -83,6 +83,9 @@ export const SignIn = () => {
                 <label className="block text-xs font-bold text-black uppercase">
                   Password
                 </label>
+                <Link to="/forgot-password" className="text-xs font-bold text-[#1da156] hover:underline">
+                  Forgot password?
+                </Link>
               </div>
               <div className="relative">
                 <LockClosedIcon className="w-5 h-5 text-black/40 absolute left-3 top-3" />
