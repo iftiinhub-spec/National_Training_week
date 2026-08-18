@@ -14,6 +14,7 @@ import { hasValidImageSignature } from '../src/middleware/upload.js';
 import { isValidHumanName, normalizeHumanName } from '../src/utils/humanName.js';
 import User from '../src/models/User.js';
 import { formatValidationField } from '../src/middleware/validate.js';
+import { eventDayTimelineError } from '../src/utils/eventTimeline.js';
 
 const runRules = async (rules, body = {}, params = {}, query = {}) => {
   const req = { body, params, query };
@@ -47,6 +48,20 @@ test('event validation rejects an impossible year and invalid dates', async () =
     name: 'NTW', year: 1900, startDate: 'not-a-date', endDate: 'not-a-date',
   });
   assert.equal(errors.length >= 3, true);
+});
+
+test('event day can share the event start date when registration closes earlier that day', () => {
+  const event = {
+    name: 'National Training Week 2030',
+    year: 2030,
+    startDate: '2030-05-20',
+    startTime: '09:30',
+    endDate: '2030-05-20',
+    registrationStart: '2030-05-20T07:00:00+03:00',
+    registrationDeadline: '2030-05-20T09:00:00+03:00',
+  };
+  assert.equal(eventDayTimelineError(event, '2030-05-20'), null);
+  assert.match(eventDayTimelineError(event, '2030-05-21'), /between 2030-05-20 and 2030-05-20/);
 });
 
 test('valid training payload passes boundary validation', async () => {

@@ -145,10 +145,8 @@ export const EventsManagement = () => {
     const day = dayForm.date;
     const eventStart = selectedEventForDay.startDate?.split('T')[0];
     const eventEnd = selectedEventForDay.endDate?.split('T')[0];
-    const registrationDeadline = new Date(selectedEventForDay.registrationDeadline).getTime();
-    const dayStartsAt = day ? new Date(`${day}T00:00:00+03:00`).getTime() : Number.NaN;
-    if (!day || day < eventStart || day > eventEnd || dayStartsAt <= registrationDeadline) {
-      toast.error(`Event day must be after registration closes and between ${eventStart} and ${eventEnd}.`);
+    if (!day || day < eventStart || day > eventEnd) {
+      toast.error(`Event day must be between ${eventStart} and ${eventEnd}.`);
       return;
     }
     const siblingDays = eventDaysMap[selectedEventForDay._id] || [];

@@ -33,8 +33,14 @@ const EMPTY_FORM = {
 export const TrainersManagement = () => {
   const confirmAction = useConfirmDialog();
   const [trainers, setTrainers] = useState([]);
+  const [allTrainers, setAllTrainers] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [eventDays, setEventDays] = useState([]);
+  const [assignedSessions, setAssignedSessions] = useState([]);
+  const [filters, setFilters] = useState({ event: '', eventDay: '' });
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [viewingTrainer, setViewingTrainer] = useState(null);
   const [editingTrainer, setEditingTrainer] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -48,8 +54,10 @@ export const TrainersManagement = () => {
 
   const fetchTrainers = async () => {
     try {
-      const res = await api.get('/admin/trainers');
-      if (res.success) setTrainers(res.data || []);
+      const [res, eventRes, trainingRes] = await Promise.all([api.get('/admin/trainers?limit=100'), api.get('/admin/events'), api.get('/admin/trainings?limit=100')]);
+      if (res.success) { setAllTrainers(res.data || []); setTrainers(res.data || []); }
+      if (eventRes.success) setEvents(eventRes.data || []);
+      if (trainingRes.success) setAssignedSessions(trainingRes.data || []);
     } catch (err) {
       toast.error('Failed to load trainers.');
     } finally {
@@ -58,6 +66,23 @@ export const TrainersManagement = () => {
   };
 
   useEffect(() => { fetchTrainers(); }, []);
+
+  useEffect(() => {
+    if (!filters.event) { setEventDays([]); return; }
+    api.get(`/admin/events/${filters.event}/days`).then((res) => setEventDays(res.data?.days || [])).catch(() => setEventDays([]));
+  }, [filters.event]);
+
+  const visibleTrainers = trainers.filter((trainer) => {
+    if (!filters.event && !filters.eventDay) return true;
+    return assignedSessions.some((session) => String(session.trainer?._id || session.trainer) === String(trainer._id)
+      && (!filters.event || String(session.event?._id || session.event) === String(filters.event))
+      && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === String(filters.eventDay)));
+  });
+
+  useEffect(() => {
+    if (!filters.event && !filters.eventDay) { setTrainers(allTrainers); return; }
+    setTrainers(allTrainers.filter((trainer) => assignedSessions.some((session) => String(session.trainer?._id || session.trainer) === String(trainer._id) && (!filters.event || String(session.event?._id || session.event) === String(filters.event)) && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === String(filters.eventDay)))));
+  }, [allTrainers, assignedSessions, filters]);
 
   const openCreateModal = () => {
     setEditingTrainer(null);
@@ -90,6 +115,8 @@ export const TrainersManagement = () => {
     setShowConfirmPassword(false);
     setShowModal(true);
   };
+
+  const openViewModal = (tr) => setViewingTrainer(tr);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -187,13 +214,22 @@ export const TrainersManagement = () => {
         </button>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2"><select value={filters.event} onChange={(e) => setFilters({ event: e.target.value, eventDay: '' })} className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All events</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name} ({event.year})</option>)}</select><select value={filters.eventDay} onChange={(e) => setFilters((current) => ({ ...current, eventDay: e.target.value }))} disabled={!filters.event} className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100"><option value="">All days</option>{eventDays.map((day) => <option key={day._id} value={day._id}>Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}</option>)}</select></div>
+
       {/* Cards Grid */}
       {trainers.length === 0 ? (
         <div className="text-center py-20 text-slate-400 text-sm">
           No trainer profiles yet. Click <strong>Add Trainer Profile</strong> to create one.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full min-w-[860px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Trainer</th><th className="px-4 py-3">Organization</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Expertise</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{trainers.map((tr) => { const imgSrc = photoUrl(tr.photo); return <tr key={tr._id} className="align-middle hover:bg-slate-50/70"><td className="px-4 py-2"><div className="flex items-center gap-3">{imgSrc ? <img src={imgSrc} alt={tr.name} className="h-9 w-9 shrink-0 rounded-full object-cover" /> : <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-black text-[#1a6b3c]">{tr.name?.charAt(0)?.toUpperCase()}</div>}<span className="max-w-40 truncate font-bold text-slate-900">{tr.title ? `${tr.title} ` : ''}{tr.name}</span></div></td><td className="max-w-36 truncate px-4 py-2 text-xs font-semibold text-[#155289]">{tr.organization || '—'}</td><td className="max-w-52 truncate px-4 py-2 text-xs text-slate-500" title={tr.email}>{tr.email || '—'}</td><td className="max-w-40 truncate px-4 py-2 text-xs text-emerald-700" title={tr.expertise}>{tr.expertise || '—'}</td><td className="px-4 py-2"><select value={tr.accessStatus || 'pending'} onChange={(e) => reviewAccess(tr._id, e.target.value)} className="min-h-9 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="suspended">Suspended</option></select></td><td className="px-4 py-2"><div className="flex justify-end gap-1"><button onClick={() => openViewModal(tr)} className="flex min-h-9 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-[#1a6b3c]" title="View full trainer profile"><EyeIcon className="h-4 w-4" />View</button></div></td></tr>; })}</tbody></table>
+        </div>
+        <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full min-w-[920px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Trainer</th><th className="px-4 py-3">Organization</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Expertise</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{trainers.map((tr) => { const imgSrc = photoUrl(tr.photo); return <tr key={tr._id} className="align-middle hover:bg-slate-50/70"><td className="px-4 py-3"><div className="flex items-center gap-3">{imgSrc ? <img src={imgSrc} alt={tr.name} loading="lazy" className="h-11 w-11 rounded-full border border-slate-200 object-cover" /> : <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-lg font-black text-[#1a6b3c]">{tr.name?.charAt(0)?.toUpperCase()}</div>}<div><p className="font-bold text-slate-900">{tr.title ? `${tr.title} ` : ''}{tr.name}</p>{tr.biography && <p className="max-w-xs truncate text-xs text-slate-500">{tr.biography}</p>}</div></div></td><td className="px-4 py-3 text-xs font-semibold text-[#155289]">{tr.organization || '—'}</td><td className="px-4 py-3 text-xs text-slate-500">{tr.email || '—'}</td><td className="px-4 py-3 text-xs text-emerald-700">{tr.expertise || '—'}</td><td className="px-4 py-3"><select value={tr.accessStatus || 'pending'} onChange={(e) => reviewAccess(tr._id, e.target.value)} className="min-h-9 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="suspended">Suspended</option></select></td><td className="px-4 py-3"><div className="flex justify-end gap-1">{imgSrc && <a href={imgSrc} download className="flex min-h-9 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-emerald-50 hover:text-[#1a6b3c]" title="Download photo"><ArrowDownTrayIcon className="h-4 w-4" />Download</a>}<button onClick={() => openEditModal(tr)} className="flex min-h-9 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-emerald-50 hover:text-[#1a6b3c]" title="Edit trainer profile"><PencilIcon className="h-4 w-4" />Edit</button><button onClick={() => handleDelete(tr._id)} className="flex min-h-9 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Delete trainer profile"><TrashIcon className="h-4 w-4" />Delete</button></div></td></tr>; })}</tbody></table>
+        </div>
+        <div className="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {trainers.map((tr) => {
             const imgSrc = photoUrl(tr.photo);
             return (
@@ -277,9 +313,19 @@ export const TrainersManagement = () => {
             );
           })}
         </div>
+        </>
       )}
 
       {/* Create / Edit Modal */}
+      {viewingTrainer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={() => setViewingTrainer(null)}>
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4"><div className="flex items-center gap-4"><div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-2xl font-black text-[#1a6b3c]">{viewingTrainer.photo ? <img src={photoUrl(viewingTrainer.photo)} alt={viewingTrainer.name} className="h-full w-full object-cover" /> : viewingTrainer.name?.charAt(0)?.toUpperCase()}</div><div><p className="text-xs font-bold uppercase tracking-wide text-[#1a6b3c]">Trainer profile</p><h2 className="mt-1 text-xl font-black text-slate-900">{viewingTrainer.title ? `${viewingTrainer.title} ` : ''}{viewingTrainer.name}</h2><span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${viewingTrainer.accessStatus === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{viewingTrainer.accessStatus || 'Pending'}</span></div></div><AdminModalClose onClick={() => setViewingTrainer(null)} /></div>
+            <div className="mt-5 grid gap-4 text-sm sm:grid-cols-2"><div><p className="text-xs font-bold uppercase text-slate-400">Email</p><p className="mt-1 text-slate-700">{viewingTrainer.email || '—'}</p></div><div><p className="text-xs font-bold uppercase text-slate-400">Phone</p><p className="mt-1 text-slate-700">{viewingTrainer.phone || '—'}</p></div><div><p className="text-xs font-bold uppercase text-slate-400">Organization</p><p className="mt-1 text-slate-700">{viewingTrainer.organization || '—'}</p></div><div className="sm:col-span-2"><p className="text-xs font-bold uppercase text-slate-400">Areas of expertise</p><div className="mt-2 flex flex-wrap gap-2">{String(viewingTrainer.expertise || '').split(',').map((area) => area.trim()).filter(Boolean).map((area) => <span key={area} className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-[#1a6b3c]">{area}</span>)}{!viewingTrainer.expertise && <span className="text-slate-500">—</span>}</div></div><div className="sm:col-span-2"><p className="text-xs font-bold uppercase text-slate-400">Biography</p><p className="mt-1 whitespace-pre-wrap leading-6 text-slate-700">{viewingTrainer.biography || '—'}</p></div></div>
+          </div>
+        </div>
+      )}
+
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto" onMouseDown={() => setShowModal(false)}>
           <div className="relative bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 my-8" onMouseDown={(e) => e.stopPropagation()}>

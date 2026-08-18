@@ -8,6 +8,11 @@ import PhoneInput from '../../components/common/PhoneInput';
 
 export const ModeratorsManagement = () => {
   const [moderators, setModerators] = useState([]);
+  const [allModerators, setAllModerators] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [eventDays, setEventDays] = useState([]);
+  const [assignedSessions, setAssignedSessions] = useState([]);
+  const [filters, setFilters] = useState({ event: '', eventDay: '' });
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -21,8 +26,10 @@ export const ModeratorsManagement = () => {
 
   const fetchModerators = async () => {
     try {
-      const res = await api.get('/admin/moderators');
-      if (res.success) setModerators(res.data || []);
+      const [res, eventRes, trainingRes] = await Promise.all([api.get('/admin/moderators?limit=100'), api.get('/admin/events'), api.get('/admin/trainings?limit=100')]);
+      if (res.success) { setAllModerators(res.data || []); setModerators(res.data || []); }
+      if (eventRes.success) setEvents(eventRes.data || []);
+      if (trainingRes.success) setAssignedSessions(trainingRes.data || []);
     } catch (err) {
       toast.error('Failed to load moderators.');
     } finally {
@@ -33,6 +40,16 @@ export const ModeratorsManagement = () => {
   useEffect(() => {
     fetchModerators();
   }, []);
+
+  useEffect(() => {
+    if (!filters.event) { setEventDays([]); return; }
+    api.get(`/admin/events/${filters.event}/days`).then((res) => setEventDays(res.data?.days || [])).catch(() => setEventDays([]));
+  }, [filters.event]);
+
+  useEffect(() => {
+    if (!filters.event && !filters.eventDay) { setModerators(allModerators); return; }
+    setModerators(allModerators.filter((moderator) => assignedSessions.some((session) => String(session.moderator?._id || session.moderator) === String(moderator._id) && (!filters.event || String(session.event?._id || session.event) === String(filters.event)) && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === String(filters.eventDay)))));
+  }, [allModerators, assignedSessions, filters]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -81,6 +98,7 @@ export const ModeratorsManagement = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2"><select value={filters.event} onChange={(e) => setFilters({ event: e.target.value, eventDay: '' })} className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All events</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name} ({event.year})</option>)}</select><select value={filters.eventDay} onChange={(e) => setFilters((current) => ({ ...current, eventDay: e.target.value }))} disabled={!filters.event} className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100"><option value="">All days</option>{eventDays.map((day) => <option key={day._id} value={day._id}>Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}</option>)}</select></div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 uppercase text-slate-500 font-bold">
