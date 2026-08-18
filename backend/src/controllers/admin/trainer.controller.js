@@ -11,7 +11,7 @@ import { sendTrainerApprovedEmail, sendTrainerRejectedEmail } from '../../utils/
 import { deleteFile } from '../../middleware/upload.js';
 
 const trainerPayload = (input) => pick(input, ['name', 'email', 'phone', 'password', 'title', 'organization', 'biography', 'expertise', 'isActive', 'accessStatus']);
-const idsFromRequest = (req) => [...new Set((req.body.ids || [req.params.id]).filter(Boolean).map(String))];
+const idsFromRequest = (req) => [...new Set((req.body?.ids || [req.params.id]).filter(Boolean).map(String))];
 
 const deleteTrainerIds = async (ids) => {
   const trainers = await Trainer.find({ _id: { $in: ids } }).select('user photo');
