@@ -105,6 +105,9 @@ export const Home = () => {
     : 'Dates to be announced';
   const eventStatus = event?.status?.replace(/_/g, ' ') || 'Program announced';
   const heroImage = '/training-week-default-hero.png';
+  const formatDayChoiceDate = (date) => (
+    date ? new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBA'
+  );
 
   useEffect(() => {
     api.get(`/public/trainers${event?._id ? `?event=${event._id}` : ''}`)
@@ -196,19 +199,36 @@ export const Home = () => {
           />
 
           {days.length > 0 && (
-            <div className="mb-12 flex gap-3 overflow-x-auto px-1 py-3 sm:justify-center" aria-label="Filter speakers by program day">
-              {days.map((day) => {
-                const isActive = activeFacultyDay === day._id;
-                return (
-                  <button key={day._id} type="button" onClick={() => setActiveFacultyDay(day._id)} aria-pressed={isActive}
-                    className={`min-w-[190px] shrink-0 rounded-2xl border px-6 py-4 text-left transition-all ${isActive ? 'border-[#1da156] bg-[#1da156] text-white shadow-lg shadow-[#1da156]/20' : 'border-black/10 bg-white text-black hover:border-[#1da156]'}`}>
-                    <span className={`block text-[11px] font-bold tracking-wide ${isActive ? 'text-white/85' : 'text-black/55'}`}>
-                      Day {day.dayNumber} • {day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBA'}
-                    </span>
-                    <span className="mt-1 block text-sm font-extrabold">{day.theme}</span>
-                  </button>
-                );
-              })}
+            <div className="mb-12" aria-label="Filter speakers by program day">
+              <div className="lg:hidden">
+                <select
+                  aria-label="Select faculty day"
+                  value={activeFacultyDay}
+                  onChange={(e) => setActiveFacultyDay(e.target.value)}
+                  className="min-h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-950 outline-none focus:border-[#1da156] focus:ring-2 focus:ring-[#1da156]/20"
+                >
+                  {days.map((day) => (
+                    <option key={day._id} value={day._id}>
+                      Day {day.dayNumber} - {formatDayChoiceDate(day.date)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="hidden justify-center gap-3 lg:flex">
+                {days.map((day) => {
+                  const isActive = activeFacultyDay === day._id;
+                  return (
+                    <button key={day._id} type="button" onClick={() => setActiveFacultyDay(day._id)} aria-pressed={isActive}
+                      className={`w-[138px] shrink-0 cursor-pointer rounded-2xl border px-4 py-3 text-center transition-all duration-300 ${isActive ? 'border-[#1da156] bg-[#1da156] text-white shadow-xl shadow-[#1da156]/25' : 'border-black/10 bg-white text-black hover:border-[#1da156] hover:shadow-md'}`}>
+                      <span className="block text-sm font-black">Day {day.dayNumber}</span>
+                      <span className={`mt-2 block text-xs font-bold ${isActive ? 'text-white/85' : 'text-black/55'}`}>{formatDayChoiceDate(day.date)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-5 text-center text-sm font-black text-slate-950">
+                <span className="text-[#1da156]">Theme:</span> {selectedFacultyDay?.theme || 'To be announced'}
+              </p>
             </div>
           )}
 
@@ -312,20 +332,20 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* Sponsors are shown late in the page journey: visible, but secondary to the event program. */}
+      {/* Co-organizers are shown late in the page journey: visible, but secondary to the event program. */}
       {sponsors.length > 0 && (
         <section className="bg-white py-20 text-black" aria-labelledby="sponsors-heading">
           <div className="mx-auto max-w-7xl px-4 sm:px-8">
             <div className="mx-auto mb-12 max-w-3xl text-center">
               <p className="mb-4 inline-flex rounded-full bg-[#1da156]/10 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-[#1da156]">Working together</p>
-              <h2 id="sponsors-heading" className="text-3xl font-bold leading-tight tracking-[-.025em] text-black sm:text-4xl">Sponsors & Partners</h2>
-              <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-black/60">Organizations helping make National Training Week accessible to learners across Somalia.</p>
+              <h2 id="sponsors-heading" className="text-3xl font-bold leading-tight tracking-[-.025em] text-black sm:text-4xl">Co-Organizers</h2>
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-black/60">Organizations co-organizing National Training Week and helping make it accessible to learners across Somalia.</p>
             </div>
             <div className="flex flex-wrap items-start justify-center gap-x-10 gap-y-12 sm:gap-x-16 lg:gap-x-20">
               {sponsors.map((sponsor) => {
                 const content = (
                   <>
-                    <div className={`flex w-full items-center justify-center ${sponsor.isFeatured ? 'h-20 sm:h-24' : 'h-16 sm:h-20'}`}>
+                    <div className={`mx-auto flex shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white p-4 shadow-sm transition-shadow group-hover:shadow-md ${sponsor.isFeatured ? 'h-24 w-24 sm:h-28 sm:w-28' : 'h-20 w-20 sm:h-24 sm:w-24'}`}>
                       <img src={sponsor.logo.startsWith('http') ? sponsor.logo : `/${sponsor.logo.replace(/^\//, '')}`} alt={`${sponsor.name} logo`} loading="lazy" className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105" />
                     </div>
                   </>
@@ -404,32 +424,44 @@ const ScheduleTabs = ({ fallbackDays = [] }) => {
   return (
     <div>
       {/* ── Day Tab Row ── */}
-      <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-12 py-2">
-        {program.map(({ day }, i) => {
-          const isActive = active === i;
-          return (
-            <button
-              key={i}
-              onClick={() => setActive(i)}
-              className={`shrink-0 px-5 py-3.5 sm:px-6 sm:py-4 rounded-2xl text-left transition-all duration-300 border whitespace-nowrap cursor-pointer ${
-                isActive
-                  ? 'bg-[#1da156] border-[#1da156] shadow-lg shadow-[#1da156]/20 text-white scale-105'
-                  : 'bg-white border-black/10 text-black hover:border-[#1da156] hover:shadow-md'
-              }`}
-            >
-              <span className={`block text-[11px] font-bold tracking-wider mb-1 ${
-                isActive ? 'text-white/90' : 'text-black/60'
-              }`}>
-                Day {day.dayNumber} • {day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBA'}
-              </span>
-              <span className={`block text-xs sm:text-sm font-extrabold ${
-                isActive ? 'text-white' : 'text-black'
-              }`}>
-                {day.theme}
-              </span>
-            </button>
-          );
-        })}
+      <div className="mb-12">
+        <div className="lg:hidden">
+          <select
+            aria-label="Select program day"
+            value={active}
+            onChange={(e) => setActive(Number(e.target.value))}
+            className="min-h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-950 outline-none focus:border-[#1da156] focus:ring-2 focus:ring-[#1da156]/20"
+          >
+            {program.map(({ day }, i) => (
+              <option key={day._id || i} value={i}>
+                Day {day.dayNumber} - {day.date ? new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBA'}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="hidden justify-center gap-3 lg:flex">
+          {program.map(({ day }, i) => {
+            const isActive = active === i;
+            const dayDate = day.date ? new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBA';
+            return (
+              <button
+                key={i}
+                onClick={() => setActive(i)}
+                className={`w-[138px] shrink-0 cursor-pointer rounded-2xl border px-4 py-3 text-center transition-all duration-300 ${
+                  isActive
+                    ? 'bg-[#1da156] border-[#1da156] shadow-xl shadow-[#1da156]/25 text-white'
+                    : 'bg-white border-black/10 text-black hover:border-[#1da156] hover:shadow-md'
+                }`}
+              >
+                <span className="block text-sm font-black">Day {day.dayNumber}</span>
+                <span className={`mt-2 block text-xs font-bold ${isActive ? 'text-white/85' : 'text-black/55'}`}>{dayDate}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-5 text-center text-sm font-black text-slate-950">
+          <span className="text-[#1da156]">Theme:</span> {currentDay?.day?.theme || 'To be announced'}
+        </p>
       </div>
 
       {/* ── Session Cards ── */}

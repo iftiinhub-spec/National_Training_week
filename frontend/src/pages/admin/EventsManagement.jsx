@@ -195,7 +195,12 @@ export const EventsManagement = () => {
   };
 
   const handleDeleteEvent = async (id) => {
-    if (!await confirmAction({ title: 'Delete event edition?', message: 'This edition will be permanently removed. An edition with related program data cannot be deleted.', confirmLabel: 'Delete edition' })) return;
+    if (!await confirmAction({
+      title: 'Delete entire event edition?',
+      message: 'This permanently deletes the event, all event days, all training sessions, registrations, attendance, meetings, feedback, certificates, recordings, co-organizers, and related operational data. This cannot be undone.',
+      confirmLabel: 'Delete everything',
+      tone: 'danger',
+    })) return;
     try {
       await api.delete(`/admin/events/${id}`);
       toast.success('Event deleted');
@@ -230,7 +235,12 @@ export const EventsManagement = () => {
   };
 
   const handleDeleteDay = async (eventId, dayId) => {
-    if (!await confirmAction({ title: 'Delete event day?', message: 'This program day will be permanently removed. A day with assigned sessions cannot be deleted.', confirmLabel: 'Delete day' })) return;
+    if (!await confirmAction({
+      title: 'Delete event day and its data?',
+      message: 'This permanently deletes this day, all sessions assigned to it, registrations, attendance, meetings, feedback, certificates, recordings, and related operational data for those sessions. This cannot be undone.',
+      confirmLabel: 'Delete day and data',
+      tone: 'danger',
+    })) return;
     try {
       await api.delete(`/admin/events/${eventId}/days/${dayId}`);
       toast.success('Event day deleted');

@@ -8,11 +8,12 @@ import { useCurrentEvent } from '../../context/EventContext';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 
 const OBJECTIVES = [
-  'Introduce AI concepts and practical tools to the wider Somali public in accessible language, including Somali.',
-  'Equip teachers, business owners, and community organizations to apply AI in their daily work.',
-  'Build technical capacity among university students and developers through practical, hands-on sessions.',
-  'Guide secondary-school graduates toward informed study and career choices in the age of AI.',
-  'Establish a permanent annual national platform for digital-skills development in Somalia.',
+  'Expand access to learning by providing free and accessible training opportunities to people across Somalia, regardless of their location or educational background.',
+  'Develop practical and relevant skills through structured sessions addressing emerging technologies, professional development, and national priorities.',
+  'Connect expertise with the wider community by bringing together academics, professionals, industry experts, and learners on a shared national platform.',
+  'Promote lifelong learning by encouraging students, graduates, professionals, and members of the public to continuously develop their knowledge and skills.',
+  "Support national development by focusing each annual edition on a theme relevant to Somalia's current and future social, economic, and technological needs.",
+  "Strengthen collaboration and knowledge sharing among universities, industry, public institutions, development partners, and communities."
 ];
 
 const AUDIENCE = [
@@ -49,7 +50,7 @@ export const About = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <PublicPageHeader eyebrow="About the initiative" title="National Training Week" description="An annual capacity-building initiative from Hormuud University, connecting Somalia's students, graduates, professionals, and the public with practical, expert-led learning." />
+      <PublicPageHeader eyebrow="About the initiative" title="National Training Week" description="is a national training platform established by Hormuud University and held once a year. Over the course of a single week it opens a series of structured sessions to the country at large, organised so that participation turns on interest and commitment rather than on holding a place at a university or living within reach of one." />
 
       <section className="bg-white py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-8">

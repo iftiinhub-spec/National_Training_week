@@ -5,6 +5,7 @@ import { successResponse, errorResponse, getPagination, paginatedResponse } from
 import { syncEventStatus } from '../../utils/eventLifecycle.js';
 import { eventDayTimelineError, eventStatusError, eventTimelineError } from '../../utils/eventTimeline.js';
 import { pick } from '../../utils/pick.js';
+import { deleteEventCascade, deleteEventDayCascade } from '../../utils/cascadeDelete.js';
 
 const eventPayload = (input) => pick(input, ['name', 'theme', 'year', 'startDate', 'startTime', 'endDate', 'registrationStart', 'registrationDeadline', 'description', 'status', 'isActive', 'isCurrent']);
 const eventDayPayload = (input) => pick(input, ['dayNumber', 'theme', 'date']);
@@ -179,15 +180,8 @@ export const deleteEvent = async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.id);
     if (!event) return errorResponse(res, 'Event not found.', 404);
-    const [dayCount, trainingCount] = await Promise.all([
-      EventDay.countDocuments({ event: event._id }),
-      Training.countDocuments({ event: event._id }),
-    ]);
-    if (dayCount || trainingCount) {
-      return errorResponse(res, `Delete the event's ${trainingCount} training(s) and ${dayCount} event day(s) first.`, 409);
-    }
-    await event.deleteOne();
-    return successResponse(res, null, 'Event deleted successfully.');
+    const summary = await deleteEventCascade(event);
+    return successResponse(res, { summary }, `Event deleted with ${summary.days} day(s), ${summary.trainings} training session(s), ${summary.coOrganizers} co-organizer(s), and ${summary.relatedRecords} related record(s).`);
   } catch (err) { next(err); }
 };
 
@@ -238,9 +232,7 @@ export const deleteEventDay = async (req, res, next) => {
   try {
     const day = await EventDay.findOne({ _id: req.params.dayId, event: req.params.eventId });
     if (!day) return errorResponse(res, 'Event day not found.', 404);
-    const trainingCount = await Training.countDocuments({ eventDay: day._id });
-    if (trainingCount) return errorResponse(res, `Delete the ${trainingCount} training(s) assigned to this event day first.`, 409);
-    await day.deleteOne();
-    return successResponse(res, null, 'Event day deleted successfully.');
+    const summary = await deleteEventDayCascade(day);
+    return successResponse(res, { summary }, `Event day deleted with ${summary.trainings} training session(s) and ${summary.relatedRecords} related record(s).`);
   } catch (err) { next(err); }
 };

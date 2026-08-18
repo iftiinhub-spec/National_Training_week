@@ -17,7 +17,9 @@ export const Program = () => {
 
   useEffect(() => {
     api.get('/public/events').then((res) => {
-      if (res.success) setEvents(res.data.events || []);
+      if (res.success) {
+        setEvents((res.data.events || []).filter((event) => event.status !== 'draft'));
+      }
     }).catch(() => {});
   }, []);
 
@@ -32,7 +34,11 @@ export const Program = () => {
           if (days.length > 0) setActiveDay(days[0].day._id);
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        setEventData(null);
+        setProgramDays([]);
+        setActiveDay(null);
+      })
       .finally(() => setLoading(false));
   }, [selectedEvent]);
 
@@ -42,7 +48,7 @@ export const Program = () => {
 
   const fmtDate = (d) => {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
   return (
@@ -74,33 +80,46 @@ export const Program = () => {
       {!loading && programDays.length > 0 && (
         <div className="bg-white border-b border-black/10 sticky top-[88px] z-40 py-2">
           <div className="max-w-7xl mx-auto px-4 sm:px-8">
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 py-4">
+            <div className="py-4 lg:hidden">
+              <select
+                aria-label="Select program day"
+                value={activeDay || currentDay?.day?._id || ''}
+                onChange={(e) => setActiveDay(e.target.value)}
+                className="min-h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-950 outline-none focus:border-[#1da156] focus:ring-2 focus:ring-[#1da156]/20"
+              >
+                {programDays.map((p) => (
+                  <option key={p.day._id} value={p.day._id}>
+                    Day {p.day.dayNumber}{p.day.date ? ` - ${fmtDate(p.day.date)}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="hidden justify-center gap-3 py-4 lg:flex">
               {programDays.map((p) => {
                 const isActive = p.day._id === activeDay;
                 return (
                   <button
                     key={p.day._id}
                     onClick={() => setActiveDay(p.day._id)}
-                    className={`shrink-0 px-5 py-3.5 sm:px-6 sm:py-4 rounded-2xl text-left transition-all duration-300 border whitespace-nowrap cursor-pointer ${
+                    className={`w-[138px] shrink-0 cursor-pointer rounded-2xl border px-4 py-3 text-center transition-all duration-300 ${
                       isActive
-                        ? 'bg-[#1da156] border-[#1da156] shadow-lg shadow-[#1da156]/20 text-white scale-105'
+                        ? 'bg-[#1da156] border-[#1da156] shadow-xl shadow-[#1da156]/25 text-white'
                         : 'bg-white border-black/10 text-black hover:border-[#1da156] hover:shadow-md'
                     }`}
                   >
-                    <span className={`block text-[11px] font-bold tracking-wider mb-1 ${
-                      isActive ? 'text-white/90' : 'text-black/60'
-                    }`}>
-                      Day {p.day.dayNumber}{p.day.date ? ` • ${fmtDate(p.day.date)}` : ''}
+                    <span className="block text-sm font-black">
+                      Day {p.day.dayNumber}
                     </span>
-                    <span className={`block text-xs sm:text-sm font-extrabold ${
-                      isActive ? 'text-white' : 'text-black'
-                    }`}>
-                      {p.day.theme}
+                    <span className={`mt-2 block text-xs font-bold ${isActive ? 'text-white/85' : 'text-black/55'}`}>
+                      {p.day.date ? fmtDate(p.day.date) : 'Date TBA'}
                     </span>
                   </button>
                 );
               })}
             </div>
+            <p className="pb-4 text-center text-sm font-black text-slate-950">
+              <span className="text-[#1da156]">Theme:</span> {currentDay?.day?.theme || 'To be announced'}
+            </p>
           </div>
         </div>
       )}

@@ -164,7 +164,7 @@ export const Navbar = () => {
                   to="/signup"
                   className="px-5 py-2 rounded-xl text-sm font-bold bg-[#1da156] hover:bg-black text-white shadow-xs transition-all"
                 >
-                  Register Free
+                  Register Now
                 </Link>
               </div>
             )}
@@ -226,7 +226,7 @@ export const Navbar = () => {
                   Sign In
                 </Link>
                 <Link to="/signup" onClick={() => setMobileMenuOpen(false)} className="text-center px-4 py-3 rounded-lg font-bold bg-[#1da156] text-white">
-                  Register Free
+                  Register Now
                 </Link>
               </div>
             )}
