@@ -99,7 +99,7 @@ export const getCurrentEvent = async (req, res, next) => {
 // GET /api/public/events/:id — public event detail with days
 export const getPublicEvent = async (req, res, next) => {
   try {
-    const event = await Event.findOne({ _id: req.params.id, status: { $ne: 'draft' } });
+    const event = await Event.findOne({ _id: req.params.id, ...publicEventFilter });
     if (!event) return errorResponse(res, 'Event not found.', 404);
     const days = await EventDay.find({ event: event._id }).sort({ dayNumber: 1 });
     return successResponse(res, { event, days });

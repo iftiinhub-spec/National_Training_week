@@ -44,7 +44,7 @@ export const AdminLayout = () => {
         { name: 'Categories', path: '/admin/categories', icon: TagIcon },
         { name: 'Training Sessions', path: '/admin/trainings', icon: AcademicCapIcon },
         { name: 'Recording Library', path: '/admin/recordings', icon: VideoCameraIcon },
-        { name: 'Sponsors & Partners', path: '/admin/sponsors', icon: BuildingOffice2Icon },
+        { name: 'Co-Organizers', path: '/admin/sponsors', icon: BuildingOffice2Icon },
       ],
     },
     {

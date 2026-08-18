@@ -106,7 +106,7 @@ export const TrainingsManagement = () => {
     audience: 'General Public & University Students',
     level: 'general',
     language: 'Somali / English',
-    capacity: 100,
+    capacity: '',
   });
 
   const fetchData = async () => {
@@ -190,7 +190,7 @@ export const TrainingsManagement = () => {
       audience: 'General Public & University Students',
       level: 'general',
       language: 'Somali',
-      capacity: 100,
+      capacity: '',
     });
     setShowModal(true);
   };
@@ -221,7 +221,7 @@ export const TrainingsManagement = () => {
       audience: tr.audience || 'General Public & University Students',
       level: tr.level || 'general',
       language: trainingLanguage,
-      capacity: tr.capacity || 100,
+      capacity: tr.capacity ?? '',
     });
     setShowModal(true);
   };
@@ -278,7 +278,12 @@ export const TrainingsManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!await confirmAction({ title: 'Delete training session?', message: 'This session will be permanently removed. Sessions with operational records cannot be deleted.', confirmLabel: 'Delete session' })) return;
+    if (!await confirmAction({
+      title: 'Delete training session and its data?',
+      message: 'This permanently deletes this session, registrations, attendance, meeting details, communications, feedback, certificates, recordings, materials, QR sessions, and related operational data. This cannot be undone.',
+      confirmLabel: 'Delete session and data',
+      tone: 'danger',
+    })) return;
     try {
       await api.delete(`/admin/trainings/${id}`);
       toast.success('Training deleted');
@@ -520,7 +525,7 @@ export const TrainingsManagement = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Level</label>
                   <select
@@ -559,6 +564,20 @@ export const TrainingsManagement = () => {
                       required
                     />
                   )}
+                </div>
+                <div>
+                  <label className="block font-bold uppercase text-slate-700 mb-1">Registration Capacity *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100000"
+                    value={form.capacity}
+                    onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                    placeholder="e.g. 100"
+                    className="w-full p-2.5 rounded-lg border border-slate-300"
+                    required
+                  />
+                  <p className="mt-1 text-[11px] leading-4 text-slate-500">Maximum approved participants for this session.</p>
                 </div>
               </div>
 

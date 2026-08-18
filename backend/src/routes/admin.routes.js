@@ -134,13 +134,13 @@ router.patch('/faqs/:id/publish',
   validate,
   toggleFAQPublish);
 
-// Sponsors and partners
+// Co-organizers
 const sponsorValidation = [
   body('event').isMongoId().withMessage('Select a valid event edition.'),
-  body('name').trim().isLength({ min: 2, max: 120 }).withMessage('Sponsor name must be between 2 and 120 characters.'),
+  body('name').trim().isLength({ min: 2, max: 120 }).withMessage('Co-organizer name must be between 2 and 120 characters.'),
   body('websiteUrl').optional({ checkFalsy: true }).isURL({ protocols: ['http', 'https'], require_protocol: true }).withMessage('Website URL must start with http:// or https://.'),
   body('description').optional({ checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('Description cannot exceed 500 characters.'),
-  body('category').isIn(['Strategic Partner', 'Platinum Sponsor', 'Gold Sponsor', 'Silver Sponsor', 'Supporting Partner', 'Media Partner']).withMessage('Select a valid sponsor category.'),
+  body('category').isIn(['Strategic Co-Organizer', 'Lead Co-Organizer', 'Co-Organizer', 'Supporting Co-Organizer', 'Media Co-Organizer']).withMessage('Select a valid co-organizer category.'),
   body('displayOrder').optional().isInt({ min: 0, max: 9999 }).withMessage('Display order must be between 0 and 9999.'),
   body('isActive').optional().isBoolean().withMessage('Active status must be true or false.'),
   body('isFeatured').optional().isBoolean().withMessage('Featured status must be true or false.'),

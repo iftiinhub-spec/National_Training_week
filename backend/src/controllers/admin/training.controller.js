@@ -1,16 +1,6 @@
 import Training from '../../models/Training.js';
 import Event from '../../models/Event.js';
 import EventDay from '../../models/EventDay.js';
-import Registration from '../../models/Registration.js';
-import Attendance from '../../models/Attendance.js';
-import Meeting from '../../models/Meeting.js';
-import Communication from '../../models/Communication.js';
-import Feedback from '../../models/Feedback.js';
-import Certificate from '../../models/Certificate.js';
-import TrainerCertificate from '../../models/TrainerCertificate.js';
-import CertificateIssuanceJob from '../../models/CertificateIssuanceJob.js';
-import Recording from '../../models/Recording.js';
-import QRSession from '../../models/QRSession.js';
 import Trainer from '../../models/Trainer.js';
 import User from '../../models/User.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
@@ -19,6 +9,7 @@ import { getTrainingDateTime, normalizeTrainingTime } from '../../utils/training
 import { getRegistrationWindowState } from '../../utils/registrationWindow.js';
 import { escapeRegex } from '../../utils/search.js';
 import { pick } from '../../utils/pick.js';
+import { deleteTrainingCascade } from '../../utils/cascadeDelete.js';
 
 const trainingPayload = (input) => pick(input, ['title', 'description', 'event', 'eventDay', 'category', 'trainer', 'moderator', 'date', 'startTime', 'endTime', 'audience', 'level', 'language', 'capacity', 'registrationRequired', 'status']);
 
@@ -278,16 +269,7 @@ export const deleteTraining = async (req, res, next) => {
   try {
     const training = await Training.findById(req.params.id);
     if (!training) return errorResponse(res, 'Training not found.', 404);
-    if (['ongoing', 'completed'].includes(training.status)) {
-      return errorResponse(res, 'Cannot delete an ongoing or completed training.', 400);
-    }
-    const relatedModels = [Registration, Attendance, Meeting, Communication, Feedback, Certificate, TrainerCertificate, CertificateIssuanceJob, Recording, QRSession];
-    const relatedCounts = await Promise.all(relatedModels.map((Model) => Model.countDocuments({ training: training._id })));
-    const relatedCount = relatedCounts.reduce((total, count) => total + count, 0);
-    if (relatedCount) {
-      return errorResponse(res, `Cannot delete this training because it has ${relatedCount} related operational record(s). Cancel it instead.`, 409);
-    }
-    await Training.findByIdAndDelete(req.params.id);
-    return successResponse(res, null, 'Training deleted successfully.');
+    const summary = await deleteTrainingCascade(training);
+    return successResponse(res, { summary }, `Training deleted with ${summary.relatedRecords} related record(s).`);
   } catch (err) { next(err); }
 };
