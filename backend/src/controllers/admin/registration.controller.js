@@ -5,7 +5,7 @@ import { successResponse, errorResponse, getPagination, paginatedResponse } from
 import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
 import { resolveTrainingScope } from '../../utils/trainingScope.js';
 
-const idsFromRequest = (req) => [...new Set((req.body.ids || [req.params.id]).filter(Boolean).map(String))];
+const idsFromRequest = (req) => [...new Set((req.body?.ids || [req.params.id]).filter(Boolean).map(String))];
 
 const deleteRegistrationIds = async (ids) => {
   const registrations = await Registration.find({ _id: { $in: ids } }).select('participant training status');

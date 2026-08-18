@@ -7,7 +7,7 @@ import Training from '../../models/Training.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { escapeRegex } from '../../utils/search.js';
 
-const idsFromRequest = (req) => [...new Set((req.body.ids || [req.params.id]).filter(Boolean).map(String))];
+const idsFromRequest = (req) => [...new Set((req.body?.ids || [req.params.id]).filter(Boolean).map(String))];
 
 const deleteParticipantIds = async (ids) => {
   const approvedRegistrations = await Registration.find({ participant: { $in: ids }, status: 'approved' }).select('training');
