@@ -1,6 +1,44 @@
 import User from '../../models/User.js';
+import Attendance from '../../models/Attendance.js';
+import Certificate from '../../models/Certificate.js';
+import Feedback from '../../models/Feedback.js';
+import Registration from '../../models/Registration.js';
+import Training from '../../models/Training.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { escapeRegex } from '../../utils/search.js';
+
+const idsFromRequest = (req) => [...new Set((req.body.ids || [req.params.id]).filter(Boolean).map(String))];
+
+const deleteParticipantIds = async (ids) => {
+  const approvedRegistrations = await Registration.find({ participant: { $in: ids }, status: 'approved' }).select('training');
+  const seatsByTraining = approvedRegistrations.reduce((grouped, registration) => {
+    const key = String(registration.training);
+    grouped[key] = (grouped[key] || 0) + 1;
+    return grouped;
+  }, {});
+  await Promise.all(Object.entries(seatsByTraining).map(([training, count]) => (
+    Training.findByIdAndUpdate(training, { $inc: { filledSeats: -count } })
+  )));
+  const [registrations, attendance, feedback, certificates, users] = await Promise.all([
+    Registration.deleteMany({ participant: { $in: ids } }),
+    Attendance.deleteMany({ participant: { $in: ids } }),
+    Feedback.deleteMany({ participant: { $in: ids } }),
+    Certificate.deleteMany({ participant: { $in: ids } }),
+    User.deleteMany({ _id: { $in: ids }, role: 'participant' }),
+  ]);
+  return {
+    users: users.deletedCount,
+    relatedRecords: registrations.deletedCount + attendance.deletedCount + feedback.deletedCount + certificates.deletedCount,
+  };
+};
+
+const deleteModeratorIds = async (ids) => {
+  const [trainingUpdate, users] = await Promise.all([
+    Training.updateMany({ moderator: { $in: ids } }, { $set: { moderator: null } }),
+    User.deleteMany({ _id: { $in: ids }, role: 'moderator' }),
+  ]);
+  return { users: users.deletedCount, unassignedSessions: trainingUpdate.modifiedCount || 0 };
+};
 
 // --- Participant Management ---
 export const getParticipants = async (req, res, next) => {
@@ -40,6 +78,20 @@ export const toggleParticipantStatus = async (req, res, next) => {
     user.isActive = !user.isActive;
     await user.save();
     return successResponse(res, { participant: user }, `Participant ${user.isActive ? 'activated' : 'deactivated'}.`);
+  } catch (err) { next(err); }
+};
+
+export const deleteParticipant = async (req, res, next) => {
+  try {
+    const summary = await deleteParticipantIds(idsFromRequest(req));
+    return successResponse(res, { summary }, `Deleted ${summary.users} participant account(s) and ${summary.relatedRecords} related record(s).`);
+  } catch (err) { next(err); }
+};
+
+export const deleteParticipants = async (req, res, next) => {
+  try {
+    const summary = await deleteParticipantIds(idsFromRequest(req));
+    return successResponse(res, { summary }, `Deleted ${summary.users} participant account(s) and ${summary.relatedRecords} related record(s).`);
   } catch (err) { next(err); }
 };
 
@@ -114,5 +166,19 @@ export const resetModeratorPassword = async (req, res, next) => {
     user.tokenVersion += 1;
     await user.save();
     return successResponse(res, null, 'Moderator password reset successfully.');
+  } catch (err) { next(err); }
+};
+
+export const deleteModerator = async (req, res, next) => {
+  try {
+    const summary = await deleteModeratorIds(idsFromRequest(req));
+    return successResponse(res, { summary }, `Deleted ${summary.users} moderator account(s) and unassigned ${summary.unassignedSessions} session(s).`);
+  } catch (err) { next(err); }
+};
+
+export const deleteModerators = async (req, res, next) => {
+  try {
+    const summary = await deleteModeratorIds(idsFromRequest(req));
+    return successResponse(res, { summary }, `Deleted ${summary.users} moderator account(s) and unassigned ${summary.unassignedSessions} session(s).`);
   } catch (err) { next(err); }
 };

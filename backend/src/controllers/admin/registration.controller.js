@@ -5,6 +5,30 @@ import { successResponse, errorResponse, getPagination, paginatedResponse } from
 import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
 import { resolveTrainingScope } from '../../utils/trainingScope.js';
 
+const idsFromRequest = (req) => [...new Set((req.body.ids || [req.params.id]).filter(Boolean).map(String))];
+
+const deleteRegistrationIds = async (ids) => {
+  const registrations = await Registration.find({ _id: { $in: ids } }).select('participant training status');
+  const approvedByTraining = registrations
+    .filter((registration) => registration.status === 'approved')
+    .reduce((grouped, registration) => {
+      const key = String(registration.training);
+      grouped[key] = (grouped[key] || 0) + 1;
+      return grouped;
+    }, {});
+  await Promise.all(Object.entries(approvedByTraining).map(([training, count]) => (
+    Training.findByIdAndUpdate(training, { $inc: { filledSeats: -count } })
+  )));
+  const attendanceDeletes = await Promise.all(registrations.map((registration) => (
+    Attendance.deleteMany({ participant: registration.participant, training: registration.training })
+  )));
+  const deleted = await Registration.deleteMany({ _id: { $in: ids } });
+  return {
+    registrations: deleted.deletedCount,
+    attendance: attendanceDeletes.reduce((total, result) => total + result.deletedCount, 0),
+  };
+};
+
 // GET /api/admin/registrations
 export const getRegistrations = async (req, res, next) => {
   try {
@@ -109,5 +133,19 @@ export const updateRegistrationStatus = async (req, res, next) => {
     }
 
     return successResponse(res, { registration: reg }, `Registration ${status}.`);
+  } catch (err) { next(err); }
+};
+
+export const deleteRegistration = async (req, res, next) => {
+  try {
+    const summary = await deleteRegistrationIds(idsFromRequest(req));
+    return successResponse(res, { summary }, `Deleted ${summary.registrations} registration(s) and ${summary.attendance} attendance record(s).`);
+  } catch (err) { next(err); }
+};
+
+export const deleteRegistrations = async (req, res, next) => {
+  try {
+    const summary = await deleteRegistrationIds(idsFromRequest(req));
+    return successResponse(res, { summary }, `Deleted ${summary.registrations} registration(s) and ${summary.attendance} attendance record(s).`);
   } catch (err) { next(err); }
 };
