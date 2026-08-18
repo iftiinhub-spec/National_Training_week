@@ -4,10 +4,35 @@ import { successResponse, errorResponse, getPagination, paginatedResponse } from
 import { escapeRegex } from '../../utils/search.js';
 import User from '../../models/User.js';
 import Event from '../../models/Event.js';
+import TrainerCertificate from '../../models/TrainerCertificate.js';
+import TrainingMaterial from '../../models/TrainingMaterial.js';
 import { pick } from '../../utils/pick.js';
 import { sendTrainerApprovedEmail, sendTrainerRejectedEmail } from '../../utils/trainerStatusEmail.js';
+import { deleteFile } from '../../middleware/upload.js';
 
 const trainerPayload = (input) => pick(input, ['name', 'email', 'phone', 'password', 'title', 'organization', 'biography', 'expertise', 'isActive', 'accessStatus']);
+const idsFromRequest = (req) => [...new Set((req.body.ids || [req.params.id]).filter(Boolean).map(String))];
+
+const deleteTrainerIds = async (ids) => {
+  const trainers = await Trainer.find({ _id: { $in: ids } }).select('user photo');
+  const userIds = trainers.map((trainer) => trainer.user).filter(Boolean);
+  trainers.forEach((trainer) => { if (trainer.photo) deleteFile(trainer.photo); });
+  const [trainingUpdate, materials, certificates, deletedTrainers] = await Promise.all([
+    Training.updateMany({ trainer: { $in: ids } }, { $set: { trainer: null } }),
+    TrainingMaterial.deleteMany({ trainer: { $in: ids } }),
+    TrainerCertificate.deleteMany({ trainer: { $in: ids } }),
+    Trainer.deleteMany({ _id: { $in: ids } }),
+  ]);
+  if (userIds.length) await User.deleteMany({ _id: { $in: userIds }, role: 'trainer' });
+  return {
+    trainers: deletedTrainers.deletedCount,
+    users: userIds.length,
+    unassignedSessions: trainingUpdate.modifiedCount || 0,
+    materials: materials.deletedCount,
+    certificates: certificates.deletedCount,
+    files: trainers.filter((trainer) => trainer.photo).length,
+  };
+};
 
 export const getTrainers = async (req, res, next) => {
   try {
@@ -161,13 +186,15 @@ export const reviewTrainer = async (req, res, next) => {
 
 export const deleteTrainer = async (req, res, next) => {
   try {
-    const trainer = await Trainer.findById(req.params.id);
-    if (!trainer) return errorResponse(res, 'Trainer not found.', 404);
-    if (await Training.exists({ trainer: trainer._id })) {
-      return errorResponse(res, 'This trainer is assigned to a training. Reassign those trainings before deleting the account.', 409);
-    }
-    await Trainer.findByIdAndDelete(trainer._id);
-    if (trainer.user) await User.findByIdAndDelete(trainer.user);
-    return successResponse(res, null, 'Trainer account deleted successfully.');
+    const summary = await deleteTrainerIds(idsFromRequest(req));
+    if (!summary.trainers) return errorResponse(res, 'Trainer not found.', 404);
+    return successResponse(res, { summary }, `Deleted ${summary.trainers} trainer profile(s) and unassigned ${summary.unassignedSessions} session(s).`);
+  } catch (err) { next(err); }
+};
+
+export const deleteTrainers = async (req, res, next) => {
+  try {
+    const summary = await deleteTrainerIds(idsFromRequest(req));
+    return successResponse(res, { summary }, `Deleted ${summary.trainers} trainer profile(s) and unassigned ${summary.unassignedSessions} session(s).`);
   } catch (err) { next(err); }
 };

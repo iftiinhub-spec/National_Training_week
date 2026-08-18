@@ -3,12 +3,15 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { EyeIcon, EyeSlashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import PhoneInput from '../../components/common/PhoneInput';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
 export const ModeratorsManagement = () => {
+  const confirmAction = useConfirmDialog();
   const [moderators, setModerators] = useState([]);
   const [allModerators, setAllModerators] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [events, setEvents] = useState([]);
   const [eventDays, setEventDays] = useState([]);
   const [assignedSessions, setAssignedSessions] = useState([]);
@@ -27,7 +30,7 @@ export const ModeratorsManagement = () => {
   const fetchModerators = async () => {
     try {
       const [res, eventRes, trainingRes] = await Promise.all([api.get('/admin/moderators?limit=100'), api.get('/admin/events'), api.get('/admin/trainings?limit=100')]);
-      if (res.success) { setAllModerators(res.data || []); setModerators(res.data || []); }
+      if (res.success) { setAllModerators(res.data || []); setModerators(res.data || []); setSelectedIds([]); }
       if (eventRes.success) setEvents(eventRes.data || []);
       if (trainingRes.success) setAssignedSessions(trainingRes.data || []);
     } catch (err) {
@@ -77,6 +80,29 @@ export const ModeratorsManagement = () => {
     }
   };
 
+  const toggleSelected = (id) => setSelectedIds((current) => (
+    current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+  ));
+  const toggleAll = () => setSelectedIds((current) => (
+    current.length === moderators.length ? [] : moderators.map((item) => item._id)
+  ));
+  const deleteModerators = async (ids) => {
+    if (!ids.length) return;
+    if (!await confirmAction({
+      title: ids.length === moderators.length ? 'Delete all shown moderators?' : `Delete ${ids.length} moderator(s)?`,
+      message: 'This permanently deletes the moderator account(s). Any assigned training sessions will become unassigned. This cannot be undone.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    })) return;
+    try {
+      const res = ids.length === 1 ? await api.delete(`/admin/moderators/${ids[0]}`) : await api.delete('/admin/moderators', { data: { ids } });
+      toast.success(res.message || 'Moderator(s) deleted.');
+      fetchModerators();
+    } catch (err) {
+      toast.error(err.message || 'Delete failed');
+    }
+  };
+
   if (loading) return <LoadingSpinner label="Loading moderator accounts..." />;
 
   return (
@@ -99,10 +125,15 @@ export const ModeratorsManagement = () => {
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2"><select value={filters.event} onChange={(e) => setFilters({ event: e.target.value, eventDay: '' })} className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All events</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name} ({event.year})</option>)}</select><select value={filters.eventDay} onChange={(e) => setFilters((current) => ({ ...current, eventDay: e.target.value }))} disabled={!filters.event} className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100"><option value="">All days</option>{eventDays.map((day) => <option key={day._id} value={day._id}>Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}</option>)}</select></div>
+        <div className="flex flex-wrap gap-2 border-b border-slate-200 px-4 py-3">
+          <button type="button" onClick={() => deleteModerators(selectedIds)} disabled={!selectedIds.length} className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Delete selected</button>
+          <button type="button" onClick={() => deleteModerators(moderators.map((item) => item._id))} disabled={!moderators.length} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 disabled:opacity-40">Delete all</button>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 uppercase text-slate-500 font-bold">
               <tr>
+                <th className="p-4"><input type="checkbox" checked={moderators.length > 0 && selectedIds.length === moderators.length} onChange={toggleAll} aria-label="Select all moderators" className="h-4 w-4 accent-[#1a6b3c]" /></th>
                 <th className="p-4">Full Name</th>
                 <th className="p-4">Email</th>
                 <th className="p-4">Phone</th>
@@ -113,6 +144,7 @@ export const ModeratorsManagement = () => {
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {moderators.map((mod) => (
                 <tr key={mod._id} className="hover:bg-slate-50">
+                  <td className="p-4"><input type="checkbox" checked={selectedIds.includes(mod._id)} onChange={() => toggleSelected(mod._id)} aria-label={`Select ${mod.fullName}`} className="h-4 w-4 accent-[#1a6b3c]" /></td>
                   <td className="p-4 font-bold text-slate-900">{mod.fullName}</td>
                   <td className="p-4 text-slate-500">{mod.email}</td>
                   <td className="p-4">{mod.phone || '—'}</td>
@@ -124,12 +156,15 @@ export const ModeratorsManagement = () => {
                     </span>
                   </td>
                   <td className="p-4">
+                    <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleToggleStatus(mod._id)}
                       className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded text-xs"
                     >
                       {mod.isActive ? 'Deactivate' : 'Activate'}
                     </button>
+                    <button onClick={() => deleteModerators([mod._id])} aria-label={`Delete ${mod.fullName}`} title="Delete moderator" className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-4 w-4" /></button>
+                    </div>
                   </td>
                 </tr>
               ))}
