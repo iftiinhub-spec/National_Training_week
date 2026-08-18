@@ -25,8 +25,6 @@ export const eventDayTimelineError = (event, value) => {
   const startKey = validDate(event.startDate).toISOString().slice(0, 10);
   const endKey = validDate(event.endDate).toISOString().slice(0, 10);
   if (!dayKey || dayKey < startKey || dayKey > endKey) return `Event day must be between ${startKey} and ${endKey}.`;
-  const dayStartsAt = validDate(`${dayKey}T00:00:00+03:00`);
-  if (dayStartsAt <= validDate(event.registrationDeadline)) return 'Event day must occur after registration closes.';
   return null;
 };
 

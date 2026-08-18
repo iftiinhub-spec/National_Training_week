@@ -68,6 +68,31 @@ const validateTrainingDay = async (data, existing = null) => {
   }
 };
 
+const validateStaffAvailability = async (data, existing = null) => {
+  const conflicts = [];
+  const baseFilter = {
+    eventDay: data.eventDay || existing?.eventDay,
+    ...(existing?._id ? { _id: { $ne: existing._id } } : {}),
+    startTime: { $lt: data.endTime ?? existing?.endTime },
+    endTime: { $gt: data.startTime ?? existing?.startTime },
+  };
+
+  if (data.trainer || existing?.trainer) {
+    const trainerId = data.trainer ?? existing?.trainer;
+    if (trainerId && await Training.exists({ ...baseFilter, trainer: trainerId })) conflicts.push('trainer');
+  }
+  if (data.moderator || existing?.moderator) {
+    const moderatorId = data.moderator ?? existing?.moderator;
+    if (moderatorId && await Training.exists({ ...baseFilter, moderator: moderatorId })) conflicts.push('moderator');
+  }
+
+  if (conflicts.length) {
+    const error = new Error(`The assigned ${conflicts.join(' and ')} already has another session at this time on the selected day.`);
+    error.statusCode = 409;
+    throw error;
+  }
+};
+
 const validateTimedStatus = (training, status, now = new Date()) => {
   const startsAt = getTrainingDateTime(training.date, training.startTime);
   const endsAt = getTrainingDateTime(training.date, training.endTime);
@@ -139,6 +164,7 @@ export const createTraining = async (req, res, next) => {
   try {
     const data = normalizeTimes(trainingPayload(req.body));
     await validateTrainingDay(data);
+    await validateStaffAvailability(data);
     if (req.file) data.coverImage = `uploads/coverImage/${req.file.filename}`;
     const training = await Training.create(data);
     return successResponse(res, { training }, 'Training created successfully.', 201);
@@ -152,6 +178,7 @@ export const updateTraining = async (req, res, next) => {
     const existing = await Training.findById(req.params.id);
     if (!existing) return errorResponse(res, 'Training not found.', 404);
     await validateTrainingDay(data, existing);
+    await validateStaffAvailability(data, existing);
     if (req.file) data.coverImage = `uploads/coverImage/${req.file.filename}`;
     // Remove status from update — use dedicated status endpoint
     delete data.status;
@@ -226,6 +253,15 @@ export const assignTrainingStaff = async (req, res, next) => {
       const moderator = await User.findOne({ _id: moderatorId, role: 'moderator', isActive: true });
       if (!moderator) return errorResponse(res, 'Select an active moderator.', 400);
     }
+    const existing = await Training.findById(req.params.id);
+    if (!existing) return errorResponse(res, 'Training not found.', 404);
+    await validateStaffAvailability({
+      eventDay: existing.eventDay,
+      startTime: existing.startTime,
+      endTime: existing.endTime,
+      trainer: trainerId !== undefined ? trainerId : existing.trainer,
+      moderator: moderatorId !== undefined ? moderatorId : existing.moderator,
+    }, existing);
     const update = {};
     if (trainerId !== undefined) update.trainer = trainerId || null;
     if (moderatorId !== undefined) update.moderator = moderatorId || null;
@@ -233,7 +269,6 @@ export const assignTrainingStaff = async (req, res, next) => {
     const training = await Training.findByIdAndUpdate(req.params.id, update, { new: true })
       .populate('trainer', 'name title organization')
       .populate('moderator', 'fullName email');
-    if (!training) return errorResponse(res, 'Training not found.', 404);
     return successResponse(res, { training }, 'Assignments updated successfully.');
   } catch (err) { next(err); }
 };

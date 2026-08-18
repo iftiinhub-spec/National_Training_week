@@ -141,25 +141,8 @@ export const SponsorsManagement = () => {
       </div>
 
       {sponsors.length ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {sponsors.map((sponsor) => (
-            <article key={sponsor._id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="flex h-40 items-center justify-center bg-slate-50 p-7">
-                <img src={imageUrl(sponsor.logo)} alt={`${sponsor.name} logo`} className="max-h-full max-w-full object-contain" />
-              </div>
-              <div className="space-y-4 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div><h2 className="font-black text-slate-950">{sponsor.name}</h2><p className="mt-1 text-xs font-semibold text-[#1a6b3c]">{sponsor.category}</p></div>
-                  {sponsor.isFeatured && <span title="Featured sponsor" className="rounded-lg bg-amber-50 p-2 text-amber-600"><StarIcon className="h-5 w-5" /></span>}
-                </div>
-                <div className="flex flex-wrap gap-2 text-xs text-slate-500"><span className="rounded-full bg-slate-100 px-3 py-1">{sponsor.event?.name || 'Event'}</span><span className="rounded-full bg-slate-100 px-3 py-1">Order {sponsor.displayOrder}</span></div>
-                <div className="flex items-center justify-between border-t border-slate-100 pt-4">
-                  <button onClick={() => toggleStatus(sponsor)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${sponsor.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>{sponsor.isActive ? 'Visible' : 'Hidden'}</button>
-                  <div className="flex gap-1"><button onClick={() => openEdit(sponsor)} aria-label={`Edit ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-[#1a6b3c]"><PencilSquareIcon className="h-5 w-5" /></button><button onClick={() => remove(sponsor)} aria-label={`Delete ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-5 w-5" /></button></div>
-                </div>
-              </div>
-            </article>
-          ))}
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Logo</th><th className="px-4 py-3">Sponsor</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Event</th><th className="px-4 py-3">Order</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{sponsors.map((sponsor) => <tr key={sponsor._id} className="align-middle hover:bg-slate-50/70"><td className="px-4 py-3"><img src={imageUrl(sponsor.logo)} alt={`${sponsor.name} logo`} className="h-12 w-20 object-contain" /></td><td className="px-4 py-3 font-black text-slate-950">{sponsor.name}{sponsor.isFeatured && <StarIcon className="ml-2 inline h-4 w-4 text-amber-500" title="Featured sponsor" />}</td><td className="px-4 py-3 text-xs font-semibold text-[#1a6b3c]">{sponsor.category}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.event?.name || 'Event'}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.displayOrder}</td><td className="px-4 py-3"><button onClick={() => toggleStatus(sponsor)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${sponsor.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>{sponsor.isActive ? 'Visible' : 'Hidden'}</button></td><td className="px-4 py-3"><div className="flex justify-end gap-1"><button onClick={() => openEdit(sponsor)} aria-label={`Edit ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-[#1a6b3c]"><PencilSquareIcon className="h-5 w-5" /></button><button onClick={() => remove(sponsor)} aria-label={`Delete ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-5 w-5" /></button></div></td></tr>)}</tbody></table>
         </div>
       ) : (
         <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><BuildingOffice2Icon className="mx-auto h-11 w-11 text-slate-300" /><h2 className="mt-4 text-lg font-black text-slate-900">No sponsors added yet</h2><p className="mt-2 text-sm text-slate-500">Add the first organization to publish the Home-page sponsor section.</p></div>

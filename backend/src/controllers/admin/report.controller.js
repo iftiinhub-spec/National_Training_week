@@ -54,11 +54,8 @@ export const getOverview = async (req, res, next) => {
 // GET /api/admin/reports/registrations?eventId=
 export const registrationReport = async (req, res, next) => {
   try {
-    const filter = {};
-    if (req.query.eventId) {
-      const trainings = await Training.find({ event: req.query.eventId }).select('_id');
-      filter.training = { $in: trainings.map((t) => t._id) };
-    }
+    const trainingIds = await scopedTrainingIds(req.query);
+    const filter = trainingIds ? { training: { $in: trainingIds } } : {};
 
     const data = await Registration.aggregate([
       { $match: filter },
@@ -67,10 +64,10 @@ export const registrationReport = async (req, res, next) => {
 
     const byTraining = await Registration.aggregate([
       { $match: filter },
-      { $group: { _id: '$training', total: { $sum: 1 }, approved: { $sum: { $cond: [{ $eq: ['$status', 'approved'] }, 1, 0] } } } },
+      { $group: { _id: '$training', total: { $sum: 1 }, approved: { $sum: { $cond: [{ $eq: ['$status', 'approved'] }, 1, 0] } }, pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } }, rejected: { $sum: { $cond: [{ $eq: ['$status', 'rejected'] }, 1, 0] } }, cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } } } },
       { $lookup: { from: 'trainings', localField: '_id', foreignField: '_id', as: 'training' } },
       { $unwind: '$training' },
-      { $project: { title: '$training.title', total: 1, approved: 1 } },
+      { $project: { trainingId: '$_id', title: '$training.title', total: 1, approved: 1, pending: 1, rejected: 1, cancelled: 1 } },
       { $sort: { total: -1 } },
     ]);
 
@@ -99,7 +96,7 @@ export const attendanceReport = async (req, res, next) => {
       { $group: { _id: '$_id.training', statuses: { $push: { status: '$_id.status', count: '$count' } }, total: { $sum: '$count' } } },
       { $lookup: { from: 'trainings', localField: '_id', foreignField: '_id', as: 'training' } },
       { $unwind: '$training' },
-      { $project: { title: '$training.title', statuses: 1, total: 1 } },
+      { $project: { trainingId: '$_id', title: '$training.title', statuses: 1, total: 1 } },
       { $sort: { total: -1 } },
     ]);
 
@@ -136,18 +133,18 @@ export const participantsByType = async (req, res, next) => {
 // GET /api/admin/reports/certificates
 export const certificateReport = async (req, res, next) => {
   try {
-    const filter = {};
-    if (req.query.trainingId) filter.training = req.query.trainingId;
+    const trainingIds = await scopedTrainingIds(req.query);
+    const filter = trainingIds ? { training: { $in: trainingIds } } : {};
     const [total, revoked] = await Promise.all([
       Certificate.countDocuments(filter),
       Certificate.countDocuments({ ...filter, isRevoked: true }),
     ]);
     const byTraining = await Certificate.aggregate([
-      { $match: { isRevoked: false } },
+      { $match: { ...filter, isRevoked: false } },
       { $group: { _id: '$training', count: { $sum: 1 } } },
       { $lookup: { from: 'trainings', localField: '_id', foreignField: '_id', as: 'training' } },
       { $unwind: '$training' },
-      { $project: { title: '$training.title', count: 1 } },
+      { $project: { trainingId: '$_id', title: '$training.title', count: 1 } },
       { $sort: { count: -1 } },
     ]);
     return successResponse(res, { total, revoked, active: total - revoked, byTraining });
@@ -179,7 +176,7 @@ export const feedbackReport = async (req, res, next) => {
       }},
       { $lookup: { from: 'trainings', localField: '_id', foreignField: '_id', as: 'training' } },
       { $unwind: '$training' },
-      { $project: { title: '$training.title', count: 1, avgContent: 1, avgTrainer: 1, avgOrg: 1 } },
+       { $project: { trainingId: '$_id', title: '$training.title', count: 1, avgContent: 1, avgTrainer: 1, avgOrg: 1 } },
       { $sort: { avgContent: -1 } },
     ]);
     return successResponse(res, { summary: data[0] || {}, byTraining });
