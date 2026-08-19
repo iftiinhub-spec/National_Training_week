@@ -6,7 +6,7 @@ const validDate = (value) => {
 export const eventTimelineError = (event) => {
   const startKey = validDate(event?.startDate)?.toISOString().slice(0, 10);
   const endKey = validDate(event?.endDate)?.toISOString().slice(0, 10);
-  const startsAt = startKey ? validDate(`${startKey}T${event.startTime || '09:00'}:00+03:00`) : null;
+  const startsAt = startKey ? validDate(`${startKey}T00:00:00+03:00`) : null;
   const opensAt = validDate(event?.registrationStart);
   const closesAt = validDate(event?.registrationDeadline);
   if (!startKey || !endKey || !startsAt) return 'Valid event start and end dates are required.';
@@ -14,7 +14,7 @@ export const eventTimelineError = (event) => {
   if (Number(startKey.slice(0, 4)) !== Number(event.year) || Number(endKey.slice(0, 4)) !== Number(event.year)) return `The event dates must be in ${event.year}.`;
   if (!opensAt || !closesAt) return 'Valid registration opening and deadline date-times are required.';
   if (opensAt >= closesAt) return 'Registration must open before it closes.';
-  if (closesAt >= startsAt) return 'Registration must close before the event starts.';
+  if (closesAt >= startsAt) return 'Registration must close before the event start date.';
   return null;
 };
 
@@ -34,7 +34,7 @@ export const eventStatusError = (event, status, now = new Date()) => {
   if (timelineError) return timelineError;
   const startKey = validDate(event.startDate).toISOString().slice(0, 10);
   const endKey = validDate(event.endDate).toISOString().slice(0, 10);
-  const startsAt = validDate(`${startKey}T${event.startTime || '09:00'}:00+03:00`);
+  const startsAt = validDate(`${startKey}T00:00:00+03:00`);
   const endsAt = validDate(`${endKey}T23:59:59.999+03:00`);
   const opensAt = validDate(event.registrationStart);
   const closesAt = validDate(event.registrationDeadline);

@@ -50,15 +50,14 @@ test('event validation rejects an impossible year and invalid dates', async () =
   assert.equal(errors.length >= 3, true);
 });
 
-test('event day can share the event start date when registration closes earlier that day', () => {
+test('event day can share the event start date when registration closes before that date', () => {
   const event = {
     name: 'National Training Week 2030',
     year: 2030,
     startDate: '2030-05-20',
-    startTime: '09:30',
     endDate: '2030-05-20',
-    registrationStart: '2030-05-20T07:00:00+03:00',
-    registrationDeadline: '2030-05-20T09:00:00+03:00',
+    registrationStart: '2030-05-19T07:00:00+03:00',
+    registrationDeadline: '2030-05-19T23:00:00+03:00',
   };
   assert.equal(eventDayTimelineError(event, '2030-05-20'), null);
   assert.match(eventDayTimelineError(event, '2030-05-21'), /between 2030-05-20 and 2030-05-20/);

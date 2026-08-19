@@ -7,7 +7,7 @@ import { eventDayTimelineError, eventStatusError, eventTimelineError } from '../
 import { pick } from '../../utils/pick.js';
 import { deleteEventCascade, deleteEventDayCascade } from '../../utils/cascadeDelete.js';
 
-const eventPayload = (input) => pick(input, ['name', 'theme', 'year', 'startDate', 'startTime', 'endDate', 'registrationStart', 'registrationDeadline', 'description', 'status', 'isActive', 'isCurrent']);
+const eventPayload = (input) => pick(input, ['name', 'theme', 'year', 'startDate', 'endDate', 'registrationStart', 'registrationDeadline', 'description', 'status', 'isActive', 'isCurrent']);
 const eventDayPayload = (input) => pick(input, ['dayNumber', 'theme', 'date']);
 
 const dateKey = (value) => {
@@ -64,7 +64,7 @@ const prepareRegistrationWindow = (data, existing = null) => {
   };
   const rawStartDate = data.startDate || existing?.startDate;
   const startDate = typeof rawStartDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawStartDate)
-    ? new Date(`${rawStartDate}T${data.startTime || existing?.startTime || '09:00'}:00+03:00`)
+    ? new Date(`${rawStartDate}T00:00:00+03:00`)
     : parseNairobiDateTime(rawStartDate);
   if (Number.isNaN(startDate.getTime())) throw new Error('A valid event start date is required.');
 
@@ -80,7 +80,7 @@ const prepareRegistrationWindow = (data, existing = null) => {
   }
   const invalidWindow = (message) => { const error = new Error(message); error.statusCode = 400; throw error; };
   if (registrationStart >= registrationDeadline) invalidWindow('Registration must open before it closes.');
-  if (registrationDeadline >= startDate) invalidWindow('Registration must close before the event starts.');
+  if (registrationDeadline >= startDate) invalidWindow('Registration must close before the event start date.');
   const now = new Date();
   const registrationChanged = !existing
     || registrationStart.getTime() !== new Date(existing.registrationStart).getTime()
@@ -93,7 +93,6 @@ const prepareRegistrationWindow = (data, existing = null) => {
   const timelineMessage = eventTimelineError({
     year: data.year ?? existing?.year,
     startDate: rawStartDate,
-    startTime: data.startTime ?? existing?.startTime,
     endDate: data.endDate ?? existing?.endDate,
     registrationStart,
     registrationDeadline,
@@ -103,7 +102,6 @@ const prepareRegistrationWindow = (data, existing = null) => {
   const statusMessage = eventStatusError({
     year: data.year ?? existing?.year,
     startDate: rawStartDate,
-    startTime: data.startTime ?? existing?.startTime,
     endDate: data.endDate ?? existing?.endDate,
     registrationStart,
     registrationDeadline,

@@ -14,6 +14,7 @@ import {
   ArrowTopRightOnSquareIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
+import { formatTimeRange12 } from '../../utils/timeFormat';
 
 export const MyRegistrations = () => {
   const confirmAction = useConfirmDialog();
@@ -105,7 +106,7 @@ export const MyRegistrations = () => {
                     </div>
                     <div className="flex items-center gap-1 font-medium">
                       <ClockIcon className="w-4 h-4 text-[#1a6b3c]" />
-                      <span>{tr.startTime} - {tr.endTime}</span>
+                      <span>{formatTimeRange12(tr.startTime, tr.endTime)}</span>
                     </div>
                     {tr.trainer && (
                       <span className="text-slate-700 font-semibold">

@@ -5,6 +5,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { ClockIcon } from '@heroicons/react/24/outline';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
+import { formatTime12, formatTimeRange12 } from '../../utils/timeFormat';
 
 export const Program = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -196,7 +197,7 @@ const SessionCard = ({ session: s, dayNumber }) => {
         {s.startTime && (
           <span className="absolute top-3 right-3 flex items-center gap-1 bg-black text-white text-[10px] font-medium px-2 py-1 rounded-full">
             <ClockIcon className="w-3 h-3" />
-            {s.startTime}
+            {formatTime12(s.startTime)}
           </span>
         )}
       </div>
@@ -218,7 +219,7 @@ const SessionCard = ({ session: s, dayNumber }) => {
               ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
               : '—'}
           </span>
-          <span>{s.startTime} – {s.endTime}</span>
+          <span>{formatTimeRange12(s.startTime, s.endTime)}</span>
         </div>
       </div>
     </Link>

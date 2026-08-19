@@ -14,6 +14,7 @@ import {
   CheckCircleIcon,
   ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
+import { formatTimeRange12 } from '../../utils/timeFormat';
 
 export const TrainingDetails = () => {
   const { id } = useParams();
@@ -318,7 +319,7 @@ export const TrainingDetails = () => {
                   <ClockIcon className="w-5 h-5 text-[#1da156] shrink-0" />
                   <div>
                     <span className="block font-bold text-black">Time</span>
-                    <span>{startTime || 'TBA'} {endTime ? `- ${endTime}` : ''}</span>
+                    <span>{formatTimeRange12(startTime, endTime)}</span>
                   </div>
                 </div>
 

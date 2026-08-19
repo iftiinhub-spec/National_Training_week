@@ -10,6 +10,7 @@ import {
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useCurrentEvent } from '../../context/EventContext';
+import { formatTimeRange12 } from '../../utils/timeFormat';
 
 const assetUrl = (value) => {
   if (!value) return null;
@@ -93,7 +94,7 @@ export const TrainerDetails = () => {
                     {session.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-black/60">{session.description}</p>}
                     <div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold text-black/60">
                       <span className="inline-flex items-center gap-1.5"><CalendarDaysIcon className="h-4 w-4 text-[#1da156]" />{new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                      <span className="inline-flex items-center gap-1.5"><ClockIcon className="h-4 w-4 text-[#1da156]" />{session.startTime}–{session.endTime}</span>
+                      <span className="inline-flex items-center gap-1.5"><ClockIcon className="h-4 w-4 text-[#1da156]" />{formatTimeRange12(session.startTime, session.endTime)}</span>
                     </div>
                   </Link>
                 ))}

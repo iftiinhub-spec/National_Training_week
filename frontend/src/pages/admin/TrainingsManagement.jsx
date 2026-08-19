@@ -7,6 +7,7 @@ import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { formatTimeRange12, toTimeInputValue } from '../../utils/timeFormat';
 
 const TRAINING_STATUSES = [
   ['draft', 'Draft'],
@@ -58,15 +59,6 @@ const statusIsAvailable = (training, status) => {
     return Number.isFinite(endsAt) && now >= endsAt;
   }
   return true;
-};
-
-const toTimeInputValue = (value = '') => {
-  if (/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return value;
-  const match = value.match(/^(0?[1-9]|1[0-2]):([0-5]\d)\s*(AM|PM)$/i);
-  if (!match) return '';
-  let hour = Number(match[1]) % 12;
-  if (match[3].toUpperCase() === 'PM') hour += 12;
-  return `${String(hour).padStart(2, '0')}:${match[2]}`;
 };
 
 const assetUrl = (value) => value ? (value.startsWith('http') ? value : `/${value.replace(/^\//, '')}`) : '';
@@ -349,7 +341,7 @@ export const TrainingsManagement = () => {
                   </td>
                   <td className="p-4">
                     <span className="block text-slate-900">{tr.date ? new Date(tr.date).toLocaleDateString() : '—'}</span>
-                    <span className="text-[11px] text-slate-400">{tr.startTime} - {tr.endTime}</span>
+                    <span className="text-[11px] text-slate-400">{formatTimeRange12(tr.startTime, tr.endTime)}</span>
                   </td>
                   <td className="p-4">
                     <div className={`relative inline-flex min-w-44 items-center rounded-full border ${statusControlClass(tr.status)}`}>

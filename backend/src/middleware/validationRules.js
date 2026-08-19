@@ -136,7 +136,6 @@ export const eventValidation = [
   body('year').isInt({ min: 2020, max: 2200 }).withMessage('Enter a valid event year.').toInt(),
   body('startDate').isISO8601().withMessage('Enter a valid event start date.'),
   body('endDate').isISO8601().withMessage('Enter a valid event end date.'),
-  body('startTime').optional({ checkFalsy: true }).matches(/^([01]\d|2[0-3]):[0-5]\d$/),
   body('registrationStart').optional({ checkFalsy: true }).isISO8601(),
   body('registrationDeadline').optional({ checkFalsy: true }).isISO8601(),
   body('description').optional({ checkFalsy: true }).trim().isLength({ max: 5000 }),

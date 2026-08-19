@@ -3,7 +3,7 @@ import Training from '../models/Training.js';
 export const getAutomaticEventStatus = (event, now = new Date()) => {
   if (!event || event.status === 'draft' || event.status === 'completed') return event?.status;
   const eventStart = event.startDate
-    ? new Date(`${new Date(event.startDate).toISOString().slice(0, 10)}T${event.startTime || '09:00'}:00+03:00`)
+    ? new Date(`${new Date(event.startDate).toISOString().slice(0, 10)}T00:00:00+03:00`)
     : null;
   const eventEnd = event.endDate
     ? new Date(`${new Date(event.endDate).toISOString().slice(0, 10)}T23:59:59+03:00`)

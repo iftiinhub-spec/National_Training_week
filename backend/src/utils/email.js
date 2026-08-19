@@ -108,7 +108,7 @@ export const closeEmailTransporter = () => {
 
 export const sendInvitationEmail = ({ to, trainingTitle, eventName, meetingUrl, meetingId, passcode, startTime, platform, notes }) => {
   const platformNames = { zoom: 'Zoom', google_meet: 'Google Meet', teams: 'Microsoft Teams', other: 'Online' };
-  return sendEmail({ to, subject: `Invitation: ${trainingTitle} — National Training Week`, html: emailLayout({ title: 'Your training invitation', preview: `Join ${trainingTitle}`, body: `<p style="margin-top:0">You are invited to attend the following expert-led session.</p>${emailInfoCard([['Training', trainingTitle], ['Event', eventName], ['Date and time', startTime ? new Date(startTime).toLocaleString() : ''], ['Platform', platformNames[platform] || platform], ['Meeting ID', meetingId], ['Passcode', passcode]])}${emailButton('Join the live session', meetingUrl)}${notes ? `<p style="background:#fefce8;border-radius:10px;padding:14px"><strong>Joining notes:</strong> ${escapeHtml(notes)}</p>` : ''}<p>Keep this email available for the session. The meeting link is intended for registered attendees.</p>` }) });
+  return sendEmail({ to, subject: `Invitation: ${trainingTitle} — National Training Week`, html: emailLayout({ title: 'Your training invitation', preview: `Join ${trainingTitle}`, body: `<p style="margin-top:0">You are invited to attend the following expert-led session.</p>${emailInfoCard([['Training', trainingTitle], ['Event', eventName], ['Date and time', startTime ? new Date(startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short', hour12: true }) : ''], ['Platform', platformNames[platform] || platform], ['Meeting ID', meetingId], ['Passcode', passcode]])}${emailButton('Join the live session', meetingUrl)}${notes ? `<p style="background:#fefce8;border-radius:10px;padding:14px"><strong>Joining notes:</strong> ${escapeHtml(notes)}</p>` : ''}<p>Keep this email available for the session. The meeting link is intended for registered attendees.</p>` }) });
 };
 
 const formatRemainingTime = (startTime) => {
@@ -130,7 +130,7 @@ export const sendReminderEmail = ({ to, trainingTitle, startTime, type = 'remind
   const labels = { reminder: 'Session reminder', schedule_change: 'Schedule change', cancellation: 'Cancellation notice' };
   const label = labels[type] || 'Session notice';
   const timingMessage = type === 'reminder' ? formatRemainingTime(startTime) : 'There is an update to your training session.';
-  const formattedStart = startTime ? new Date(startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'full', timeStyle: 'short' }) : '';
+  const formattedStart = startTime ? new Date(startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'full', timeStyle: 'short', hour12: true }) : '';
   return sendEmail({ to, subject: `${label}: ${trainingTitle}`, html: emailLayout({ eyebrow: label, title: trainingTitle, preview: `${label}: ${trainingTitle}`, body: `<p style="margin-top:0"><strong>${escapeHtml(timingMessage)}</strong></p>${emailInfoCard([['Training', trainingTitle], ['Scheduled start', formattedStart], ...(type === 'reminder' ? [['Time remaining', timingMessage.replace(/^The session (starts|is starting) /, '').replace(/\.$/, '')]] : [])])}<p>Open your participant portal for the latest schedule and access information. For security, meeting access is not included in reminder emails.</p>` }) });
 };
 

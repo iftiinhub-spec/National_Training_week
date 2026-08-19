@@ -6,6 +6,7 @@ import { useCurrentEvent } from '../../context/EventContext';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
+import { formatTimeRange12 } from '../../utils/timeFormat';
 
 const photoUrl = (p) => {
   if (!p) return null;
@@ -70,7 +71,7 @@ const TrainingCard = ({ training: t }) => (
             ? new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
             : '—'}
         </span>
-        <span>{t.startTime} – {t.endTime}</span>
+        <span>{formatTimeRange12(t.startTime, t.endTime)}</span>
       </div>
     </div>
   </Link>
