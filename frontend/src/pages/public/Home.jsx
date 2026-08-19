@@ -17,6 +17,7 @@ import {
   UserGroupIcon,
   HeartIcon,
 } from '@heroicons/react/24/outline';
+import { formatTime12, formatTimeRange12 } from '../../utils/timeFormat';
 
 /* ── Countdown hook ──────────────────────────────── */
 const useCountdown = (target) => {
@@ -87,7 +88,7 @@ export const Home = () => {
   const now = Date.now();
   const registrationOpensAt = event?.registrationStart ? new Date(event.registrationStart).getTime() : null;
   const registrationClosesAt = event?.registrationDeadline ? new Date(event.registrationDeadline).getTime() : null;
-  const eventStartsAt = event?.startDate ? new Date(`${event.startDate.slice(0, 10)}T${event.startTime || '09:00'}:00+03:00`).getTime() : null;
+  const eventStartsAt = event?.startDate ? new Date(`${event.startDate.slice(0, 10)}T00:00:00+03:00`).getTime() : null;
   const eventEndsAt = event?.endDate ? new Date(`${event.endDate.slice(0, 10)}T23:59:59+03:00`).getTime() : null;
   const formatStageDate = (timestamp) => timestamp ? new Date(timestamp).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) : '';
   const todayKey = new Date(now).toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
@@ -541,7 +542,7 @@ const HomeSessionCard = ({ session: s }) => {
         {(s.startTime || s.endTime) && (
           <span className="absolute top-3 right-3 flex items-center gap-1 bg-black text-white text-[10px] font-medium px-2 py-1 rounded-full">
             <ClockIcon className="w-3 h-3" />
-            {s.startTime}
+            {formatTime12(s.startTime)}
           </span>
         )}
       </div>
@@ -558,7 +559,7 @@ const HomeSessionCard = ({ session: s }) => {
               ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
               : '—'}
           </span>
-          <span>{s.startTime} – {s.endTime}</span>
+          <span>{formatTimeRange12(s.startTime, s.endTime)}</span>
         </div>
       </div>
     </Link>

@@ -43,7 +43,7 @@ export const createMeeting = async (req, res, next) => {
     const existing = await Meeting.findOne({ training: trainingId });
     if (existing) return errorResponse(res, 'A meeting already exists. Use PUT to update it.', 409);
 
-    const meeting = await Meeting.create({ ...meetingPayload(req.body), training: trainingId, createdBy: req.user._id });
+    const meeting = await Meeting.create({ ...meetingPayload(req.body), training: trainingId, createdBy: req.user._id, isReleased: true });
     return successResponse(res, { meeting }, 'Meeting created successfully.', 201);
   } catch (err) { next(err); }
 };
@@ -57,7 +57,7 @@ export const updateMeeting = async (req, res, next) => {
 
     const meeting = await Meeting.findOneAndUpdate(
       { training: trainingId },
-      meetingPayload(req.body),
+      { ...meetingPayload(req.body), isReleased: true },
       { new: true, runValidators: true }
     );
     if (!meeting) return errorResponse(res, 'Meeting not found.', 404);
@@ -104,7 +104,11 @@ export const sendTrainerInvitation = async (req, res, next) => {
 
     const training = await Training.findById(trainingId).populate('trainer').populate('event', 'name');
     if (!training) return errorResponse(res, 'Training not found.', 404);
+    const trainerInviteStartsAt = getTrainingDateTime(training.date, training.startTime);
     const trainerInviteEndsAt = getTrainingDateTime(training.date, training.endTime);
+    if (trainerInviteStartsAt && new Date() < new Date(trainerInviteStartsAt.getTime() - 30 * 60 * 1000)) {
+      return errorResponse(res, 'Trainer invitations can be sent starting 30 minutes before the session.', 400);
+    }
     if (trainerInviteEndsAt && trainerInviteEndsAt <= new Date()) {
       return errorResponse(res, 'This session has already ended. Invitations can no longer be sent.', 400);
     }
@@ -147,12 +151,17 @@ export const sendParticipantInvitations = async (req, res, next) => {
   try {
     const { trainingId } = req.params;
     const { type = 'invitation', selectedIds } = req.body;
+    if (type === 'reminder') return errorResponse(res, 'Session reminders are sent automatically 24 hours and 1 hour before the session.', 400);
     const hasAccess = await checkModeratorAccess(trainingId, req.user._id, req.user.role);
     if (!hasAccess) return errorResponse(res, 'Access denied.', 403);
 
     const training = await Training.findById(trainingId).populate('event', 'name');
     if (!training) return errorResponse(res, 'Training not found.', 404);
+    const participantInviteStartsAt = getTrainingDateTime(training.date, training.startTime);
     const participantInviteEndsAt = getTrainingDateTime(training.date, training.endTime);
+    if (participantInviteStartsAt && new Date() < new Date(participantInviteStartsAt.getTime() - 30 * 60 * 1000)) {
+      return errorResponse(res, 'Participant invitations can be sent starting 30 minutes before the session.', 400);
+    }
     if (participantInviteEndsAt && participantInviteEndsAt <= new Date()) {
       return errorResponse(res, 'This session has already ended. Invitations can no longer be sent.', 400);
     }

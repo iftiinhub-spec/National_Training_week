@@ -14,7 +14,7 @@ const communicationSchema = new mongoose.Schema(
     },
     recipientType: {
       type: String,
-      enum: ['trainer', 'all_approved', 'selected', 'all'],
+      enum: ['trainer', 'all_approved', 'selected', 'all', 'automatic'],
       required: true,
     },
     recipients: [{ type: String }], // Array of email addresses
@@ -23,7 +23,7 @@ const communicationSchema = new mongoose.Schema(
     sentBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
     },
     sentAt: { type: Date, default: Date.now },
     deliveryStatus: {

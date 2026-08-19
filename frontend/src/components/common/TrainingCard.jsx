@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 import { CalendarIcon, ClockIcon, UserIcon } from '@heroicons/react/24/outline';
+import { formatTimeRange12 } from '../../utils/timeFormat';
 
 export const TrainingCard = ({ training }) => {
   const {
@@ -91,7 +92,7 @@ export const TrainingCard = ({ training }) => {
             </div>
             <div className="flex items-center gap-2">
               <ClockIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{startTime || 'TBA'} {endTime ? `- ${endTime}` : ''}</span>
+              <span>{formatTimeRange12(startTime, endTime)}</span>
             </div>
             {trainer && (
               <div className="flex items-center gap-2 pt-1 border-t border-slate-100">

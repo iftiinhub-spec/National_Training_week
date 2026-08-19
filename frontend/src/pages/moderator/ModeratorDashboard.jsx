@@ -5,6 +5,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../context/AuthContext';
 import { AcademicCapIcon, CalendarIcon, CheckCircleIcon, ClockIcon, UserIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline';
+import { formatTimeRange12 } from '../../utils/timeFormat';
 
 export const ModeratorDashboard = () => {
   const { user } = useAuth();
@@ -80,7 +81,7 @@ export const ModeratorDashboard = () => {
                     </span>
                     <span className="flex items-center gap-1 font-medium">
                       <ClockIcon className="w-4 h-4 text-[#1a6b3c]" />
-                      {tr.startTime} - {tr.endTime}
+                      {formatTimeRange12(tr.startTime, tr.endTime)}
                     </span>
                     {tr.trainer && (
                       <span className="flex items-center gap-1 text-slate-800 font-semibold">

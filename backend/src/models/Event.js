@@ -13,7 +13,6 @@ const eventSchema = new mongoose.Schema(
       required: [true, 'Year is required'],
     },
     startDate: { type: Date, required: [true, 'Start date is required'] },
-    startTime: { type: String, default: '09:00' },
     endDate: { type: Date, required: [true, 'End date is required'] },
     registrationStart: { type: Date },
     registrationDeadline: { type: Date },

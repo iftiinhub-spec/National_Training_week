@@ -131,7 +131,7 @@ export const getMyRegistration = async (req, res, next) => {
     let materials = [];
     if (reg.status === 'approved') {
       [meeting, materials] = await Promise.all([
-        Meeting.findOne({ training: reg.training._id, isReleased: true })
+        Meeting.findOne({ training: reg.training._id })
           .select('platform meetingUrl meetingId passcode startTime endTime notes'),
         TrainingMaterial.find({ training: reg.training._id })
           .select('title url description createdAt').sort({ createdAt: -1 }),

@@ -13,18 +13,16 @@ const minimumFutureDateTime = () => {
 };
 
 const datePart = (dateTime = '') => dateTime.split('T')[0] || '';
-const timePart = (dateTime = '') => dateTime.split('T')[1] || '';
-const minuteAfter = (dateTime = '') => {
-  if (!dateTime) return '';
+const nextDatePart = (dateTime = '') => {
   const date = new Date(dateTime);
-  date.setMinutes(date.getMinutes() + 1);
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  if (!Number.isFinite(date.getTime())) return '';
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().slice(0, 10);
 };
-
 const availableEventStatus = (form) => {
   const opensAt = new Date(form.registrationStart).getTime();
   const closesAt = new Date(form.registrationDeadline).getTime();
-  const startsAt = form.startDate && form.startTime ? new Date(`${form.startDate}T${form.startTime}`).getTime() : Number.NaN;
+  const startsAt = form.startDate ? new Date(`${form.startDate}T00:00`).getTime() : Number.NaN;
   const endsAt = form.endDate ? new Date(`${form.endDate}T23:59:59`).getTime() : Number.NaN;
   if (![opensAt, closesAt, startsAt, endsAt].every(Number.isFinite)) return null;
   const now = Date.now();
@@ -56,7 +54,6 @@ export const EventsManagement = () => {
     theme: '',
     year: '',
     startDate: '',
-    startTime: '',
     endDate: '',
     registrationStart: '',
     registrationDeadline: '',
@@ -101,8 +98,8 @@ export const EventsManagement = () => {
 
   const handleEventSubmit = async (e) => {
     e.preventDefault();
-    const eventStartsAt = eventForm.startDate && eventForm.startTime
-      ? new Date(`${eventForm.startDate}T${eventForm.startTime}`).getTime()
+    const eventStartsAt = eventForm.startDate
+      ? new Date(`${eventForm.startDate}T00:00`).getTime()
       : Number.NaN;
     const registrationOpensAt = new Date(eventForm.registrationStart).getTime();
     const registrationClosesAt = new Date(eventForm.registrationDeadline).getTime();
@@ -115,7 +112,7 @@ export const EventsManagement = () => {
       return;
     }
     if (registrationClosesAt >= eventStartsAt) {
-      toast.error('Registration must close before the event starts.');
+      toast.error('Registration must close before the event start date.');
       return;
     }
     const validStatus = availableEventStatus(eventForm);
@@ -183,7 +180,6 @@ export const EventsManagement = () => {
       theme: event.theme || '',
       year: event.year,
       startDate: event.startDate ? event.startDate.split('T')[0] : '',
-      startTime: event.startTime || '09:00',
       endDate: event.endDate ? event.endDate.split('T')[0] : '',
       registrationStart: toNairobiInput(event.registrationStart),
       registrationDeadline: toNairobiInput(event.registrationDeadline),
@@ -269,7 +265,6 @@ export const EventsManagement = () => {
               theme: '',
               year: '',
               startDate: '',
-              startTime: '',
               endDate: '',
               registrationStart: '',
               registrationDeadline: '',
@@ -414,25 +409,23 @@ export const EventsManagement = () => {
                   <input
                     type="datetime-local"
                     min={eventForm.registrationStart || minimumFutureDateTime()}
-                    max={eventForm.startDate && eventForm.startTime ? `${eventForm.startDate}T${eventForm.startTime}` : undefined}
+                    max={eventForm.startDate ? `${eventForm.startDate}T00:00` : undefined}
                     value={eventForm.registrationDeadline}
                     onChange={(e) => {
                       const deadline = e.target.value;
                       const deadlineDate = datePart(deadline);
                       const startIsTooEarly = eventForm.startDate && eventForm.startDate < deadlineDate;
-                      const sameDayTimeIsTooEarly = eventForm.startDate === deadlineDate
-                        && eventForm.startTime && eventForm.startTime <= timePart(deadline);
                       setEventForm({
                         ...eventForm,
                         registrationDeadline: deadline,
-                        ...(startIsTooEarly || sameDayTimeIsTooEarly ? { startDate: '', endDate: '', startTime: '' } : {}),
+                        ...(startIsTooEarly || eventForm.startDate === deadlineDate ? { startDate: '', endDate: '' } : {}),
                       });
                     }}
                     className="w-full p-2.5 rounded-lg border border-slate-300 bg-white"
                     required
                   />
                 </div>
-                <p className="sm:col-span-2 text-[11px] leading-5 text-slate-500">Choose when registration opens and closes. Both must be before the event start date and time.</p>
+                <p className="sm:col-span-2 text-[11px] leading-5 text-slate-500">Choose when registration opens and closes. Both must be before the event start date.</p>
               </div>
 
               <div>
@@ -447,7 +440,7 @@ export const EventsManagement = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Year</label>
                   <input
@@ -464,7 +457,7 @@ export const EventsManagement = () => {
                   <label className="block font-bold uppercase text-slate-700 mb-1">Start Date</label>
                   <input
                     type="date"
-                    min={datePart(eventForm.registrationDeadline) || (eventForm.year ? `${eventForm.year}-01-01` : undefined)}
+                    min={nextDatePart(eventForm.registrationDeadline) || (eventForm.year ? `${eventForm.year}-01-01` : undefined)}
                     max={eventForm.year ? `${eventForm.year}-12-31` : undefined}
                     value={eventForm.startDate}
                     onChange={(e) => {
@@ -472,7 +465,7 @@ export const EventsManagement = () => {
                         ...eventForm,
                         startDate: e.target.value,
                         ...(eventForm.endDate && eventForm.endDate < e.target.value ? { endDate: '' } : {}),
-                        ...(e.target.value !== datePart(eventForm.registrationDeadline) ? {} : { startTime: '' }),
+                        ...(e.target.value <= datePart(eventForm.registrationDeadline) ? { startDate: '', endDate: '' } : {}),
                       });
                     }}
                     className="w-full p-2.5 rounded-lg border border-slate-300"
@@ -490,10 +483,6 @@ export const EventsManagement = () => {
                     className="w-full p-2.5 rounded-lg border border-slate-300"
                     required
                   />
-                </div>
-                <div>
-                  <label className="block font-bold uppercase text-slate-700 mb-1">Event Starts</label>
-                  <input type="time" min={eventForm.startDate === datePart(eventForm.registrationDeadline) ? minuteAfter(eventForm.registrationDeadline) : undefined} value={eventForm.startTime} onChange={(e) => setEventForm({ ...eventForm, startTime: e.target.value })} className="w-full p-2.5 rounded-lg border border-slate-300" required />
                 </div>
               </div>
 
