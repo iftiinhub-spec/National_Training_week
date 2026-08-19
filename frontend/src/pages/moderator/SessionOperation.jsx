@@ -92,21 +92,6 @@ export const SessionOperation = () => {
     }
   };
 
-  // Release Meeting to Participants
-  const handleToggleRelease = async () => {
-    try {
-      const res = await api.patch(`/moderator/trainings/${trainingId}/meeting/release`, {
-        isReleased: !meeting?.isReleased,
-      });
-      if (res.success) {
-        toast.success(res.message);
-        setMeeting(res.data.meeting);
-      }
-    } catch (err) {
-      toast.error(err.message || 'Release status update failed.');
-    }
-  };
-
   // Send Trainer Email Invitation
   const handleSendTrainerInvite = async () => {
     try {
@@ -119,10 +104,10 @@ export const SessionOperation = () => {
     }
   };
 
-  // Send Participant Email Invitations / Reminders
-  const handleSendParticipantInvites = async (type = 'invitation') => {
+  // Send participant invitations manually; reminders are automatic.
+  const handleSendParticipantInvitation = async () => {
     try {
-      const res = await api.post(`/moderator/trainings/${trainingId}/invitations/participants`, { type });
+      const res = await api.post(`/moderator/trainings/${trainingId}/invitations/participants`, { type: 'invitation' });
       if (res.success) {
         toast.success(res.message || 'Emails sent to approved participants!');
       }
@@ -263,18 +248,6 @@ export const SessionOperation = () => {
               <h3 className="text-lg font-bold text-slate-900">Meeting Configuration</h3>
               <p className="text-xs text-slate-500">Enter the meeting details supplied by Zoom, Teams, Google Meet, or your selected provider.</p>
             </div>
-            {meeting && (
-              <button
-                onClick={handleToggleRelease}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
-                  meeting.isReleased
-                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                    : 'bg-emerald-600 text-white shadow-xs'
-                }`}
-              >
-                {meeting.isReleased ? 'Hide from Participants' : 'Release to Participants'}
-              </button>
-            )}
           </div>
 
           <form onSubmit={handleSaveMeeting} className="space-y-4 max-w-2xl">
@@ -405,19 +378,13 @@ export const SessionOperation = () => {
 
               <div className="space-y-2">
                 <button
-                  onClick={() => handleSendParticipantInvites('invitation')}
+                  onClick={handleSendParticipantInvitation}
                   disabled={!meeting}
                   className="w-full py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50"
                 >
                   Send Invitation Email to Approved Participants
                 </button>
 
-                <button
-                  onClick={() => handleSendParticipantInvites('reminder')}
-                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50"
-                >
-                  Send Session Reminder Email
-                </button>
               </div>
             </div>
 

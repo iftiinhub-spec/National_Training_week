@@ -16,12 +16,33 @@ import {
 } from '@heroicons/react/24/outline';
 import { formatTimeRange12 } from '../../utils/timeFormat';
 
+const getSessionStart = (meeting) => {
+  if (!meeting?.sessionDate || !meeting?.sessionStartTime) return null;
+  const value = new Date(`${String(meeting.sessionDate).slice(0, 10)}T${meeting.sessionStartTime}:00+03:00`);
+  return Number.isFinite(value.getTime()) ? value : null;
+};
+
+const formatCountdown = (milliseconds) => {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+};
+
 export const MyRegistrations = () => {
   const confirmAction = useConfirmDialog();
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!modalOpen) return undefined;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [modalOpen]);
 
   const fetchRegistrations = async () => {
     try {
@@ -45,7 +66,11 @@ export const MyRegistrations = () => {
       const res = await api.get(`/participant/registrations/${regId}`);
       if (res.success && res.data) {
         if (res.data.meeting) {
-          setSelectedMeeting(res.data.meeting);
+          setSelectedMeeting({
+            ...res.data.meeting,
+            sessionDate: res.data.registration?.training?.date,
+            sessionStartTime: res.data.registration?.training?.startTime,
+          });
           setModalOpen(true);
         } else {
           toast.error('Meeting details have not been released by the Moderator yet.');
@@ -219,14 +244,19 @@ export const MyRegistrations = () => {
             </div>
 
             <div className="pt-2 flex justify-end">
-              <a
-                href={selectedMeeting.meetingUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full text-center py-3 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-sm transition-colors"
-              >
-                Launch & Join Meeting Now
-              </a>
+              {(() => {
+                const sessionStart = getSessionStart(selectedMeeting);
+                const waiting = sessionStart && now < sessionStart.getTime();
+                return waiting ? (
+                  <button type="button" disabled className="w-full cursor-not-allowed rounded-xl bg-slate-200 py-3 text-center text-sm font-bold text-slate-500">
+                    Join available in {formatCountdown(sessionStart.getTime() - now)}
+                  </button>
+                ) : (
+                  <a href={selectedMeeting.meetingUrl} target="_blank" rel="noopener noreferrer" className="block w-full rounded-xl bg-[#1a6b3c] py-3 text-center text-sm font-bold text-white transition-colors hover:bg-[#124d2a]">
+                    Launch & Join Meeting Now
+                  </a>
+                );
+              })()}
             </div>
           </div>
         </div>

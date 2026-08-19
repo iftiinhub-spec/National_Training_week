@@ -4,19 +4,23 @@ import { AcademicCapIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, ChevronDown
 import api from '../../api/axios';
 import { formatTimeRange12 } from '../../utils/timeFormat';
 
-const sessionTime = (session) => new Date(`${String(session.date).slice(0, 10)}T${session.startTime || '00:00'}:00`).getTime();
+const sessionTime = (session) => new Date(`${String(session.date).slice(0, 10)}T${session.startTime || '00:00'}:00+03:00`).getTime();
+const sessionEndTime = (session) => new Date(`${String(session.date).slice(0, 10)}T${session.endTime || '23:59'}:00+03:00`).getTime();
+const countdown = (milliseconds) => { const seconds = Math.max(0, Math.ceil(milliseconds / 1000)); return `${Math.floor(seconds / 3600)}h ${String(Math.floor((seconds % 3600) / 60)).padStart(2, '0')}m ${String(seconds % 60).padStart(2, '0')}s`; };
 const statusStyle = { ongoing: 'bg-green-100 text-green-800', completed: 'bg-black/5 text-black/60', registration_open: 'bg-green-50 text-green-800', published: 'bg-green-50 text-green-800', draft: 'bg-black/5 text-black/60', cancelled: 'bg-red-50 text-red-700' };
 
 export default function TrainerDashboard({ sessionsOnly = false }) {
   const [data, setData] = useState(null);
   const [expanded, setExpanded] = useState(null);
+  const [now, setNow] = useState(Date.now());
   const load = async () => { try { const response = await api.get('/trainer/dashboard'); setData(response.data); } catch (error) { toast.error(error.message || 'Unable to load trainer workspace.'); } };
   useEffect(() => { load(); }, []);
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
 
   const summary = useMemo(() => {
     const sessions = data?.sessions || [];
     const now = Date.now();
-    const upcoming = sessions.filter((item) => sessionTime(item) >= now && item.status !== 'cancelled').sort((a, b) => sessionTime(a) - sessionTime(b));
+    const upcoming = sessions.filter((item) => sessionEndTime(item) >= now && !['cancelled', 'completed'].includes(item.status)).sort((a, b) => sessionTime(a) - sessionTime(b));
     const participants = sessions.reduce((total, item) => total + item.participants.length, 0);
     const present = sessions.reduce((total, item) => total + item.attendancePresent, 0);
     const ratings = sessions.flatMap((item) => item.feedback.map((feedback) => feedback.trainerRating)).filter(Number.isFinite);
@@ -39,7 +43,7 @@ export default function TrainerDashboard({ sessionsOnly = false }) {
     </section>
 
     <section className="grid gap-5 lg:grid-cols-[1.4fr_.6fr]">
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm"><span className="absolute inset-y-0 left-0 w-1.5 bg-[#1a6b3c]" /><p className="text-xs font-bold uppercase tracking-[.14em] text-[#1a6b3c]">Next session</p>{nextSession ? <div className="mt-4"><h2 className="text-2xl font-bold text-slate-950">{nextSession.title}</h2><div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600"><span className="inline-flex items-center gap-2"><CalendarDaysIcon className="h-5 w-5 text-[#1a6b3c]" />{new Date(nextSession.date).toLocaleDateString()}</span><span className="inline-flex items-center gap-2"><ClockIcon className="h-5 w-5 text-[#1a6b3c]" />{formatTimeRange12(nextSession.startTime, nextSession.endTime)}</span><span className="inline-flex items-center gap-2"><MapPinIcon className="h-5 w-5 text-[#1a6b3c]" />Day {nextSession.eventDay?.dayNumber || '—'}</span></div>{nextSession.meeting ? <a href={nextSession.meeting.meetingUrl} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#1da156] px-5 py-3 text-sm font-bold text-white"><VideoCameraIcon className="h-5 w-5" /> Join meeting</a> : <p className="mt-5 text-sm text-slate-500">Meeting access has not been added by the administrator.</p>}</div> : <p className="mt-4 text-sm text-slate-500">No upcoming session is currently assigned.</p>}</div>
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm"><span className="absolute inset-y-0 left-0 w-1.5 bg-[#1a6b3c]" /><p className="text-xs font-bold uppercase tracking-[.14em] text-[#1a6b3c]">Next session</p>{nextSession ? <div className="mt-4"><h2 className="text-2xl font-bold text-slate-950">{nextSession.title}</h2><div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600"><span className="inline-flex items-center gap-2"><CalendarDaysIcon className="h-5 w-5 text-[#1a6b3c]" />{new Date(nextSession.date).toLocaleDateString()}</span><span className="inline-flex items-center gap-2"><ClockIcon className="h-5 w-5 text-[#1a6b3c]" />{formatTimeRange12(nextSession.startTime, nextSession.endTime)}</span><span className="inline-flex items-center gap-2"><MapPinIcon className="h-5 w-5 text-[#1a6b3c]" />Day {nextSession.eventDay?.dayNumber || '—'}</span></div>{nextSession.meeting ? sessionTime(nextSession) > now ? <button type="button" disabled className="mt-5 inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-slate-200 px-5 py-3 text-sm font-bold text-slate-500"><VideoCameraIcon className="h-5 w-5" /> Join available in {countdown(sessionTime(nextSession) - now)}</button> : <a href={nextSession.meeting.meetingUrl} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#1da156] px-5 py-3 text-sm font-bold text-white"><VideoCameraIcon className="h-5 w-5" /> Join meeting</a> : <p className="mt-5 text-sm text-slate-500">Meeting access has not been added by the administrator.</p>}</div> : <p className="mt-4 text-sm text-slate-500">No upcoming session is currently assigned.</p>}</div>
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Workspace summary</p><dl className="mt-4 space-y-4"><SummaryRow label="Learning materials" value={data.sessions.reduce((sum, item) => sum + item.materials.length, 0)} /><SummaryRow label="Completed sessions" value={data.sessions.filter((item) => item.status === 'completed').length} /><SummaryRow label="Feedback comments" value={data.sessions.reduce((sum, item) => sum + item.feedback.filter((feedback) => feedback.comments).length, 0)} /></dl></div>
     </section></>}
 
