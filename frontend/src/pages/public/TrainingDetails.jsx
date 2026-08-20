@@ -24,7 +24,7 @@ export const TrainingDetails = () => {
   const [training, setTraining] = useState(null);
   const [registeredCount, setRegisteredCount] = useState(0);
   const [userRegistration, setUserRegistration] = useState(null);
-  const [myRegistrations, setMyRegistrations] = useState([]);
+  // const [myRegistrations, setMyRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,7 +48,7 @@ export const TrainingDetails = () => {
         const res = await api.get('/participant/registrations');
         if (res.success && res.data) {
           const records = res.data || [];
-          setMyRegistrations(records);
+          // setMyRegistrations(records);
           const found = records.find((r) => r.training?._id === id || r.training === id);
           if (found) setUserRegistration(found);
         }
@@ -116,11 +116,11 @@ export const TrainingDetails = () => {
     ? registrationNow >= new Date(event.registrationStart).getTime() && registrationNow < new Date(event.registrationDeadline).getTime()
     : false;
   const isOpen = ['published', 'registration_open'].includes(status) && eventRegistrationOpen;
-  const dayConflict = myRegistrations.find((registration) =>
-    ['pending', 'approved'].includes(registration.status)
-    && registration.training?._id !== id
-    && registration.training?.eventDay?._id === eventDay?._id
-  );
+  // const dayConflict = myRegistrations.find((registration) =>
+  //   ['pending', 'approved'].includes(registration.status)
+  //   && registration.training?._id !== id
+  //   && registration.training?.eventDay?._id === eventDay?._id
+  // );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 bg-white min-h-screen">
@@ -279,11 +279,6 @@ export const TrainingDetails = () => {
                   >
                     View in My Portal
                   </Link>
-                </div>
-              ) : dayConflict ? (
-                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs leading-5 text-amber-900">
-                  <strong className="block">Another session is already selected for this day.</strong>
-                  You have an active registration for “{dayConflict.training?.title}”. Cancel it before selecting a different Day {eventDay?.dayNumber} session.
                 </div>
               ) : isOpen ? (
                 <button

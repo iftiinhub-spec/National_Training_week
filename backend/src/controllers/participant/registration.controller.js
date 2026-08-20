@@ -30,19 +30,19 @@ export const registerForTraining = async (req, res, next) => {
       return errorResponse(res, 'Registration for this event has closed.', 400);
     }
 
-    const sameDayTrainings = await Training.find({
-      _id: { $ne: training._id },
-      eventDay: training.eventDay?._id || training.eventDay,
-    }).select('_id title');
-    const conflict = await Registration.findOne({
-      participant: participantId,
-      training: { $in: sameDayTrainings.map((item) => item._id) },
-      status: { $in: ['pending', 'approved'] },
-    }).populate('training', 'title');
-    if (conflict) {
-      const dayLabel = training.eventDay?.dayNumber ? `Day ${training.eventDay.dayNumber}` : 'this event day';
-      return errorResponse(res, `You already have an active registration for “${conflict.training.title}” on ${dayLabel}. A participant can register for only one session per event day.`, 409);
-    }
+    // const sameDayTrainings = await Training.find({
+    //   _id: { $ne: training._id },
+    //   eventDay: training.eventDay?._id || training.eventDay,
+    // }).select('_id title');
+    // const conflict = await Registration.findOne({
+    //   participant: participantId,
+    //   training: { $in: sameDayTrainings.map((item) => item._id) },
+    //   status: { $in: ['pending', 'approved'] },
+    // }).populate('training', 'title');
+    // if (conflict) {
+    //   const dayLabel = training.eventDay?.dayNumber ? `Day ${training.eventDay.dayNumber}` : 'this event day';
+    //   return errorResponse(res, `You already have an active registration for “${conflict.training.title}” on ${dayLabel}. A participant can register for only one session per event day.`, 409);
+    // }
 
     // Capacity check
     if (training.capacity) {
