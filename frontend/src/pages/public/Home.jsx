@@ -147,7 +147,7 @@ export const Home = () => {
         <div className="mx-auto flex min-h-[680px] max-w-7xl items-center justify-start px-4 py-20 text-left sm:px-8">
           <div className="max-w-3xl animate-fade-up">
             <h1 className="text-5xl font-black leading-[.98] tracking-[-.04em] sm:text-6xl lg:text-7xl">National<br /><span className="text-[#1da156]">Training Week</span></h1>
-            <p className="mt-6 max-w-2xl text-lg font-bold leading-snug text-white sm:text-xl">{event ? <><span className="text-white/65">Theme:</span> {event.theme}</> : 'Skills, knowledge, and opportunity—accessible nationwide.'}</p>
+            <p className="mt-6 max-w-2xl text-lg font-bold leading-snug text-white sm:text-xl">{event ? <><span className="text-white/65">Theme {event.year}:</span> {event.theme}</> : 'Skills, knowledge, and opportunity—accessible nationwide.'}</p>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75 sm:text-base">{event?.description || 'An annual virtual learning platform connecting students, graduates, and professionals with expert-led training across technology, education, health, business, and community development.'}</p>
             {event && <div className="mt-6 flex flex-wrap justify-start gap-x-6 gap-y-2 text-xs font-bold text-white/80"><span>{eventDates}</span><span>{days.length} day{days.length === 1 ? '' : 's'} · {sessionCount} session{sessionCount === 1 ? '' : 's'}</span><span className="capitalize text-[#1da156]">{eventStatus}</span></div>}
             {event && <div className="mt-7 max-w-2xl" aria-live="polite">
@@ -461,7 +461,7 @@ const ScheduleTabs = ({ fallbackDays = [] }) => {
           })}
         </div>
         <p className="mt-5 text-center text-sm font-black text-slate-950">
-          <span className="text-[#1da156]">Theme:</span> {currentDay?.day?.theme || 'To be announced'}
+          <span className="text-[#1da156]">Training focus:</span> {currentDay?.day?.theme || 'To be announced'}
         </p>
       </div>
 

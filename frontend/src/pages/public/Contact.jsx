@@ -1,35 +1,55 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../../api/axios';
-import toast from 'react-hot-toast';
-import { EnvelopeIcon, PhoneIcon, MapPinIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
-import PublicPageHeader from '../../components/common/PublicPageHeader';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import api from "../../api/axios";
+import toast from "react-hot-toast";
+import {
+  EnvelopeIcon,
+  PhoneIcon,
+  MapPinIcon,
+  GlobeAltIcon,
+} from "@heroicons/react/24/outline";
+import PublicPageHeader from "../../components/common/PublicPageHeader";
 
 const CONTACT_INFO = [
-  { Icon: MapPinIcon, label: 'Location', value: 'Daru Shura Campus, Villa Baidoa, Wadajir, Mogadishu, Somalia' },
-  { Icon: EnvelopeIcon, label: 'Email Address', value: 'info@ntw.hu.edu.so', href: 'mailto:info@ntw.hu.edu.so' },
-  { Icon: PhoneIcon, label: 'Inquiry Hotline', value: '+252 613 311119 / +2521 858117', href: 'tel:+252613311119' },
-  { Icon: GlobeAltIcon, label: 'Official Website', value: 'www.ntw.hu.edu.so', href: 'https://www.ntw.hu.edu.so' },
+  {
+    Icon: MapPinIcon,
+    value: 'Daru Shura Campus, Villa Baidoa, Wadajir, Mogadishu, Somalia'
+  },
+  {
+    Icon: EnvelopeIcon,
+    value: 'info@ntw.hu.edu.so',
+    href: 'mailto:info@ntw.hu.edu.so'
+  },
+  {
+    Icon: PhoneIcon,
+    value: '+252 613 311119 / +2521 858117',
+    href: 'tel:+252613311119'
+  },
 ];
 
 const inputClass =
-  'w-full px-4 py-3 rounded-xl border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1da156]/40 bg-white text-black transition-shadow';
+  "w-full px-4 py-3 rounded-xl border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1da156]/40 bg-white text-black transition-shadow";
 
 export const Contact = () => {
-  const [form, setForm]         = useState({ name: '', email: '', subject: '', message: '' });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const res = await api.post('/public/contact', form);
+      const res = await api.post("/public/contact", form);
       if (res.success) {
-        toast.success('Message sent! We will get back to you soon.');
-        setForm({ name: '', email: '', subject: '', message: '' });
+        toast.success("Message sent! We will get back to you soon.");
+        setForm({ name: "", email: "", subject: "", message: "" });
       }
     } catch (err) {
-      toast.error(err.message || 'Failed to send message.');
+      toast.error(err.message || "Failed to send message.");
     } finally {
       setSubmitting(false);
     }
@@ -37,7 +57,6 @@ export const Contact = () => {
 
   return (
     <div className="bg-white min-h-screen">
-
       {/* ── Page Hero ───────────────────────────────── */}
       <PublicPageHeader
         eyebrow="Get in touch"
@@ -49,30 +68,36 @@ export const Contact = () => {
       <section className="py-16 sm:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-
             {/* Left: info column */}
             <div className="lg:col-span-2 space-y-6">
               {/* Info card */}
               <div className="rounded-2xl p-8 text-white shadow-xl space-y-6 bg-[#1da156]">
                 <div>
-                  <h2 className="text-2xl font-black">National Training Week</h2>
-                  <p className="text-white/80 text-sm mt-1">Organizing Secretariat</p>
+                  <h2 className="text-2xl font-black">
+                    National Training Week
+                  </h2>
+                  <p className="text-white/80 text-sm mt-1">
+                    Organizing Secretariat
+                  </p>
                 </div>
 
                 <div className="space-y-5">
-                  {CONTACT_INFO.map(({ Icon, label, value, href }) => (
-                    <div key={label} className="flex items-start gap-4">
+                  {CONTACT_INFO.map(({ Icon, value, href }) => (
+                    <div key={value} className="flex items-center gap-4">
                       <div className="p-2.5 bg-white/10 rounded-xl shrink-0">
                         <Icon className="w-5 h-5 text-white" />
                       </div>
+
                       <div>
-                        <p className="text-xs font-bold text-white uppercase tracking-wide">{label}</p>
                         {href ? (
-                          <a href={href} className="mt-0.5 block text-sm text-white hover:underline">
+                          <a
+                            href={href}
+                            className="block text-sm text-white hover:underline"
+                          >
                             {value}
                           </a>
                         ) : (
-                          <p className="mt-0.5 text-sm text-white">{value}</p>
+                          <p className="text-sm text-white">{value}</p>
                         )}
                       </div>
                     </div>
@@ -81,9 +106,19 @@ export const Contact = () => {
               </div>
 
               <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-black uppercase tracking-wide text-black">Looking for a quick answer?</h3>
-                <p className="mt-3 text-sm leading-6 text-black/70">Read answers about registration, attendance, certificates, and training sessions before sending a message.</p>
-                <Link to="/faq" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl border border-[#1a6b3c] px-5 text-sm font-bold text-[#1a6b3c] transition hover:bg-[#1a6b3c] hover:text-white">View FAQs</Link>
+                <h3 className="text-sm font-black uppercase tracking-wide text-black">
+                  Looking for a quick answer?
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-black/70">
+                  Read answers about registration, attendance, certificates, and
+                  training sessions before sending a message.
+                </p>
+                <Link
+                  to="/faq"
+                  className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl border border-[#1a6b3c] px-5 text-sm font-bold text-[#1a6b3c] transition hover:bg-[#1a6b3c] hover:text-white"
+                >
+                  View FAQs
+                </Link>
               </div>
             </div>
 
@@ -91,7 +126,9 @@ export const Contact = () => {
             <div className="lg:col-span-3 bg-white rounded-2xl border border-black/10 shadow-sm overflow-hidden">
               <div className="h-1.5 bg-[#1da156]" />
               <div className="p-8 sm:p-10">
-                <h2 className="text-2xl font-black text-black mb-1">Send a Message</h2>
+                <h2 className="text-2xl font-black text-black mb-1">
+                  Send a Message
+                </h2>
                 <p className="text-black/60 text-sm mb-8">
                   We usually respond within 1–2 business days.
                 </p>
@@ -105,7 +142,9 @@ export const Contact = () => {
                       <input
                         type="text"
                         value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, name: e.target.value })
+                        }
                         className={inputClass}
                         placeholder="Your full name"
                         required
@@ -118,7 +157,9 @@ export const Contact = () => {
                       <input
                         type="email"
                         value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, email: e.target.value })
+                        }
                         className={inputClass}
                         placeholder="your@email.com"
                         required
@@ -133,7 +174,9 @@ export const Contact = () => {
                     <input
                       type="text"
                       value={form.subject}
-                      onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, subject: e.target.value })
+                      }
                       className={inputClass}
                       placeholder="e.g. Registration inquiry"
                       required
@@ -147,7 +190,9 @@ export const Contact = () => {
                     <textarea
                       rows={6}
                       value={form.message}
-                      onChange={(e) => setForm({ ...form, message: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, message: e.target.value })
+                      }
                       className={`${inputClass} resize-none`}
                       placeholder="Write your message here..."
                       required
@@ -159,16 +204,14 @@ export const Contact = () => {
                     disabled={submitting}
                     className="w-full py-3.5 bg-[#1da156] hover:bg-black text-white font-black rounded-xl shadow transition-colors disabled:opacity-50 text-sm tracking-wide uppercase"
                   >
-                    {submitting ? 'Sending…' : 'Send Message →'}
+                    {submitting ? "Sending…" : "Send Message →"}
                   </button>
                 </form>
               </div>
             </div>
-
           </div>
         </div>
       </section>
-
     </div>
   );
 };

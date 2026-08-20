@@ -5,7 +5,7 @@ import { closeEmailTransporter, emailLayout, sendEmail } from '../../utils/email
 
 const defaults = {
   key: 'global',
-  organizerName: 'National Training Week',
+  organizerName: 'Hormuud University',
   contactEmail: 'info@ntw.hu.edu.so',
   replyToEmail: 'info@ntw.hu.edu.so',
   location: 'Daru Shura Campus, Villa Baidoa, Wadajir, Mogadishu, Somalia',
@@ -20,6 +20,10 @@ const defaults = {
   certificateSignatoryName: 'Authorized Signatory',
   certificateSignatoryTitle: 'National Training Week',
 };
+
+const publicOrganizerName = (organizerName) => (
+  !organizerName || organizerName === 'National Training Week' ? 'Hormuud University' : organizerName
+);
 
 const safeSettings = (settings) => {
   const value = settings.toObject ? settings.toObject() : settings;
@@ -89,7 +93,7 @@ export const getPublicSettings = async (req, res, next) => {
   try {
     const settings = await getOrCreateSettings();
     const { organizerName, contactEmail, location, facebookUrl, tiktokUrl, instagramUrl, linkedinUrl, xUrl } = settings;
-    return successResponse(res, { settings: { organizerName, contactEmail, location, facebookUrl, tiktokUrl, instagramUrl, linkedinUrl, xUrl } });
+    return successResponse(res, { settings: { organizerName: publicOrganizerName(organizerName), contactEmail, location, facebookUrl, tiktokUrl, instagramUrl, linkedinUrl, xUrl } });
   } catch (error) { next(error); }
 };
 

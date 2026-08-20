@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const siteSettingsSchema = new mongoose.Schema({
   key: { type: String, default: 'global', unique: true, immutable: true },
-  organizerName: { type: String, trim: true, default: 'National Training Week' },
+  organizerName: { type: String, trim: true, default: 'Hormuud University' },
   contactEmail: { type: String, trim: true, lowercase: true, default: 'info@ntw.hu.edu.so' },
   replyToEmail: { type: String, trim: true, lowercase: true, default: 'info@ntw.hu.edu.so' },
   location: { type: String, trim: true, default: 'Daru Shura Campus, Villa Baidoa, Wadajir, Mogadishu, Somalia' },

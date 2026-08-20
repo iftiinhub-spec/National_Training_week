@@ -14,7 +14,7 @@ export const Footer = () => {
   const year = new Date().getFullYear();
   const { event, days } = useCurrentEvent();
   const [settings, setSettings] = useState({
-    organizerName: 'National Training Week',
+    organizerName: 'Hormuud University',
     contactEmail: OFFICIAL_CONTACT.email,
     location: OFFICIAL_CONTACT.location,
     facebookUrl: '',
@@ -31,6 +31,7 @@ export const Footer = () => {
         return {
           ...current,
           ...incoming,
+          organizerName: !incoming.organizerName || incoming.organizerName === 'National Training Week' ? 'Hormuud University' : incoming.organizerName,
           contactEmail: !incoming.contactEmail || incoming.contactEmail === 'ntw@trainingweek.so' ? OFFICIAL_CONTACT.email : incoming.contactEmail,
           location: !incoming.location || incoming.location === 'Mogadishu, Somalia' ? OFFICIAL_CONTACT.location : incoming.location,
         };
@@ -64,7 +65,7 @@ export const Footer = () => {
           </div>
           <div className="text-center md:text-right">
             <p className="text-sm text-[#1da156] font-bold">
-              {event ? <>Theme: {event.theme}</> : 'Annual learning and professional development'}
+              {event ? <>Theme {event.year}: {event.theme}</> : 'Annual learning and professional development'}
             </p>
             <p className="text-xs text-white/60 mt-1">{dates}{event ? ' · Online' : ''}</p>
           </div>
@@ -142,15 +143,15 @@ export const Footer = () => {
           <ul className="space-y-3 text-sm text-white/70">
             <li className="flex items-center gap-2.5">
               <BuildingLibraryIcon className="w-4 h-4 text-[#1da156] shrink-0" />
-              <span><strong className="text-white">Organizer:</strong> {settings.organizerName}</span>
+              <span> {settings.organizerName}</span>
             </li>
             <li className="flex items-center gap-2.5">
               <MapPinIcon className="w-4 h-4 text-[#1da156] shrink-0" />
-              <span><strong className="text-white">Location:</strong> {settings.location}</span>
+              <span>{settings.location}</span>
             </li>
             <li className="flex items-center gap-2.5">
               <EnvelopeIcon className="w-4 h-4 text-[#1da156] shrink-0" />
-              <span><strong className="text-white">Email:</strong> <a href={`mailto:${settings.contactEmail}`} className="hover:text-[#1da156]">{settings.contactEmail}</a></span>
+              <span> <a href={`mailto:${settings.contactEmail}`} className="hover:text-[#1da156]">{settings.contactEmail}</a></span>
             </li>
           </ul>
         </div>
