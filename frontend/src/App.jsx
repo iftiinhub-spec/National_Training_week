@@ -81,11 +81,16 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 const ScrollToTop = () => {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
 
   useEffect(() => {
+    if (hash) {
+      const frame = requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView());
+      return () => cancelAnimationFrame(frame);
+    }
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, [pathname]);
+    return undefined;
+  }, [pathname, hash]);
 
   return null;
 };

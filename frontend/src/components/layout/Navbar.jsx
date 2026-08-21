@@ -28,15 +28,21 @@ export const Navbar = () => {
   const navLinks = [
     { name: 'Home',               path: '/' },
     { name: 'About',              path: '/about' },
-    { name: 'Program',            path: '/program' },
     { name: 'Trainings',          path: '/trainings' },
+    { name: 'Program',            path: '/program' },
     { name: 'Recordings',         path: '/recordings' },
-    { name: 'Verify Certificate', path: '/verify-certificate' },
-    { name: 'Past Editions',      path: '/past-editions' },
     { name: 'Contact',            path: '/contact' },
+    { name: 'Past Editions',      path: '/past-editions' },
+    { name: 'FAQs',               path: '/faq' },
+    { name: 'Verify Certificate', path: '/verify-certificate' },
   ];
-  const primaryLinks = navLinks.filter((link) => ['/', '/about', '/trainings', '/past-editions', '/contact'].includes(link.path));
-  const moreLinks = navLinks.filter((link) => ['/program', '/recordings', '/verify-certificate'].includes(link.path));
+  const primaryLinks = ['/', '/about', '/trainings', '/program', '/contact']
+    .map((path) => navLinks.find((link) => link.path === path));
+  const moreLinks = ['/recordings', '/past-editions', '/faq', '/verify-certificate']
+    .map((path) => navLinks.find((link) => link.path === path));
+  const isLinkActive = (link) => link.path.includes('#')
+    ? location.pathname === '/' && location.hash === `#${link.path.split('#')[1]}`
+    : location.pathname === link.path;
 
   const getDashboardPath = () => {
     if (isAdmin) return '/admin';
@@ -66,14 +72,14 @@ export const Navbar = () => {
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden lg:flex shrink-0 items-center gap-1">
             {primaryLinks.map((link) => {
-              const isActive = location.pathname === link.path;
+              const isActive = isLinkActive(link);
               return (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`relative px-3.5 py-2 text-[13px] font-bold transition-colors capitalize ${
+                  className={`relative whitespace-nowrap px-3.5 py-2 text-[13px] font-bold transition-colors capitalize ${
                     isActive
                       ? 'text-[#1da156]'
                       : 'text-black hover:text-[#1da156]'
@@ -87,16 +93,16 @@ export const Navbar = () => {
               );
             })}
             <div className="relative" onMouseLeave={() => setMoreMenuOpen(false)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setMoreMenuOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') { setMoreMenuOpen(false); event.currentTarget.querySelector('button')?.focus(); } }}>
-              <button type="button" onClick={() => setMoreMenuOpen((open) => !open)} aria-expanded={moreMenuOpen} aria-haspopup="menu" className={`relative flex items-center gap-1 px-3.5 py-2 text-[13px] font-bold transition-colors ${moreLinks.some((link) => location.pathname === link.path) ? 'text-[#1da156]' : 'text-black hover:text-[#1da156]'}`}>
+              <button type="button" onClick={() => setMoreMenuOpen((open) => !open)} aria-expanded={moreMenuOpen} aria-haspopup="menu" className={`relative flex items-center gap-1 whitespace-nowrap px-3.5 py-2 text-[13px] font-bold transition-colors ${moreLinks.some(isLinkActive) ? 'text-[#1da156]' : 'text-black hover:text-[#1da156]'}`}>
                 More <ChevronDownIcon className={`h-4 w-4 transition-transform ${moreMenuOpen ? 'rotate-180' : ''}`} />
-                {moreLinks.some((link) => location.pathname === link.path) && <span className="absolute bottom-0 left-3.5 right-3.5 h-0.5 rounded-full bg-[#1da156]" />}
+                {moreLinks.some(isLinkActive) && <span className="absolute bottom-0 left-3.5 right-3.5 h-0.5 rounded-full bg-[#1da156]" />}
               </button>
-              {moreMenuOpen && <div role="menu" className="absolute left-1/2 top-full mt-2 w-56 -translate-x-1/2 overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-xl">{moreLinks.map((link) => <Link key={link.path} to={link.path} role="menuitem" onClick={() => setMoreMenuOpen(false)} className={`block px-4 py-3 text-sm font-semibold transition-colors ${location.pathname === link.path ? 'bg-emerald-50 text-[#1da156]' : 'text-slate-700 hover:bg-slate-50 hover:text-[#1da156]'}`}>{link.name}</Link>)}</div>}
+              {moreMenuOpen && <div role="menu" className="absolute left-1/2 top-full mt-2 w-56 -translate-x-1/2 overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-xl">{moreLinks.map((link) => <Link key={link.path} to={link.path} role="menuitem" onClick={() => setMoreMenuOpen(false)} className={`block px-4 py-3 text-sm font-semibold transition-colors ${isLinkActive(link) ? 'bg-emerald-50 text-[#1da156]' : 'text-slate-700 hover:bg-slate-50 hover:text-[#1da156]'}`}>{link.name}</Link>)}</div>}
             </div>
           </nav>
 
           {/* Desktop Auth */}
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden lg:flex shrink-0 items-center gap-2">
             <ThemeToggle />
             {isAuthenticated ? (
               <div className="relative">
@@ -156,13 +162,13 @@ export const Navbar = () => {
               <div className="flex items-center gap-2">
                 <Link
                   to="/signin"
-                  className="px-4 py-2 rounded-lg text-sm font-semibold text-black hover:text-[#1da156] transition-colors"
+                  className="whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold text-black hover:text-[#1da156] transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="px-5 py-2 rounded-xl text-sm font-bold bg-[#1da156] hover:bg-black text-white shadow-xs transition-all"
+                  className="whitespace-nowrap px-5 py-2 rounded-xl text-sm font-bold bg-[#1da156] hover:bg-black text-white shadow-xs transition-all"
                 >
                   Register Now
                 </Link>
@@ -194,7 +200,7 @@ export const Navbar = () => {
               to={link.path}
               onClick={() => setMobileMenuOpen(false)}
               className={`block px-4 py-3 rounded-lg text-sm font-bold transition-colors ${
-                location.pathname === link.path
+                isLinkActive(link)
                   ? 'bg-white text-[#1da156] border-l-4 border-[#1da156]'
                   : 'text-black hover:bg-white hover:text-[#1da156]'
               }`}

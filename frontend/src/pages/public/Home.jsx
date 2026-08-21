@@ -213,7 +213,7 @@ export const Home = () => {
       </section>
 
       {/* ══ FEATURED TRAINERS & KEYNOTES ════════════════ */}
-      <section className="bg-white py-24">
+      <section id="trainers" className="scroll-mt-24 bg-white py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <SectionTitle
             tag="World-Class Faculty"
