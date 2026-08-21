@@ -107,8 +107,8 @@ export const ModeratorsManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-black text-slate-900">Moderator Accounts</h1>
           <p className="text-xs text-slate-500 mt-1">
             Admin creates and manages operational Moderator user accounts for training sessions.
@@ -116,7 +116,7 @@ export const ModeratorsManagement = () => {
         </div>
         <button
           onClick={() => { setShowPassword(false); setShowModal(true); }}
-          className="px-4 py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs"
+          className="flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#1a6b3c] px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#124d2a] sm:w-auto"
         >
           <UserPlusIcon className="w-4 h-4" />
           <span>Create Moderator Account</span>
@@ -124,13 +124,13 @@ export const ModeratorsManagement = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2"><select value={filters.event} onChange={(e) => setFilters({ event: e.target.value, eventDay: '' })} className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All events</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name} ({event.year})</option>)}</select><select value={filters.eventDay} onChange={(e) => setFilters((current) => ({ ...current, eventDay: e.target.value }))} disabled={!filters.event} className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100"><option value="">All days</option>{eventDays.map((day) => <option key={day._id} value={day._id}>Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}</option>)}</select></div>
+        <div className="grid min-w-0 grid-cols-1 gap-3 border-b border-slate-200 p-4 sm:grid-cols-2"><select value={filters.event} onChange={(e) => setFilters({ event: e.target.value, eventDay: '' })} className="min-h-10 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All events</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name} ({event.year})</option>)}</select><select value={filters.eventDay} onChange={(e) => setFilters((current) => ({ ...current, eventDay: e.target.value }))} disabled={!filters.event} className="min-h-10 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100"><option value="">All days</option>{eventDays.map((day) => <option key={day._id} value={day._id}>Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}</option>)}</select></div>
         <div className="flex flex-wrap gap-2 border-b border-slate-200 px-4 py-3">
           <button type="button" onClick={() => deleteModerators(selectedIds)} disabled={!selectedIds.length} className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Delete selected</button>
           <button type="button" onClick={() => deleteModerators(moderators.map((item) => item._id))} disabled={!moderators.length} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 disabled:opacity-40">Delete all</button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full min-w-[720px] text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 uppercase text-slate-500 font-bold">
               <tr>
                 <th className="p-4"><input type="checkbox" checked={moderators.length > 0 && selectedIds.length === moderators.length} onChange={toggleAll} aria-label="Select all moderators" className="h-4 w-4 accent-[#1a6b3c]" /></th>
