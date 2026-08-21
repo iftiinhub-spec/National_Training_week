@@ -119,7 +119,7 @@ export const Program = () => {
               })}
             </div>
             <p className="pb-4 text-center text-sm font-black text-slate-950">
-              <span className="text-[#1da156]">Theme:</span> {currentDay?.day?.theme || 'To be announced'}
+              <span className="text-[#1da156]">Training focus:</span> {currentDay?.day?.theme || 'To be announced'}
             </p>
           </div>
         </div>
@@ -168,7 +168,7 @@ const SessionCard = ({ session: s, dayNumber }) => {
       className="group block relative overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all card-hover-lift bg-white border border-black/10"
     >
       {/* Cover image / logo fallback */}
-      <div className="relative h-48 overflow-hidden bg-black">
+      <div className="relative aspect-video w-full overflow-hidden bg-black">
         {photoUrl(s.coverImage) ? (
           <img
             src={photoUrl(s.coverImage)}
@@ -188,22 +188,21 @@ const SessionCard = ({ session: s, dayNumber }) => {
           </p>
         </div>
 
-        {/* Status badge */}
-        <span className="absolute top-3 left-3 bg-[#1da156] text-white text-[10px] font-bold px-2.5 py-1 rounded-full capitalize shadow">
-          {s.status?.replace(/_/g, ' ')}
-        </span>
-
-        {/* Time badge */}
-        {s.startTime && (
-          <span className="absolute top-3 right-3 flex items-center gap-1 bg-black text-white text-[10px] font-medium px-2 py-1 rounded-full">
-            <ClockIcon className="w-3 h-3" />
-            {formatTime12(s.startTime)}
-          </span>
-        )}
       </div>
 
       {/* Card body */}
       <div className="p-5 bg-white">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <span className="rounded-full bg-[#1da156] px-2.5 py-1 text-[10px] font-bold capitalize text-white">
+            {s.status?.replace(/_/g, ' ')}
+          </span>
+          {s.startTime && (
+            <span className="flex items-center gap-1 rounded-full bg-black px-2 py-1 text-[10px] font-medium text-white">
+              <ClockIcon className="h-3 w-3" />
+              {formatTime12(s.startTime)}
+            </span>
+          )}
+        </div>
         <p className="text-[10px] font-bold text-[#1da156] uppercase tracking-wide mb-1">
           Day {dayNumber} Session
         </p>

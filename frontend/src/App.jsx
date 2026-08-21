@@ -21,6 +21,7 @@ import Trainings from './pages/public/Trainings';
 import TrainingDetails from './pages/public/TrainingDetails';
 import TrainerDetails from './pages/public/TrainerDetails';
 import Recordings from './pages/public/Recordings';
+import RecordingPlayer from './pages/public/RecordingPlayer';
 import VerifyCertificate from './pages/public/VerifyCertificate';
 import Contact from './pages/public/Contact';
 import SignIn from './pages/public/SignIn';
@@ -105,6 +106,7 @@ const PublicLayout = () => {
           <Route path="/trainings/:id"       element={<div className="pt-[88px]"><TrainingDetails /></div>} />
           <Route path="/trainers/:id"        element={<div className="pt-[88px]"><TrainerDetails /></div>} />
           <Route path="/recordings"          element={<div className="pt-[88px]"><Recordings /></div>} />
+          <Route path="/recordings/:id"      element={<div className="pt-[88px]"><RecordingPlayer /></div>} />
           <Route path="/verify-certificate"  element={<div className="pt-[88px]"><VerifyCertificate /></div>} />
           <Route path="/contact"             element={<div className="pt-[88px]"><Contact /></div>} />
           <Route path="/faq"                 element={<div className="pt-[88px]"><FAQ /></div>} />

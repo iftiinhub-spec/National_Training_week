@@ -12,7 +12,7 @@ const OFFICIAL_CONTACT = {
 
 export const Footer = () => {
   const year = new Date().getFullYear();
-  const { event, days } = useCurrentEvent();
+  const { event } = useCurrentEvent();
   const [settings, setSettings] = useState({
     organizerName: 'Hormuud University',
     contactEmail: OFFICIAL_CONTACT.email,
@@ -41,7 +41,6 @@ export const Footer = () => {
   const dates = event?.startDate && event?.endDate
     ? `${new Date(event.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
     : 'Next edition to be announced';
-  const programLabel = days.length ? `${days.length}-Day Program` : 'Official Program';
   const socialLinks = [
     { key: 'facebookUrl', label: 'Facebook', Icon: FaFacebookF },
     { key: 'tiktokUrl', label: 'TikTok', Icon: FaTiktok },
@@ -97,7 +96,7 @@ export const Footer = () => {
             {[
               { name: 'Home',                  path: '/' },
               { name: 'About NTW',             path: '/about' },
-              { name: programLabel,            path: '/program' },
+              { name: 'Program',               path: '/program' },
               { name: 'Past Editions',          path: '/past-editions' },
               { name: 'Browse Trainings',      path: '/trainings' },
               { name: 'Recorded Sessions',     path: '/recordings' },

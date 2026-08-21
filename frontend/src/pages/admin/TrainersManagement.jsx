@@ -73,13 +73,6 @@ export const TrainersManagement = () => {
     api.get(`/admin/events/${filters.event}/days`).then((res) => setEventDays(res.data?.days || [])).catch(() => setEventDays([]));
   }, [filters.event]);
 
-  const visibleTrainers = trainers.filter((trainer) => {
-    if (!filters.event && !filters.eventDay) return true;
-    return assignedSessions.some((session) => String(session.trainer?._id || session.trainer) === String(trainer._id)
-      && (!filters.event || String(session.event?._id || session.event) === String(filters.event))
-      && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === String(filters.eventDay)));
-  });
-
   useEffect(() => {
     if (!filters.event && !filters.eventDay) { setTrainers(allTrainers); return; }
     setTrainers(allTrainers.filter((trainer) => assignedSessions.some((session) => String(session.trainer?._id || session.trainer) === String(trainer._id) && (!filters.event || String(session.event?._id || session.event) === String(filters.event)) && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === String(filters.eventDay)))));

@@ -115,16 +115,22 @@ export const getPublicProgram = async (req, res, next) => {
     if (!event) return errorResponse(res, 'No active event found.', 404);
 
     const days = await EventDay.find({ event: event._id }).sort({ dayNumber: 1 });
-    const program = await Promise.all(days.map(async (day) => {
-      const sessions = await Training.find({
-        eventDay: day._id,
-        status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] },
-      })
-        .populate('trainer', 'name title photo organization')
-        .populate('category', 'name')
-        .sort({ startTime: 1 });
-      return { day, sessions };
-    }));
+    const sessions = await Training.find({
+      event: event._id,
+      eventDay: { $in: days.map((day) => day._id) },
+      status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] },
+    })
+      .populate('trainer', 'name title photo organization')
+      .populate('category', 'name')
+      .sort({ eventDay: 1, startTime: 1 });
+    const sessionsByDay = new Map();
+    sessions.forEach((session) => {
+      const key = String(session.eventDay);
+      const grouped = sessionsByDay.get(key) || [];
+      grouped.push(session);
+      sessionsByDay.set(key, grouped);
+    });
+    const program = days.map((day) => ({ day, sessions: sessionsByDay.get(String(day._id)) || [] }));
 
     return successResponse(res, { event, program });
   } catch (err) { next(err); }

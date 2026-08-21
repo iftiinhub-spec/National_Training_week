@@ -19,6 +19,14 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('ntw_token') || null);
   const [loading, setLoading] = useState(true);
 
+  const logout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('ntw_token');
+    localStorage.removeItem('ntw_user');
+    toast.success('Logged out successfully');
+  }, []);
+
   // Fetch current user on refresh
   useEffect(() => {
     const initAuth = async () => {
@@ -37,7 +45,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     initAuth();
-  }, [token]);
+  }, [token, logout]);
 
   const login = useCallback(async (email, password) => {
     try {
@@ -68,14 +76,6 @@ export const AuthProvider = ({ children }) => {
       toast.error(err.message || 'Registration failed');
       throw err;
     }
-  }, []);
-
-  const logout = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('ntw_token');
-    localStorage.removeItem('ntw_user');
-    toast.success('Logged out successfully');
   }, []);
 
   const updateProfile = useCallback(async (formData) => {

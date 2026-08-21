@@ -29,14 +29,14 @@ export const Navbar = () => {
     { name: 'Home',               path: '/' },
     { name: 'About',              path: '/about' },
     { name: 'Program',            path: '/program' },
-    { name: 'Past Editions',      path: '/past-editions' },
     { name: 'Trainings',          path: '/trainings' },
     { name: 'Recordings',         path: '/recordings' },
     { name: 'Verify Certificate', path: '/verify-certificate' },
+    { name: 'Past Editions',      path: '/past-editions' },
     { name: 'Contact',            path: '/contact' },
   ];
-  const primaryLinks = navLinks.filter((link) => ['/', '/about', '/program', '/trainings', '/contact'].includes(link.path));
-  const moreLinks = navLinks.filter((link) => ['/past-editions', '/recordings', '/verify-certificate'].includes(link.path));
+  const primaryLinks = navLinks.filter((link) => ['/', '/about', '/trainings', '/past-editions', '/contact'].includes(link.path));
+  const moreLinks = navLinks.filter((link) => ['/program', '/recordings', '/verify-certificate'].includes(link.path));
 
   const getDashboardPath = () => {
     if (isAdmin) return '/admin';
@@ -66,7 +66,7 @@ export const Navbar = () => {
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden xl:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1">
             {primaryLinks.map((link) => {
               const isActive = location.pathname === link.path;
               return (
@@ -96,7 +96,7 @@ export const Navbar = () => {
           </nav>
 
           {/* Desktop Auth */}
-          <div className="hidden xl:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2">
             <ThemeToggle />
             {isAuthenticated ? (
               <div className="relative">
@@ -171,7 +171,7 @@ export const Navbar = () => {
           </div>
 
           {/* Mobile toggle */}
-          <div className="flex items-center gap-2 xl:hidden">
+          <div className="flex items-center gap-2 lg:hidden">
             <ThemeToggle />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -187,7 +187,7 @@ export const Navbar = () => {
 
       {/* Mobile drawer */}
       {mobileMenuOpen && (
-        <div className="xl:hidden max-h-[calc(100vh-88px)] overflow-y-auto bg-white border-t border-black/10 shadow-xl px-4 pt-3 pb-6 space-y-1">
+        <div className="lg:hidden max-h-[calc(100vh-88px)] overflow-y-auto bg-white border-t border-black/10 shadow-xl px-4 pt-3 pb-6 space-y-1">
           {navLinks.map((link) => (
             <Link
               key={link.path}

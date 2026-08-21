@@ -5,7 +5,9 @@ import {
   eventValidation,
   feedbackValidation,
   meetingValidation,
+  optionalObjectIdQueries,
   qrCheckinValidation,
+  recordingValidation,
   trainingValidation,
 } from '../src/middleware/validationRules.js';
 import { escapeRegex } from '../src/utils/search.js';
@@ -41,6 +43,25 @@ test('feedback only accepts ratings from one to five', async () => {
 test('meetings require an HTTPS URL', async () => {
   const errors = await runRules(meetingValidation, { platform: 'zoom', meetingUrl: 'http://example.com' });
   assert.equal(errors.some(({ path }) => path === 'meetingUrl'), true);
+});
+
+test('recordings accept supported HTTPS media and reject unsupported URLs', async () => {
+  const id = '507f1f77bcf86cd799439011';
+  const valid = await runRules(recordingValidation, {
+    training: id, title: 'AI Foundations', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+  });
+  const invalid = await runRules(recordingValidation, {
+    training: id, title: 'AI Foundations', url: 'https://example.com/page',
+  });
+  assert.deepEqual(valid, []);
+  assert.equal(invalid.some(({ path }) => path === 'url'), true);
+});
+
+test('optional public ID queries reject MongoDB operators and malformed IDs', async () => {
+  const rules = optionalObjectIdQueries('event');
+  assert.deepEqual(await runRules(rules, {}, {}, { event: '507f1f77bcf86cd799439011' }), []);
+  const malformed = await runRules(rules, {}, {}, { event: '$ne:null' });
+  assert.equal(malformed.some(({ path }) => path === 'event'), true);
 });
 
 test('event validation rejects an impossible year and invalid dates', async () => {

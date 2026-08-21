@@ -19,6 +19,7 @@ export const RecordingsManagement = () => {
     training: '',
     title: '',
     url: '',
+    thumbnail: '',
     description: '',
   });
 
@@ -180,15 +181,28 @@ export const RecordingsManagement = () => {
               </div>
 
               <div>
-                <label className="block font-bold uppercase text-slate-700 mb-1">Video URL (YouTube/Vimeo/Drive) *</label>
+                <label className="block font-bold uppercase text-slate-700 mb-1">Video URL *</label>
                 <input
                   type="url"
-                  placeholder="https://..."
+                  placeholder="YouTube URL or direct MP4/WebM/OGG URL"
                   value={form.url}
                   onChange={(e) => setForm({ ...form, url: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300"
                   required
                 />
+                <p className="mt-1 text-[11px] text-slate-500">YouTube videos play inside this website and use their thumbnail automatically.</p>
+              </div>
+
+              <div>
+                <label className="block font-bold uppercase text-slate-700 mb-1">Thumbnail URL</label>
+                <input
+                  type="url"
+                  placeholder="https://example.org/session-cover.jpg"
+                  value={form.thumbnail}
+                  onChange={(e) => setForm({ ...form, thumbnail: e.target.value })}
+                  className="w-full p-2.5 rounded-lg border border-slate-300"
+                />
+                <p className="mt-1 text-[11px] text-slate-500">Optional. The training cover image is used when this is empty.</p>
               </div>
 
               <div>

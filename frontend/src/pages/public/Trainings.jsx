@@ -30,7 +30,7 @@ const TrainingCard = ({ training: t }) => (
     className="group block relative overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all card-hover-lift bg-white border border-black/10"
   >
     {/* Cover image / placeholder */}
-    <div className="relative h-52 overflow-hidden bg-black">
+    <div className="relative aspect-video w-full overflow-hidden bg-black">
       {photoUrl(t.coverImage) ? (
         <img
           src={photoUrl(t.coverImage)}
@@ -49,14 +49,15 @@ const TrainingCard = ({ training: t }) => (
         </p>
       </div>
 
-      {/* Status badge */}
-      <span className={`absolute top-3 left-3 ${statusColor(t.status)} text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide shadow`}>
-        {t.status?.replace(/_/g, ' ')}
-      </span>
     </div>
 
     {/* Card body */}
     <div className="p-5 bg-white">
+      <div className="mb-4 flex">
+        <span className={`${statusColor(t.status)} rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white`}>
+          {t.status?.replace(/_/g, ' ')}
+        </span>
+      </div>
       <h3 className="font-black text-black text-base leading-snug mb-1 group-hover:text-[#1da156] transition-colors line-clamp-2">
         {t.title}
       </h3>
@@ -84,6 +85,7 @@ export const Trainings = () => {
   const [categories, setCategories]           = useState([]);
   const [loading, setLoading]                 = useState(true);
   const [search, setSearch]                   = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedLevel, setSelectedLevel]     = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('');
@@ -91,21 +93,24 @@ export const Trainings = () => {
   const [events, setEvents]                   = useState([]);
   const [selectedEvent, setSelectedEvent]     = useState('');
 
-  const fetchTrainings = useCallback(async () => {
+  const fetchTrainings = useCallback(async (signal) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search)           params.append('search', search);
+      if (debouncedSearch)  params.append('search', debouncedSearch);
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedLevel)    params.append('level', selectedLevel);
       if (selectedLanguage) params.append('language', selectedLanguage);
       if (selectedStatus)   params.append('status', selectedStatus);
       if (selectedEvent || currentEvent?._id) params.append('event', selectedEvent || currentEvent._id);
-      const res = await api.get(`/public/trainings?${params}`);
+      const res = await api.get(`/public/trainings?${params}`, { signal });
       if (res.success) setTrainings(res.data || []);
-    } catch {}
-    finally { setLoading(false); }
-  }, [search, selectedCategory, selectedLevel, selectedLanguage, selectedStatus, selectedEvent, currentEvent?._id]);
+    } catch (error) {
+      if (error.name !== 'CanceledError') return;
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, [debouncedSearch, selectedCategory, selectedLevel, selectedLanguage, selectedStatus, selectedEvent, currentEvent?._id]);
 
   useEffect(() => {
     api.get('/public/events').then((r) => { if (r.success) setEvents(r.data.events || []); }).catch(() => {});
@@ -114,7 +119,16 @@ export const Trainings = () => {
       .catch(() => {});
   }, []);
 
-  useEffect(() => { fetchTrainings(); }, [fetchTrainings]);
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchTrainings(controller.signal);
+    return () => controller.abort();
+  }, [fetchTrainings]);
 
   const reset = () => { setSearch(''); setSelectedCategory(''); setSelectedLevel(''); setSelectedLanguage(''); setSelectedStatus(''); };
 
@@ -128,7 +142,7 @@ export const Trainings = () => {
       <section className="sticky top-[88px] z-30 border-b border-black/10 bg-white/95 shadow-sm backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
           <form
-            onSubmit={(e) => { e.preventDefault(); fetchTrainings(); }}
+            onSubmit={(e) => { e.preventDefault(); setDebouncedSearch(search.trim()); }}
             className="flex flex-wrap items-center gap-2 rounded-2xl border border-black/10 bg-white p-2"
           >
             {/* Search */}
