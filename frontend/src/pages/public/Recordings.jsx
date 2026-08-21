@@ -3,8 +3,30 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
-import { PlayIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
-import { useSearchParams } from 'react-router-dom';
+import { PlayIcon } from '@heroicons/react/24/outline';
+import { Link, useSearchParams } from 'react-router-dom';
+
+const mediaUrl = (value) => value?.startsWith('http') ? value : value ? `/${value.replace(/^\//, '')}` : '';
+
+const getYouTubeId = (url = '') => {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, '');
+    if (host === 'youtu.be') return parsed.pathname.split('/').filter(Boolean)[0] || '';
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      if (parsed.pathname === '/watch') return parsed.searchParams.get('v') || '';
+      if (/^\/(embed|shorts)\//.test(parsed.pathname)) return parsed.pathname.split('/')[2] || '';
+    }
+  } catch { return ''; }
+  return '';
+};
+
+const getRecordingThumbnail = (recording) => {
+  if (recording.thumbnail) return mediaUrl(recording.thumbnail);
+  const youtubeId = getYouTubeId(recording.url);
+  if (youtubeId) return `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`;
+  return mediaUrl(recording.training?.coverImage);
+};
 
 export const Recordings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -67,17 +89,25 @@ export const Recordings = () => {
         ) : recordings.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recordings.map((recording) => (
-              <div
+              (() => {
+                const thumbnail = getRecordingThumbnail(recording);
+                return (
+              <article
                 key={recording._id}
                 className="bg-white rounded-xl border border-black/10 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group"
               >
                 {/* Thumbnail Container (16:9) */}
-                <div className="relative aspect-video w-full bg-black overflow-hidden">
-                  {recording.thumbnail ? (
+                <Link to={`/recordings/${recording._id}`} aria-label={`Watch ${recording.title}`} className="relative block aspect-video w-full overflow-hidden bg-slate-100">
+                  {thumbnail ? (
                     <img
-                      src={`/${recording.thumbnail}`}
+                      src={thumbnail}
                       alt={recording.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="h-full w-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-300"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = '/logo.png';
+                        event.currentTarget.className = 'h-full w-full object-contain p-12';
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full bg-white flex flex-col items-center justify-center p-6">
@@ -86,17 +116,12 @@ export const Recordings = () => {
                   )}
 
                   {/* Play Icon Overlay */}
-                  <a
-                    href={recording.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/20 transition-colors group"
-                  >
-                    <div className="w-14 h-14 rounded-full bg-[#1da156] text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <span className="w-14 h-14 rounded-full bg-[#1da156] text-white flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
                       <PlayIcon className="w-7 h-7 ml-0.5" />
-                    </div>
-                  </a>
-                </div>
+                    </span>
+                  </span>
+                </Link>
 
                 {/* Details */}
                 <div className="p-5 flex-1 flex flex-col justify-between">
@@ -106,9 +131,7 @@ export const Recordings = () => {
                         {recording.training.event.name}
                       </span>
                     )}
-                    <h3 className="font-bold text-black text-lg line-clamp-2 mb-2">
-                      {recording.title}
-                    </h3>
+                    <h3 className="font-bold text-black text-lg line-clamp-2 mb-2"><Link to={`/recordings/${recording._id}`} className="hover:text-[#1da156]">{recording.title}</Link></h3>
                     {recording.description && (
                       <p className="text-black/70 text-xs line-clamp-2 leading-relaxed mb-4">
                         {recording.description}
@@ -116,19 +139,10 @@ export const Recordings = () => {
                     )}
                   </div>
 
-                  <div className="pt-3 border-t border-black/10 flex items-center justify-between">
-                    <a
-                      href={recording.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full text-center bg-black hover:bg-[#1da156] text-white text-xs font-bold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <span>Watch Recording</span>
-                      <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-                    </a>
-                  </div>
                 </div>
-              </div>
+              </article>
+                );
+              })()
             ))}
           </div>
         ) : (

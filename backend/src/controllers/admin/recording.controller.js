@@ -120,3 +120,25 @@ export const getPublicRecordings = async (req, res, next) => {
     return paginatedResponse(res, recordings, total, page, limit, 'Published recordings');
   } catch (err) { next(err); }
 };
+
+// GET /api/public/recordings/:id — one published recording
+export const getPublicRecording = async (req, res, next) => {
+  try {
+    const recording = await Recording.findOne({
+      _id: req.params.id,
+      isPublished: true,
+      isArchived: { $ne: true },
+    }).populate({
+      path: 'training',
+      select: 'title date coverImage language event eventDay category trainer',
+      populate: [
+        { path: 'event', select: 'name year' },
+        { path: 'eventDay', select: 'dayNumber theme' },
+        { path: 'category', select: 'name' },
+        { path: 'trainer', select: 'name title' },
+      ],
+    });
+    if (!recording) return errorResponse(res, 'Recording not found.', 404);
+    return successResponse(res, { recording });
+  } catch (err) { next(err); }
+};

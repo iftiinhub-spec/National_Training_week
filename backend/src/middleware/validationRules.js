@@ -116,9 +116,19 @@ export const categoryValidation = [
 export const recordingValidation = [
   objectId(body, 'training', 'training ID'),
   body('title').trim().isLength({ min: 2, max: 150 }),
-  body('url').isURL({ protocols: ['http', 'https'], require_protocol: true }).withMessage('Recording URL must start with http:// or https://.'),
+  body('url')
+    .isURL({ protocols: ['https'], require_protocol: true }).withMessage('Recording URL must be a valid HTTPS URL.')
+    .custom((value) => {
+      const parsed = new URL(value);
+      const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+      const isYouTube = ['youtube.com', 'm.youtube.com', 'youtu.be', 'youtube-nocookie.com'].includes(host);
+      const isDirectVideo = /\.(mp4|webm|ogg)$/i.test(parsed.pathname);
+      if (!isYouTube && !isDirectVideo) throw new Error('Use a YouTube URL or a direct HTTPS MP4, WebM, or OGG video URL.');
+      return true;
+    }),
   body('description').optional({ checkFalsy: true }).trim().isLength({ max: 2000 }),
-  body('thumbnail').optional({ checkFalsy: true }).isURL({ protocols: ['http', 'https'], require_protocol: true }),
+  body('thumbnail').optional({ checkFalsy: true }).isURL({ protocols: ['https'], require_protocol: true })
+    .withMessage('Thumbnail URL must be a valid HTTPS URL.'),
 ];
 
 export const registrationStatusValidation = [

@@ -52,11 +52,6 @@ const createTransporter = ({ user, pass } = {}) => {
     rateDelta: 1_000,
     rateLimit: Math.max(1, Number(process.env.SMTP_RATE_LIMIT_PER_SECOND) || 5),
   };
-  // TEMPORARY: the mail server's TLS cert is expired and the host admin hasn't renewed it.
-  // This skips certificate verification so mail keeps flowing in the meantime — it does NOT
-  // disable encryption, only the check that we're talking to the real server. Remove
-  // SMTP_ALLOW_INVALID_CERT from .env the moment the cert is fixed.
-  if (process.env.SMTP_ALLOW_INVALID_CERT === 'true') options.tls = { rejectUnauthorized: false };
   if (!isRelayTransport()) options.auth = { user, pass };
   return nodemailer.createTransport(options);
 };

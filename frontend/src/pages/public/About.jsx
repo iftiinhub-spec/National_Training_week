@@ -83,7 +83,7 @@ export const About = () => {
         <div className="mx-auto max-w-7xl px-4 sm:px-8">
           <SectionHeading eyebrow="Expected Outcomes">A lasting national contribution</SectionHeading>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {OUTCOMES.map(({ value, Icon, title, text }) => <article key={title} className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm"><div className={`flex h-12 items-center justify-center rounded-xl bg-[#1da156]/10 text-[#1da156] ${value ? 'min-w-12 w-fit px-3' : 'w-12'}`}>{value ? <span className="whitespace-nowrap text-base font-black tabular-nums">{value}</span> : <Icon className="h-6 w-6" />}</div><h3 className="mt-5 text-sm font-black text-slate-950">{title}</h3><p className="mt-2 text-xs leading-6 text-slate-600">{text}</p></article>)}
+            {OUTCOMES.map(({ value, Icon, title, text }) => <article key={title} className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm"><div className={`flex h-12 items-center justify-center rounded-xl bg-[#1da156]/10 text-[#1da156] ${value ? 'min-w-12 w-fit px-3' : 'w-12'}`}>{value ? <span className="whitespace-nowrap text-base font-black tabular-nums">{value}</span> : <Icon className="h-6 w-6" />}</div><h3 className="mt-5 text-sm font-black text-slate-950">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{text}</p></article>)}
           </div>
         </div>
       </section>

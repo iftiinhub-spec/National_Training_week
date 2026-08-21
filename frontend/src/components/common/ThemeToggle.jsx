@@ -12,7 +12,7 @@ const ThemeToggle = ({ className = '' }) => {
       onClick={toggleTheme}
       aria-label={label}
       title={label}
-      className={`theme-toggle inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 transition hover:border-[#1da156] hover:text-[#1da156] ${className}`}
+      className={`theme-toggle inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-slate-900 transition hover:text-[#1da156] ${className}`}
     >
       {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
     </button>

@@ -1,6 +1,6 @@
 import express from 'express';
 import { getPublicTrainings, getPublicTraining, getPublicEvents, getPublicEvent, getCurrentEvent, getPublicProgram, getFeaturedTrainings } from '../controllers/public/training.controller.js';
-import { getPublicRecordings } from '../controllers/admin/recording.controller.js';
+import { getPublicRecording, getPublicRecordings } from '../controllers/admin/recording.controller.js';
 import { getPublicTrainer, getPublicTrainers } from '../controllers/admin/trainer.controller.js';
 import { verifyCertificate } from '../controllers/admin/certificate.controller.js';
 import { createContactMessage } from '../controllers/admin/contact.controller.js';
@@ -21,12 +21,12 @@ router.param('id', validateObjectIdParam);
 
 router.get('/settings', getPublicSettings);
 router.get('/faqs', getPublicFAQs);
-router.get('/sponsors', getPublicSponsors);
+router.get('/sponsors', ...optionalObjectIdQueries('event'), validate, getPublicSponsors);
 
 // Trainings & Trainers
 router.get('/trainings', paginationValidation, ...optionalObjectIdQueries('event', 'eventDay', 'category', 'trainer'), validate, getPublicTrainings);
 router.get('/trainings/:id', idParam(), validate, getPublicTraining);
-router.get('/featured-trainings', getFeaturedTrainings);
+router.get('/featured-trainings', ...optionalObjectIdQueries('event'), validate, getFeaturedTrainings);
 router.get('/trainers', paginationValidation, validate, getPublicTrainers);
 router.get('/trainers/:id', idParam(), validate, getPublicTrainer);
 router.get('/categories', getCategories);
@@ -42,10 +42,11 @@ router.post('/trainer-applications', uploadImage.single('photo'), verifyUploaded
 router.get('/events', paginationValidation, validate, getPublicEvents);
 router.get('/current-event', getCurrentEvent);
 router.get('/events/:id', idParam(), validate, getPublicEvent);
-router.get('/program', getPublicProgram);
+router.get('/program', ...optionalObjectIdQueries('eventId'), validate, getPublicProgram);
 
 // Recordings (published only)
 router.get('/recordings', paginationValidation, ...optionalObjectIdQueries('event', 'eventDay', 'category', 'trainer'), validate, getPublicRecordings);
+router.get('/recordings/:id', idParam(), validate, getPublicRecording);
 
 // Certificate verification
 router.get('/verify/:certificateId', param('certificateId').trim().matches(/^[A-Za-z0-9-]{6,100}$/).withMessage('Invalid certificate ID.'), validate, verifyCertificate);
