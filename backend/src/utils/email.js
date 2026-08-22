@@ -52,6 +52,11 @@ const createTransporter = ({ user, pass } = {}) => {
     rateDelta: 1_000,
     rateLimit: Math.max(1, Number(process.env.SMTP_RATE_LIMIT_PER_SECOND) || 5),
   };
+  // Temporary compatibility switch for SMTP servers with an invalid certificate.
+  // Remove this setting as soon as the mail server certificate is renewed.
+  if (process.env.SMTP_ALLOW_INVALID_CERT === 'true') {
+    options.tls = { rejectUnauthorized: false };
+  }
   if (!isRelayTransport()) options.auth = { user, pass };
   return nodemailer.createTransport(options);
 };
