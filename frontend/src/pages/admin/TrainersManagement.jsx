@@ -49,6 +49,9 @@ export const TrainersManagement = () => {
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [rejectingTrainer, setRejectingTrainer] = useState(null);
+  const [rejectionNote, setRejectionNote] = useState('');
+  const [reviewing, setReviewing] = useState(false);
   const fileRef = useRef();
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -168,12 +171,28 @@ export const TrainersManagement = () => {
     }
   };
 
-  const reviewAccess = async (id, status) => {
+  const reviewAccess = async (id, status, reason = '') => {
+    if (status === 'rejected' && !reason.trim()) {
+      const trainer = allTrainers.find((item) => item._id === id);
+      setRejectingTrainer(trainer || { _id: id, name: 'this trainer' });
+      setRejectionNote('');
+      return;
+    }
+    setReviewing(true);
     try {
-      await api.patch(`/admin/trainers/${id}/access`, { status });
+      await api.patch(`/admin/trainers/${id}/access`, { status, ...(reason.trim() && { reason: reason.trim() }) });
       toast.success(`Trainer ${status}.`);
+      setRejectingTrainer(null);
+      setRejectionNote('');
       fetchTrainers();
     } catch (error) { toast.error(error.message || 'Access update failed.'); }
+    finally { setReviewing(false); }
+  };
+
+  const submitRejection = (event) => {
+    event.preventDefault();
+    if (!rejectionNote.trim()) return toast.error('Please enter a reason for rejecting this trainer.');
+    reviewAccess(rejectingTrainer._id, 'rejected', rejectionNote);
   };
 
   const toggleSelected = (id) => setSelectedIds((current) => (
@@ -489,6 +508,24 @@ export const TrainersManagement = () => {
                 >
                   {saving ? 'Saving…' : 'Save Profile'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {rejectingTrainer && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" onMouseDown={() => !reviewing && setRejectingTrainer(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="reject-trainer-title" className="relative w-full max-w-lg rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl" onMouseDown={(event) => event.stopPropagation()}>
+            <AdminModalClose onClick={() => !reviewing && setRejectingTrainer(null)} />
+            <h2 id="reject-trainer-title" className="pr-10 text-xl font-black text-slate-900">Reject trainer application</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Write a note explaining why <strong className="text-slate-700">{rejectingTrainer.name}</strong> was rejected. This note will be included in the rejection email.</p>
+            <form onSubmit={submitRejection} className="mt-5">
+              <label className="block text-sm font-bold text-slate-700">Rejection note *</label>
+              <textarea autoFocus required maxLength={500} rows={5} value={rejectionNote} onChange={(event) => setRejectionNote(event.target.value)} placeholder="Explain the reason for the rejection..." className="mt-2 w-full resize-y rounded-xl border border-slate-300 p-3 text-sm leading-6 focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-100" />
+              <p className="mt-1 text-right text-xs text-slate-400">{rejectionNote.length}/500</p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button type="button" disabled={reviewing} onClick={() => { setRejectingTrainer(null); setRejectionNote(''); }} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-60">Cancel</button>
+                <button type="submit" disabled={reviewing || !rejectionNote.trim()} className="min-h-11 rounded-xl bg-rose-600 px-5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-50">{reviewing ? 'Rejecting...' : 'Reject and send email'}</button>
               </div>
             </form>
           </div>
