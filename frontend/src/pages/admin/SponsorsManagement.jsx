@@ -30,7 +30,7 @@ const inputClass = 'mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 bg
 const imageUrl = (path) => path ? (path.startsWith('http') ? path : `/${path.replace(/^\//, '')}`) : '';
 const coOrganizerCategory = (category) => LEGACY_CATEGORY_LABELS[category] || category || 'Co-Organizer';
 
-export const SponsorsManagement = () => {
+export const SponsorsManagement = ({ mediaPartnersOnly = false }) => {
   const confirmAction = useConfirmDialog();
   const [sponsors, setSponsors] = useState([]);
   const [events, setEvents] = useState([]);
@@ -42,6 +42,11 @@ export const SponsorsManagement = () => {
   const [logo, setLogo] = useState(null);
   const [preview, setPreview] = useState('');
   const fileRef = useRef(null);
+  const itemLabel = mediaPartnersOnly ? 'media partner' : 'co-organizer';
+  const title = mediaPartnersOnly ? 'Media Partners' : 'Co-Organizers';
+  const visibleSponsors = sponsors.filter((sponsor) => mediaPartnersOnly
+    ? coOrganizerCategory(sponsor.category) === 'Media Co-Organizer'
+    : coOrganizerCategory(sponsor.category) !== 'Media Co-Organizer');
 
   const currentEvent = useMemo(() => events.find((event) => event.status !== 'completed') || events[0], [events]);
 
@@ -60,7 +65,7 @@ export const SponsorsManagement = () => {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ ...EMPTY_FORM, event: currentEvent?._id || '' });
+    setForm({ ...EMPTY_FORM, event: currentEvent?._id || '', category: mediaPartnersOnly ? 'Media Co-Organizer' : 'Co-Organizer' });
     setLogo(null);
     setPreview('');
     setShowForm(true);
@@ -103,7 +108,7 @@ export const SponsorsManagement = () => {
 
   const submit = async (event) => {
     event.preventDefault();
-    if (!editing && !logo) return toast.error('Select a co-organizer logo.');
+    if (!editing && !logo) return toast.error(`Select a ${itemLabel} logo.`);
     const data = new FormData();
     Object.entries(form).forEach(([key, value]) => data.append(key, String(value)));
     if (logo) data.append('sponsorLogo', logo);
@@ -128,7 +133,7 @@ export const SponsorsManagement = () => {
   };
 
   const remove = async (sponsor) => {
-    if (!await confirmAction({ title: `Delete ${sponsor.name}?`, message: 'The co-organizer record and its uploaded logo will be permanently removed.', confirmLabel: 'Delete co-organizer' })) return;
+    if (!await confirmAction({ title: `Delete ${sponsor.name}?`, message: `The ${itemLabel} record and its uploaded logo will be permanently removed.`, confirmLabel: `Delete ${itemLabel}` })) return;
     try {
       const response = await api.delete(`/admin/sponsors/${sponsor._id}`);
       toast.success(response.message);
@@ -136,43 +141,43 @@ export const SponsorsManagement = () => {
     } catch (error) { toast.error(error.message || 'Failed to delete co-organizer.'); }
   };
 
-  if (loading) return <LoadingSpinner label="Loading co-organizers..." />;
+  if (loading) return <LoadingSpinner label={`Loading ${title.toLowerCase()}...`} />;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <p className="text-xs font-black uppercase tracking-[.16em] text-[#1a6b3c]">Public website</p>
-          <h1 className="mt-1 text-2xl font-black text-slate-950">Co-Organizers</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">Upload co-organizer logos, associate them with an event edition, and control how they appear on the Home page.</p>
+          <h1 className="mt-1 text-2xl font-black text-slate-950">{title}</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">Upload {itemLabel} logos, associate them with an event edition, and control how they appear on the Home page.</p>
         </div>
-        <button onClick={openCreate} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white hover:bg-[#145c32]"><PlusIcon className="h-5 w-5" /> Add Co-Organizer</button>
+        <button onClick={openCreate} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white hover:bg-[#145c32]"><PlusIcon className="h-5 w-5" /> Add {mediaPartnersOnly ? 'Media Partner' : 'Co-Organizer'}</button>
       </div>
 
-      {sponsors.length ? (
+      {visibleSponsors.length ? (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Logo</th><th className="px-4 py-3">Co-Organizer</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Event</th><th className="px-4 py-3">Order</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{sponsors.map((sponsor) => <tr key={sponsor._id} className="align-middle hover:bg-slate-50/70"><td className="px-4 py-3"><img src={imageUrl(sponsor.logo)} alt={`${sponsor.name} logo`} className="h-12 w-20 object-contain" /></td><td className="px-4 py-3 font-black text-slate-950">{sponsor.name}{sponsor.isFeatured && <StarIcon className="ml-2 inline h-4 w-4 text-amber-500" title="Featured co-organizer" />}</td><td className="px-4 py-3 text-xs font-semibold text-[#1a6b3c]">{coOrganizerCategory(sponsor.category)}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.event?.name || 'Event'}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.displayOrder}</td><td className="px-4 py-3"><button onClick={() => toggleStatus(sponsor)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${sponsor.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>{sponsor.isActive ? 'Visible' : 'Hidden'}</button></td><td className="px-4 py-3"><div className="flex justify-end gap-1"><button onClick={() => openEdit(sponsor)} aria-label={`Edit ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-[#1a6b3c]"><PencilSquareIcon className="h-5 w-5" /></button><button onClick={() => remove(sponsor)} aria-label={`Delete ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-5 w-5" /></button></div></td></tr>)}</tbody></table>
+          <table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Logo</th><th className="px-4 py-3">{mediaPartnersOnly ? 'Media Partner' : 'Co-Organizer'}</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Event</th><th className="px-4 py-3">Order</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{visibleSponsors.map((sponsor) => <tr key={sponsor._id} className="align-middle hover:bg-slate-50/70"><td className="px-4 py-3"><img src={imageUrl(sponsor.logo)} alt={`${sponsor.name} logo`} className="h-12 w-20 object-contain" /></td><td className="px-4 py-3 font-black text-slate-950">{sponsor.name}{sponsor.isFeatured && <StarIcon className="ml-2 inline h-4 w-4 text-amber-500" title={`Featured ${itemLabel}`} />}</td><td className="px-4 py-3 text-xs font-semibold text-[#1a6b3c]">{coOrganizerCategory(sponsor.category)}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.event?.name || 'Event'}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.displayOrder}</td><td className="px-4 py-3"><button onClick={() => toggleStatus(sponsor)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${sponsor.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>{sponsor.isActive ? 'Visible' : 'Hidden'}</button></td><td className="px-4 py-3"><div className="flex justify-end gap-1"><button onClick={() => openEdit(sponsor)} aria-label={`Edit ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-[#1a6b3c]"><PencilSquareIcon className="h-5 w-5" /></button><button onClick={() => remove(sponsor)} aria-label={`Delete ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-5 w-5" /></button></div></td></tr>)}</tbody></table>
         </div>
       ) : (
-        <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><BuildingOffice2Icon className="mx-auto h-11 w-11 text-slate-300" /><h2 className="mt-4 text-lg font-black text-slate-900">No co-organizers added yet</h2><p className="mt-2 text-sm text-slate-500">Add the first organization to publish the Home-page co-organizers section.</p></div>
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><BuildingOffice2Icon className="mx-auto h-11 w-11 text-slate-300" /><h2 className="mt-4 text-lg font-black text-slate-900">No {title.toLowerCase()} added yet</h2><p className="mt-2 text-sm text-slate-500">Add the first organization to publish the Home-page {title.toLowerCase()} section.</p></div>
       )}
 
       {showForm && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeForm(); }}>
           <section role="dialog" aria-modal="true" aria-labelledby="sponsor-form-title" className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5"><div><p className="text-xs font-black uppercase tracking-[.14em] text-[#1a6b3c]">Co-organizer details</p><h2 id="sponsor-form-title" className="mt-1 text-xl font-black text-slate-950">{editing ? 'Edit co-organizer' : 'Add co-organizer'}</h2></div><button onClick={closeForm} aria-label="Close co-organizer form" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><XMarkIcon className="h-6 w-6" /></button></div>
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5"><div><p className="text-xs font-black uppercase tracking-[.14em] text-[#1a6b3c]">{mediaPartnersOnly ? 'Media partner' : 'Co-organizer'} details</p><h2 id="sponsor-form-title" className="mt-1 text-xl font-black text-slate-950">{editing ? `Edit ${itemLabel}` : `Add ${itemLabel}`}</h2></div><button onClick={closeForm} aria-label={`Close ${itemLabel} form`} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><XMarkIcon className="h-6 w-6" /></button></div>
             <form onSubmit={submit} className="space-y-6 p-6">
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="text-sm font-bold text-slate-700">Event edition *<select className={inputClass} value={form.event} onChange={(e) => setForm({ ...form, event: e.target.value })} required><option value="">Select event</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name} ({event.year})</option>)}</select></label>
-                <label className="text-sm font-bold text-slate-700">Co-organizer name *<input className={inputClass} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={120} required /></label>
-                <label className="text-sm font-bold text-slate-700">Category *<select className={inputClass} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></label>
+                <label className="text-sm font-bold text-slate-700">{mediaPartnersOnly ? 'Media partner' : 'Co-organizer'} name *<input className={inputClass} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={120} required /></label>
+                {!mediaPartnersOnly && <label className="text-sm font-bold text-slate-700">Category *<select className={inputClass} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CATEGORIES.filter((category) => category !== 'Media Co-Organizer').map((category) => <option key={category}>{category}</option>)}</select></label>}
                 <label className="text-sm font-bold text-slate-700">Website URL<input type="url" className={inputClass} value={form.websiteUrl} onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })} placeholder="https://example.org" /></label>
                 <label className="text-sm font-bold text-slate-700">Display order<input type="number" min="0" max="9999" className={inputClass} value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: e.target.value })} /></label>
                 <div className="flex flex-wrap items-end gap-5 pb-2"><label className="flex items-center gap-2 text-sm font-bold text-slate-700"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="h-4 w-4 accent-[#1a6b3c]" /> Visible on Home</label><label className="flex items-center gap-2 text-sm font-bold text-slate-700"><input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} className="h-4 w-4 accent-[#1a6b3c]" /> Featured</label></div>
               </div>
               <label className="block text-sm font-bold text-slate-700">Short description<textarea rows="3" maxLength={500} className={`${inputClass} py-3`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
-              <div><p className="text-sm font-bold text-slate-700">Co-organizer logo {editing ? '' : '*'}</p><button type="button" onClick={() => fileRef.current?.click()} className="mt-2 flex min-h-40 w-full items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 hover:border-[#1a6b3c]">{preview ? <img src={preview} alt="Co-organizer logo preview" className="max-h-28 max-w-full object-contain" /> : <span className="flex flex-col items-center gap-2 text-sm font-semibold text-slate-500"><ArrowUpTrayIcon className="h-8 w-8" />Choose PNG, JPEG, or WebP</span>}</button><input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={selectLogo} className="sr-only" /><p className="mt-2 text-xs text-slate-400">Transparent PNG or WebP works best. Maximum 5 MB.</p></div>
-              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end"><button type="button" onClick={closeForm} className="min-h-11 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700">Cancel</button><button disabled={saving} className="min-h-11 rounded-xl bg-[#1a6b3c] px-6 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Saving...' : editing ? 'Save Changes' : 'Add Co-Organizer'}</button></div>
+              <div><p className="text-sm font-bold text-slate-700">{mediaPartnersOnly ? 'Media partner' : 'Co-organizer'} logo {editing ? '' : '*'}</p><button type="button" onClick={() => fileRef.current?.click()} className="mt-2 flex min-h-40 w-full items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 hover:border-[#1a6b3c]">{preview ? <img src={preview} alt={`${itemLabel} logo preview`} className="max-h-28 max-w-full object-contain" /> : <span className="flex flex-col items-center gap-2 text-sm font-semibold text-slate-500"><ArrowUpTrayIcon className="h-8 w-8" />Choose PNG, JPEG, or WebP</span>}</button><input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={selectLogo} className="sr-only" /><p className="mt-2 text-xs text-slate-400">Transparent PNG or WebP works best. Maximum 5 MB.</p></div>
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end"><button type="button" onClick={closeForm} className="min-h-11 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700">Cancel</button><button disabled={saving} className="min-h-11 rounded-xl bg-[#1a6b3c] px-6 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Saving...' : editing ? 'Save Changes' : `Add ${mediaPartnersOnly ? 'Media Partner' : 'Co-Organizer'}`}</button></div>
             </form>
           </section>
         </div>

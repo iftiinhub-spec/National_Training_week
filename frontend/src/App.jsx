@@ -68,6 +68,7 @@ const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
 const Settings = lazy(() => import('./pages/admin/Settings'));
 const FAQsManagement = lazy(() => import('./pages/admin/FAQsManagement'));
 const SponsorsManagement = lazy(() => import('./pages/admin/SponsorsManagement'));
+const MediaPartnersManagement = lazy(() => import('./pages/admin/MediaPartnersManagement'));
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -205,6 +206,7 @@ export const App = () => {
           <Route path="settings" element={<Settings />} />
           <Route path="faqs" element={<FAQsManagement />} />
           <Route path="sponsors" element={<SponsorsManagement />} />
+          <Route path="media-partners" element={<MediaPartnersManagement />} />
         </Route>
 
         {/* Public Website Fallback */}

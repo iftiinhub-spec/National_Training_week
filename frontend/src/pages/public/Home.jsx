@@ -85,6 +85,29 @@ const SectionTitle = ({ tag, title, subtitle, light = false }) => (
   </div>
 );
 
+const PartnerLogoSection = ({ partners, title, tag, subtitle, headingId }) => partners.length > 0 && (
+  <section className="bg-white py-20 text-black" aria-labelledby={headingId}>
+    <div className="mx-auto max-w-7xl px-4 sm:px-8">
+      <div className="mx-auto mb-12 max-w-3xl text-center">
+        <p className="mb-4 inline-flex rounded-full bg-[#1da156]/10 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-[#1da156]">{tag}</p>
+        <h2 id={headingId} className="text-3xl font-bold leading-tight tracking-[-.025em] text-black sm:text-4xl">{title}</h2>
+        <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-black/60">{subtitle}</p>
+      </div>
+      <div className="flex flex-wrap items-start justify-center gap-x-10 gap-y-12 sm:gap-x-16 lg:gap-x-20">
+        {partners.map((partner) => {
+          const logo = (
+            <div className={`mx-auto flex shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white p-4 shadow-sm transition-shadow group-hover:shadow-md ${partner.isFeatured ? 'h-24 w-24 sm:h-28 sm:w-28' : 'h-20 w-20 sm:h-24 sm:w-24'}`}>
+              <img src={partner.logo.startsWith('http') ? partner.logo : `/${partner.logo.replace(/^\//, '')}`} alt={`${partner.name} logo`} loading="lazy" className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105" />
+            </div>
+          );
+          const className = `group flex flex-col justify-center transition-opacity hover:opacity-80 focus:rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1da156] focus-visible:ring-offset-4 ${partner.isFeatured ? 'w-36 sm:w-44' : 'w-28 sm:w-32'}`;
+          return partner.websiteUrl ? <a key={partner._id} href={partner.websiteUrl} target="_blank" rel="noopener noreferrer" className={className} aria-label={`Visit ${partner.name} website`}>{logo}</a> : <div key={partner._id} className={className}>{logo}</div>;
+        })}
+      </div>
+    </div>
+  </section>
+);
+
 const AUDIENCE = [
   { Icon: UserGroupIcon,      label: 'General Public',                   desc: 'Understand AI through accessible sessions with no technical background required.' },
   { Icon: BookOpenIcon,       label: 'Teachers & Educators',             desc: 'Use practical AI tools for lesson planning, assessment, and classroom work.' },
@@ -101,6 +124,8 @@ export const Home = () => {
   const [trainers, setTrainers] = useState([]);
   const [loadingTrainers, setLoadingTrainers] = useState(true);
   const [sponsors, setSponsors] = useState([]);
+  const coOrganizers = sponsors.filter((sponsor) => !['Media Co-Organizer', 'Media Partner'].includes(sponsor.category));
+  const mediaPartners = sponsors.filter((sponsor) => ['Media Co-Organizer', 'Media Partner'].includes(sponsor.category));
   const [activeFacultyDay, setActiveFacultyDay] = useState('');
   const [now, setNow] = useState(Date.now);
   const registrationOpensAt = event?.registrationStart ? new Date(event.registrationStart).getTime() : null;
@@ -356,30 +381,8 @@ export const Home = () => {
       </section>
 
       {/* Co-organizers are shown late in the page journey: visible, but secondary to the event program. */}
-      {sponsors.length > 0 && (
-        <section className="bg-white py-20 text-black" aria-labelledby="sponsors-heading">
-          <div className="mx-auto max-w-7xl px-4 sm:px-8">
-            <div className="mx-auto mb-12 max-w-3xl text-center">
-              <p className="mb-4 inline-flex rounded-full bg-[#1da156]/10 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-[#1da156]">Working together</p>
-              <h2 id="sponsors-heading" className="text-3xl font-bold leading-tight tracking-[-.025em] text-black sm:text-4xl">Co-Organizers</h2>
-              <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-black/60">Organizations co-organizing National Training Week and helping make it accessible to learners across Somalia.</p>
-            </div>
-            <div className="flex flex-wrap items-start justify-center gap-x-10 gap-y-12 sm:gap-x-16 lg:gap-x-20">
-              {sponsors.map((sponsor) => {
-                const content = (
-                  <>
-                    <div className={`mx-auto flex shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white p-4 shadow-sm transition-shadow group-hover:shadow-md ${sponsor.isFeatured ? 'h-24 w-24 sm:h-28 sm:w-28' : 'h-20 w-20 sm:h-24 sm:w-24'}`}>
-                      <img src={sponsor.logo.startsWith('http') ? sponsor.logo : `/${sponsor.logo.replace(/^\//, '')}`} alt={`${sponsor.name} logo`} loading="lazy" className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105" />
-                    </div>
-                  </>
-                );
-                const className = `group flex flex-col justify-center transition-opacity hover:opacity-80 focus:rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1da156] focus-visible:ring-offset-4 ${sponsor.isFeatured ? 'w-36 sm:w-44' : 'w-28 sm:w-32'}`;
-                return sponsor.websiteUrl ? <a key={sponsor._id} href={sponsor.websiteUrl} target="_blank" rel="noopener noreferrer" className={className} aria-label={`Visit ${sponsor.name} website`}>{content}</a> : <div key={sponsor._id} className={className}>{content}</div>;
-              })}
-            </div>
-          </div>
-        </section>
-      )}
+      <PartnerLogoSection partners={coOrganizers} title="Co-Organizers" tag="Working together" subtitle="Organizations co-organizing National Training Week and helping make it accessible to learners across Somalia." headingId="sponsors-heading" />
+      <PartnerLogoSection partners={mediaPartners} title="Media Partners" tag="Media collaboration" subtitle="Media organizations helping National Training Week reach learners and communities across Somalia." headingId="media-partners-heading" />
 
       {/* ══ CERTIFICATE CTA STRIP ═══════════════════ */}
       <section className="bg-[#1da156] py-20 text-white">
