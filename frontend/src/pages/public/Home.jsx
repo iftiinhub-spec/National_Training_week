@@ -381,8 +381,8 @@ export const Home = () => {
       </section>
 
       {/* Co-organizers are shown late in the page journey: visible, but secondary to the event program. */}
-      <PartnerLogoSection partners={coOrganizers} title="Co-Organizers" tag="Working together" subtitle="Organizations co-organizing National Training Week and helping make it accessible to learners across Somalia." headingId="sponsors-heading" />
-      <PartnerLogoSection partners={mediaPartners} title="Media Partners" tag="Media collaboration" subtitle="Media organizations helping National Training Week reach learners and communities across Somalia." headingId="media-partners-heading" />
+      <PartnerLogoSection partners={coOrganizers} title="Co-Organizers" tag="Co-Organizer" subtitle="Organizations co-organizing National Training Week and helping make it accessible to learners across Somalia." headingId="sponsors-heading" />
+      <PartnerLogoSection partners={mediaPartners} title="Media Partners" tag="Media" subtitle="Media organizations helping National Training Week reach learners and communities across Somalia." headingId="media-partners-heading" />
 
       {/* ══ CERTIFICATE CTA STRIP ═══════════════════ */}
       <section className="bg-[#1da156] py-20 text-white">
