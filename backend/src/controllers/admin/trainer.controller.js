@@ -161,8 +161,10 @@ export const updateTrainer = async (req, res, next) => {
 
 export const reviewTrainer = async (req, res, next) => {
   try {
-    const { status, reason = '' } = req.body;
+    const { status } = req.body;
+    const reason = String(req.body.reason || '').trim();
     if (!['approved', 'rejected', 'suspended', 'pending'].includes(status)) return errorResponse(res, 'Invalid trainer access status.', 400);
+    if (status === 'rejected' && !reason) return errorResponse(res, 'A rejection note is required.', 400);
     const trainer = await Trainer.findById(req.params.id);
     if (!trainer) return errorResponse(res, 'Trainer not found.', 404);
     const previousStatus = trainer.accessStatus;
