@@ -4,6 +4,8 @@ import Attendance from '../../models/Attendance.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
 import { resolveTrainingScope } from '../../utils/trainingScope.js';
+import User from '../../models/User.js';
+import { escapeRegex } from '../../utils/search.js';
 
 const idsFromRequest = (req) => [...new Set((req.body?.ids || [req.params.id]).filter(Boolean).map(String))];
 
@@ -38,6 +40,14 @@ export const getRegistrations = async (req, res, next) => {
     if (trainingScope) filter.training = trainingScope;
     if (req.query.status) filter.status = req.query.status;
     if (req.query.participant) filter.participant = req.query.participant;
+    if (req.query.search) {
+      const search = { $regex: escapeRegex(req.query.search), $options: 'i' };
+      const [participantIds, trainingIds] = await Promise.all([
+        User.find({ role: 'participant', $or: [{ fullName: search }, { email: search }] }).distinct('_id'),
+        Training.find({ title: search }).distinct('_id'),
+      ]);
+      filter.$or = [{ participant: { $in: participantIds } }, { training: { $in: trainingIds } }];
+    }
 
     const [registrations, total] = await Promise.all([
       Registration.find(filter)

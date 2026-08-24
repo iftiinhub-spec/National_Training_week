@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export const CategoriesManagement = () => {
   const confirmAction = useConfirmDialog();
@@ -13,6 +13,13 @@ export const CategoriesManagement = () => {
   const [description, setDescription] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState('');
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredCategories = categories.filter((category) => (
+    !normalizedSearch
+    || category.name?.toLowerCase().includes(normalizedSearch)
+    || category.description?.toLowerCase().includes(normalizedSearch)
+  ));
 
   const fetchCategories = async () => {
     try {
@@ -131,11 +138,16 @@ export const CategoriesManagement = () => {
       </section>
 
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
               <h2 className="text-base font-bold text-slate-950">Existing categories</h2>
-              <p className="mt-0.5 text-xs text-slate-500">{categories.length} {categories.length === 1 ? 'category' : 'categories'} available</p>
+              <p className="mt-0.5 text-xs text-slate-500">{filteredCategories.length} of {categories.length} {categories.length === 1 ? 'category' : 'categories'} shown</p>
             </div>
+            <label className="relative block w-full sm:max-w-xs">
+              <span className="sr-only">Search categories</span>
+              <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search categories" className="min-h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15" />
+            </label>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -143,7 +155,7 @@ export const CategoriesManagement = () => {
                 <tr><th className="px-6 py-4">Category name</th><th className="px-6 py-4">Description</th><th className="px-6 py-4 text-right">Actions</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {categories.length > 0 ? categories.map((cat) => (
+                {filteredCategories.length > 0 ? filteredCategories.map((cat) => (
                   <tr key={cat._id} className="transition-colors hover:bg-slate-50/80">
                     <td className="px-6 py-4 font-bold text-slate-950">{cat.name}</td>
                     <td className="max-w-2xl px-6 py-4 leading-6 text-slate-500">{cat.description || 'No description provided.'}</td>
@@ -153,7 +165,7 @@ export const CategoriesManagement = () => {
                     </div></td>
                   </tr>
                 )) : (
-                  <tr><td colSpan="3" className="px-6 py-12 text-center text-sm text-slate-500">No categories have been added yet.</td></tr>
+                  <tr><td colSpan="3" className="px-6 py-12 text-center text-sm text-slate-500">{search.trim() ? 'No categories match your search.' : 'No categories have been added yet.'}</td></tr>
                 )}
               </tbody>
             </table>

@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { EyeIcon, EyeSlashIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, MagnifyingGlassIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import PhoneInput from '../../components/common/PhoneInput';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
@@ -15,7 +15,7 @@ export const ModeratorsManagement = () => {
   const [events, setEvents] = useState([]);
   const [eventDays, setEventDays] = useState([]);
   const [assignedSessions, setAssignedSessions] = useState([]);
-  const [filters, setFilters] = useState({ event: '', eventDay: '' });
+  const [filters, setFilters] = useState({ event: '', eventDay: '', training: '', search: '' });
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -50,9 +50,25 @@ export const ModeratorsManagement = () => {
   }, [filters.event]);
 
   useEffect(() => {
-    if (!filters.event && !filters.eventDay) { setModerators(allModerators); return; }
-    setModerators(allModerators.filter((moderator) => assignedSessions.some((session) => String(session.moderator?._id || session.moderator) === String(moderator._id) && (!filters.event || String(session.event?._id || session.event) === String(filters.event)) && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === String(filters.eventDay)))));
+    const query = filters.search.trim().toLowerCase();
+    const hasAssignmentFilter = filters.event || filters.eventDay || filters.training;
+    setModerators(allModerators.filter((moderator) => {
+      const matchesSearch = !query || [moderator.fullName, moderator.email, moderator.phone]
+        .some((value) => String(value || '').toLowerCase().includes(query));
+      const matchesAssignment = !hasAssignmentFilter || assignedSessions.some((session) => (
+        String(session.moderator?._id || session.moderator) === String(moderator._id)
+        && (!filters.event || String(session.event?._id || session.event) === filters.event)
+        && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === filters.eventDay)
+        && (!filters.training || String(session._id) === filters.training)
+      ));
+      return matchesSearch && matchesAssignment;
+    }));
   }, [allModerators, assignedSessions, filters]);
+
+  const sessionOptions = assignedSessions.filter((session) => (
+    (!filters.event || String(session.event?._id || session.event) === filters.event)
+    && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === filters.eventDay)
+  ));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -124,7 +140,12 @@ export const ModeratorsManagement = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="grid min-w-0 grid-cols-1 gap-3 border-b border-slate-200 p-4 sm:grid-cols-2"><select value={filters.event} onChange={(e) => setFilters({ event: e.target.value, eventDay: '' })} className="min-h-10 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All events</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name} ({event.year})</option>)}</select><select value={filters.eventDay} onChange={(e) => setFilters((current) => ({ ...current, eventDay: e.target.value }))} disabled={!filters.event} className="min-h-10 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100"><option value="">All days</option>{eventDays.map((day) => <option key={day._id} value={day._id}>Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}</option>)}</select></div>
+        <div className="grid min-w-0 grid-cols-1 gap-3 border-b border-slate-200 p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <select aria-label="Filter moderators by event" value={filters.event} onChange={(e) => setFilters((current) => ({ ...current, event: e.target.value, eventDay: '', training: '' }))} className="min-h-11 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All events</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name} ({event.year})</option>)}</select>
+          <select aria-label="Filter moderators by event day" value={filters.eventDay} onChange={(e) => setFilters((current) => ({ ...current, eventDay: e.target.value, training: '' }))} disabled={!filters.event} className="min-h-11 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100"><option value="">All days</option>{eventDays.map((day) => <option key={day._id} value={day._id}>Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}</option>)}</select>
+          <select aria-label="Filter moderators by session" value={filters.training} onChange={(e) => setFilters((current) => ({ ...current, training: e.target.value }))} className="min-h-11 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All sessions</option>{sessionOptions.map((session) => <option key={session._id} value={session._id}>{session.title}</option>)}</select>
+          <label className="relative block"><span className="sr-only">Search moderators</span><MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="search" value={filters.search} onChange={(e) => setFilters((current) => ({ ...current, search: e.target.value }))} placeholder="Search moderators" className="min-h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15" /></label>
+        </div>
         <div className="flex flex-wrap gap-2 border-b border-slate-200 px-4 py-3">
           <button type="button" onClick={() => deleteModerators(selectedIds)} disabled={!selectedIds.length} className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Delete selected</button>
           <button type="button" onClick={() => deleteModerators(moderators.map((item) => item._id))} disabled={!moderators.length} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 disabled:opacity-40">Delete all</button>
@@ -170,6 +191,7 @@ export const ModeratorsManagement = () => {
               ))}
             </tbody>
           </table>
+          {!moderators.length && <p className="p-10 text-center text-sm text-slate-500">No moderators match these filters.</p>}
         </div>
       </div>
 
