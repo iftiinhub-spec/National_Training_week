@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, EyeSlashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, EyeSlashIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import PhoneInput from '../../components/common/PhoneInput';
 import PhotoCropModal from '../../components/common/PhotoCropModal';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
@@ -38,7 +38,7 @@ export const TrainersManagement = () => {
   const [events, setEvents] = useState([]);
   const [eventDays, setEventDays] = useState([]);
   const [assignedSessions, setAssignedSessions] = useState([]);
-  const [filters, setFilters] = useState({ event: '', eventDay: '' });
+  const [filters, setFilters] = useState({ event: '', eventDay: '', training: '', search: '' });
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [viewingTrainer, setViewingTrainer] = useState(null);
@@ -77,9 +77,25 @@ export const TrainersManagement = () => {
   }, [filters.event]);
 
   useEffect(() => {
-    if (!filters.event && !filters.eventDay) { setTrainers(allTrainers); return; }
-    setTrainers(allTrainers.filter((trainer) => assignedSessions.some((session) => String(session.trainer?._id || session.trainer) === String(trainer._id) && (!filters.event || String(session.event?._id || session.event) === String(filters.event)) && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === String(filters.eventDay)))));
+    const query = filters.search.trim().toLowerCase();
+    const hasAssignmentFilter = filters.event || filters.eventDay || filters.training;
+    setTrainers(allTrainers.filter((trainer) => {
+      const matchesSearch = !query || [trainer.name, trainer.email, trainer.organization, trainer.expertise]
+        .some((value) => String(value || '').toLowerCase().includes(query));
+      const matchesAssignment = !hasAssignmentFilter || assignedSessions.some((session) => (
+        String(session.trainer?._id || session.trainer) === String(trainer._id)
+        && (!filters.event || String(session.event?._id || session.event) === filters.event)
+        && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === filters.eventDay)
+        && (!filters.training || String(session._id) === filters.training)
+      ));
+      return matchesSearch && matchesAssignment;
+    }));
   }, [allTrainers, assignedSessions, filters]);
+
+  const sessionOptions = assignedSessions.filter((session) => (
+    (!filters.event || String(session.event?._id || session.event) === filters.event)
+    && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === filters.eventDay)
+  ));
 
   const openCreateModal = () => {
     setEditingTrainer(null);
@@ -241,7 +257,12 @@ export const TrainersManagement = () => {
         </button>
       </div>
 
-      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2"><select value={filters.event} onChange={(e) => setFilters({ event: e.target.value, eventDay: '' })} className="min-h-10 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All events</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name} ({event.year})</option>)}</select><select value={filters.eventDay} onChange={(e) => setFilters((current) => ({ ...current, eventDay: e.target.value }))} disabled={!filters.event} className="min-h-10 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100"><option value="">All days</option>{eventDays.map((day) => <option key={day._id} value={day._id}>Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}</option>)}</select></div>
+      <div className="grid min-w-0 grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
+        <select aria-label="Filter trainers by event" value={filters.event} onChange={(e) => setFilters((current) => ({ ...current, event: e.target.value, eventDay: '', training: '' }))} className="min-h-11 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All events</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name} ({event.year})</option>)}</select>
+        <select aria-label="Filter trainers by event day" value={filters.eventDay} onChange={(e) => setFilters((current) => ({ ...current, eventDay: e.target.value, training: '' }))} disabled={!filters.event} className="min-h-11 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100"><option value="">All days</option>{eventDays.map((day) => <option key={day._id} value={day._id}>Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}</option>)}</select>
+        <select aria-label="Filter trainers by session" value={filters.training} onChange={(e) => setFilters((current) => ({ ...current, training: e.target.value }))} className="min-h-11 min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"><option value="">All sessions</option>{sessionOptions.map((session) => <option key={session._id} value={session._id}>{session.title}</option>)}</select>
+        <label className="relative block"><span className="sr-only">Search trainers</span><MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="search" value={filters.search} onChange={(e) => setFilters((current) => ({ ...current, search: e.target.value }))} placeholder="Search trainers" className="min-h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15" /></label>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => handleDelete(selectedIds)} disabled={!selectedIds.length} className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Delete selected</button>
@@ -251,7 +272,7 @@ export const TrainersManagement = () => {
       {/* Cards Grid */}
       {trainers.length === 0 ? (
         <div className="text-center py-20 text-slate-400 text-sm">
-          No trainer profiles yet. Click <strong>Add Trainer Profile</strong> to create one.
+          {filters.search || filters.event || filters.eventDay || filters.training ? 'No trainers match these filters.' : <>No trainer profiles yet. Click <strong>Add Trainer Profile</strong> to create one.</>}
         </div>
       ) : (
         <>

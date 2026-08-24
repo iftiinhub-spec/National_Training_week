@@ -5,6 +5,7 @@ import {
   BuildingOffice2Icon,
   PencilSquareIcon,
   PlusIcon,
+  MagnifyingGlassIcon,
   StarIcon,
   TrashIcon,
   XMarkIcon,
@@ -41,12 +42,23 @@ export const SponsorsManagement = ({ mediaPartnersOnly = false }) => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [logo, setLogo] = useState(null);
   const [preview, setPreview] = useState('');
+  const [search, setSearch] = useState('');
+  const [eventFilter, setEventFilter] = useState('');
   const fileRef = useRef(null);
   const itemLabel = mediaPartnersOnly ? 'media partner' : 'co-organizer';
   const title = mediaPartnersOnly ? 'Media Partners' : 'Co-Organizers';
-  const visibleSponsors = sponsors.filter((sponsor) => mediaPartnersOnly
-    ? coOrganizerCategory(sponsor.category) === 'Media Co-Organizer'
-    : coOrganizerCategory(sponsor.category) !== 'Media Co-Organizer');
+  const visibleSponsors = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return sponsors.filter((sponsor) => {
+      const matchesType = mediaPartnersOnly
+        ? coOrganizerCategory(sponsor.category) === 'Media Co-Organizer'
+        : coOrganizerCategory(sponsor.category) !== 'Media Co-Organizer';
+      const matchesEvent = !eventFilter || String(sponsor.event?._id || sponsor.event) === eventFilter;
+      const matchesSearch = !query || [sponsor.name, sponsor.description, sponsor.websiteUrl, coOrganizerCategory(sponsor.category)]
+        .some((value) => String(value || '').toLowerCase().includes(query));
+      return matchesType && matchesEvent && matchesSearch;
+    });
+  }, [eventFilter, mediaPartnersOnly, search, sponsors]);
 
   const currentEvent = useMemo(() => events.find((event) => event.status !== 'completed') || events[0], [events]);
 
@@ -154,12 +166,21 @@ export const SponsorsManagement = ({ mediaPartnersOnly = false }) => {
         <button onClick={openCreate} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white hover:bg-[#145c32]"><PlusIcon className="h-5 w-5" /> Add {mediaPartnersOnly ? 'Media Partner' : 'Co-Organizer'}</button>
       </div>
 
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2">
+        <label className="text-xs font-bold uppercase text-slate-600">Event
+          <select value={eventFilter} onChange={(event) => setEventFilter(event.target.value)} className={`${inputClass} mt-1`}><option value="">All events</option>{events.map((event) => <option key={event._id} value={event._id}>{event.name}{event.year ? ` (${event.year})` : ''}</option>)}</select>
+        </label>
+        <label className="text-xs font-bold uppercase text-slate-600">Search
+          <span className="relative mt-1 block"><MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${title.toLowerCase()}`} className={`${inputClass} mt-0 pl-10`} /></span>
+        </label>
+      </div>
+
       {visibleSponsors.length ? (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Logo</th><th className="px-4 py-3">{mediaPartnersOnly ? 'Media Partner' : 'Co-Organizer'}</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Event</th><th className="px-4 py-3">Order</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{visibleSponsors.map((sponsor) => <tr key={sponsor._id} className="align-middle hover:bg-slate-50/70"><td className="px-4 py-3"><img src={imageUrl(sponsor.logo)} alt={`${sponsor.name} logo`} className="h-12 w-20 object-contain" /></td><td className="px-4 py-3 font-black text-slate-950">{sponsor.name}{sponsor.isFeatured && <StarIcon className="ml-2 inline h-4 w-4 text-amber-500" title={`Featured ${itemLabel}`} />}</td><td className="px-4 py-3 text-xs font-semibold text-[#1a6b3c]">{coOrganizerCategory(sponsor.category)}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.event?.name || 'Event'}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.displayOrder}</td><td className="px-4 py-3"><button onClick={() => toggleStatus(sponsor)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${sponsor.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>{sponsor.isActive ? 'Visible' : 'Hidden'}</button></td><td className="px-4 py-3"><div className="flex justify-end gap-1"><button onClick={() => openEdit(sponsor)} aria-label={`Edit ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-[#1a6b3c]"><PencilSquareIcon className="h-5 w-5" /></button><button onClick={() => remove(sponsor)} aria-label={`Delete ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-5 w-5" /></button></div></td></tr>)}</tbody></table>
         </div>
       ) : (
-        <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><BuildingOffice2Icon className="mx-auto h-11 w-11 text-slate-300" /><h2 className="mt-4 text-lg font-black text-slate-900">No {title.toLowerCase()} added yet</h2><p className="mt-2 text-sm text-slate-500">Add the first organization to publish the Home-page {title.toLowerCase()} section.</p></div>
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><BuildingOffice2Icon className="mx-auto h-11 w-11 text-slate-300" /><h2 className="mt-4 text-lg font-black text-slate-900">{search.trim() || eventFilter ? `No ${title.toLowerCase()} match these filters` : `No ${title.toLowerCase()} added yet`}</h2><p className="mt-2 text-sm text-slate-500">{search.trim() || eventFilter ? 'Try a different search term or event.' : `Add the first organization to publish the Home-page ${title.toLowerCase()} section.`}</p></div>
       )}
 
       {showForm && (
