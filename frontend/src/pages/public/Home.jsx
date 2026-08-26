@@ -221,7 +221,7 @@ export const Home = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <SectionTitle
             tag="Program Structure"
-            title={`${days.length || 'Focused'} Days Of Learning`}
+            title={`${days.length || 'Focused'} Days of Learning`}
             subtitle={`Each day advances the current edition theme: ${event?.theme || 'national skills and innovation'}.`}
           />
           <ScheduleTabs fallbackDays={days} />
