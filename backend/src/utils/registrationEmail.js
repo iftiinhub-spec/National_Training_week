@@ -20,3 +20,14 @@ export const sendRegistrationStatusEmail = ({ to, participantName, trainingTitle
     html: emailLayout({ eyebrow: approved ? 'Place confirmed' : 'Pending review', title, preview: `${title} for ${trainingTitle}`, body: `<p style="margin-top:0">Hello ${escapeHtml(participantName || 'Participant')},</p><p>${message}</p>${emailInfoCard([['Training', trainingTitle], ['Date', date ? new Date(date).toLocaleDateString() : ''], ['Start time', formatTime12(startTime)], ['Status', approved ? 'Approved' : 'Pending approval']])}${emailButton('View my trainings', `${process.env.FRONTEND_URL}/portal/trainings`)}` }),
   });
 };
+
+export const sendRegistrationAnnouncementEmail = ({ to, participantName, trainingTitle, subject, message }) => sendEmail({
+  to,
+  subject,
+  html: emailLayout({
+    eyebrow: 'Session update',
+    title: subject,
+    preview: `${subject}: ${trainingTitle}`,
+    body: `<p style="margin-top:0">Hello ${escapeHtml(participantName || 'Participant')},</p><p>${escapeHtml(message).replaceAll('\n', '<br>')}</p>${emailInfoCard([['Training', trainingTitle]])}${emailButton('View my trainings', `${process.env.FRONTEND_URL}/portal/trainings`)}`,
+  }),
+});
