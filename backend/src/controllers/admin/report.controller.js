@@ -130,6 +130,24 @@ export const participantsByType = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// GET /api/admin/reports/participants-by-gender
+export const participantsByGender = async (req, res, next) => {
+  try {
+    const participantIds = await scopedParticipantIds(await scopedTrainingIds(req.query));
+    const data = await User.aggregate([
+      { $match: { role: 'participant', ...(participantIds ? { _id: { $in: participantIds } } : {}) } },
+      { $group: { _id: { $cond: [{ $in: ['$gender', ['male', 'female']] }, '$gender', 'not_specified'] }, count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+    const total = data.reduce((sum, item) => sum + item.count, 0);
+    const byGender = data.map((item) => ({
+      ...item,
+      percentage: total ? Number(((item.count / total) * 100).toFixed(1)) : 0,
+    }));
+    return successResponse(res, { byGender, total });
+  } catch (err) { next(err); }
+};
+
 // GET /api/admin/reports/certificates
 export const certificateReport = async (req, res, next) => {
   try {

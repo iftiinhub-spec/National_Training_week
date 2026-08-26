@@ -18,7 +18,7 @@ import { openQRSession, closeQRSession, getAttendance, updateAttendance, createM
 import { getTrainingFeedback } from '../controllers/admin/feedback.controller.js';
 import { generateCertificate, bulkGenerateCertificates, getCertificateJob, getCertificates, revokeCertificate } from '../controllers/admin/certificate.controller.js';
 import { getRecordings, getRecording, createRecording, updateRecording, togglePublish, deleteRecording, restoreRecording } from '../controllers/admin/recording.controller.js';
-import { getOverview, registrationReport, attendanceReport, participantsByRegion, participantsByType, certificateReport, feedbackReport, dailyAttendanceSummary } from '../controllers/admin/report.controller.js';
+import { getOverview, registrationReport, attendanceReport, participantsByRegion, participantsByType, participantsByGender, certificateReport, feedbackReport, dailyAttendanceSummary } from '../controllers/admin/report.controller.js';
 import { getContactMessages, markAsRead, deleteContactMessage } from '../controllers/admin/contact.controller.js';
 import { getSettings, updateSettings, sendTestEmail, uploadCertificateSignature, removeCertificateSignature } from '../controllers/admin/settings.controller.js';
 import { createFAQ, deleteFAQ, getFAQs, toggleFAQPublish, updateFAQ } from '../controllers/admin/faq.controller.js';
@@ -101,6 +101,7 @@ router.get('/reports/registrations', registrationReport);
 router.get('/reports/attendance', attendanceReport);
 router.get('/reports/participants-by-region', participantsByRegion);
 router.get('/reports/participants-by-type', participantsByType);
+router.get('/reports/participants-by-gender', participantsByGender);
 router.get('/reports/certificates', certificateReport);
 router.get('/reports/feedback', feedbackReport);
 router.get('/reports/daily-attendance', dailyAttendanceSummary);
