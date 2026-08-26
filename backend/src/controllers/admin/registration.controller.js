@@ -27,6 +27,15 @@ const buildRegistrationFilter = async (query, { pendingOnly = false } = {}) => {
   return filter;
 };
 
+const sendBulkApprovalEmails = async (messages) => {
+  let failed = 0;
+  for (const message of messages) {
+    const result = await sendRegistrationStatusEmail(message);
+    if (!result?.success) failed += 1;
+  }
+  console.info(`Bulk approval email delivery finished: ${messages.length - failed} sent, ${failed} failed.`);
+};
+
 const deleteRegistrationIds = async (ids) => {
   const registrations = await Registration.find({ _id: { $in: ids } }).select('participant training status');
   const approvedByTraining = registrations
@@ -163,7 +172,7 @@ export const approveFilteredRegistrations = async (req, res, next) => {
 
     let approved = 0;
     let capacitySkipped = 0;
-    let emailFailures = 0;
+    const approvalEmails = [];
 
     for (const registration of registrations) {
       const { training, participant } = registration;
@@ -187,23 +196,24 @@ export const approveFilteredRegistrations = async (req, res, next) => {
         { upsert: true, new: true },
       );
       approved += 1;
+      approvalEmails.push({
+        to: participant.email,
+        participantName: participant.fullName,
+        trainingTitle: training.title,
+        status: 'approved',
+        date: training.date,
+        startTime: training.startTime,
+      });
+    }
 
-      try {
-        await sendRegistrationStatusEmail({
-          to: participant.email,
-          participantName: participant.fullName,
-          trainingTitle: training.title,
-          status: 'approved',
-          date: training.date,
-          startTime: training.startTime,
-        });
-      } catch {
-        emailFailures += 1;
-      }
+    // SMTP delivery can take minutes when the provider is unavailable. Keep it
+    // outside the HTTP request so successful approvals are returned immediately.
+    if (approvalEmails.length) {
+      setImmediate(() => { void sendBulkApprovalEmails(approvalEmails); });
     }
 
     return successResponse(res, {
-      summary: { matched: registrations.length, approved, capacitySkipped, emailFailures },
+      summary: { matched: registrations.length, approved, capacitySkipped, emailsQueued: approvalEmails.length },
     }, approved ? `Approved ${approved} filtered registration(s).` : 'No pending filtered registrations could be approved.');
   } catch (err) { next(err); }
 };
