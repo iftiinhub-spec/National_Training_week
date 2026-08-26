@@ -4,8 +4,6 @@ import {
   ArrowLeftIcon,
   CalendarDaysIcon,
   ClockIcon,
-  EnvelopeIcon,
-  PhoneIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -73,8 +71,8 @@ export const TrainerDetails = () => {
         </div>
       </section>
 
-      <main className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-8 lg:grid-cols-[1fr_320px] lg:py-20">
-        <div>
+      <main className="mx-auto max-w-7xl px-4 py-14 sm:px-8 lg:py-20">
+        <div className="max-w-5xl">
           <p className="text-xs font-black uppercase tracking-[.16em] text-[#1da156]">Professional profile</p>
           <h2 className="mt-2 text-3xl font-black">About the trainer</h2>
           <p className="mt-6 whitespace-pre-line text-base leading-8 text-black/70">{trainer.biography || 'The complete professional biography will be published soon.'}</p>
@@ -103,14 +101,6 @@ export const TrainerDetails = () => {
           </div>
         </div>
 
-        <aside className="h-fit rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-black">Contact information</h2>
-          <div className="mt-5 space-y-4 text-sm">
-            {trainer.email && <a href={`mailto:${trainer.email}`} className="flex items-start gap-3 break-all text-black/70 hover:text-[#1da156]"><EnvelopeIcon className="mt-0.5 h-5 w-5 shrink-0 text-[#1da156]" />{trainer.email}</a>}
-            {trainer.phone && <a href={`tel:${trainer.phone}`} className="flex items-center gap-3 text-black/70 hover:text-[#1da156]"><PhoneIcon className="h-5 w-5 shrink-0 text-[#1da156]" />{trainer.phone}</a>}
-            {!trainer.email && !trainer.phone && <p className="text-black/60">Public contact details are not available.</p>}
-          </div>
-        </aside>
       </main>
     </div>
   );
