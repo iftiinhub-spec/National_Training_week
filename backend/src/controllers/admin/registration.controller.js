@@ -2,7 +2,7 @@ import Registration from '../../models/Registration.js';
 import Training from '../../models/Training.js';
 import Attendance from '../../models/Attendance.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
-import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
+import { sendRegistrationAnnouncementEmail, sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
 import { resolveTrainingScope } from '../../utils/trainingScope.js';
 import User from '../../models/User.js';
 import { escapeRegex } from '../../utils/search.js';
@@ -34,6 +34,15 @@ const sendBulkApprovalEmails = async (messages) => {
     if (!result?.success) failed += 1;
   }
   console.info(`Bulk approval email delivery finished: ${messages.length - failed} sent, ${failed} failed.`);
+};
+
+const sendFilteredAnnouncementEmails = async (recipients, announcement) => {
+  let failed = 0;
+  for (const recipient of recipients) {
+    const result = await sendRegistrationAnnouncementEmail({ ...recipient, ...announcement });
+    if (!result?.success) failed += 1;
+  }
+  console.info(`Filtered registration announcement finished: ${recipients.length - failed} sent, ${failed} failed.`);
 };
 
 const deleteRegistrationIds = async (ids) => {
@@ -215,6 +224,39 @@ export const approveFilteredRegistrations = async (req, res, next) => {
     return successResponse(res, {
       summary: { matched: registrations.length, approved, capacitySkipped, emailsQueued: approvalEmails.length },
     }, approved ? `Approved ${approved} filtered registration(s).` : 'No pending filtered registrations could be approved.');
+  } catch (err) { next(err); }
+};
+
+// POST /api/admin/registrations/email-filtered
+export const emailFilteredRegistrations = async (req, res, next) => {
+  try {
+    const filter = await buildRegistrationFilter(req.query);
+    filter.status = { $in: ['pending', 'approved'] };
+    const registrations = await Registration.find(filter)
+      .populate('participant', 'fullName email')
+      .populate('training', 'title');
+
+    const recipientsByEmail = new Map();
+    for (const registration of registrations) {
+      const email = registration.participant?.email?.trim().toLowerCase();
+      if (!email || recipientsByEmail.has(email)) continue;
+      recipientsByEmail.set(email, {
+        to: email,
+        participantName: registration.participant.fullName,
+        trainingTitle: registration.training?.title || 'Training session',
+      });
+    }
+    const recipients = [...recipientsByEmail.values()];
+    if (!recipients.length) return errorResponse(res, 'No pending or approved applicants match this session.', 404);
+
+    setImmediate(() => {
+      void sendFilteredAnnouncementEmails(recipients, {
+        subject: req.body.subject.trim(),
+        message: req.body.message.trim(),
+      });
+    });
+
+    return successResponse(res, { queued: recipients.length }, `Email queued for ${recipients.length} applicant(s).`);
   } catch (err) { next(err); }
 };
 
