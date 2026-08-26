@@ -18,6 +18,7 @@ import {
   HeartIcon,
 } from '@heroicons/react/24/outline';
 import { formatTime12, formatTimeRange12 } from '../../utils/timeFormat';
+import { formatTrainerName } from '../../utils/trainerName';
 
 /* ── Countdown hook ──────────────────────────────── */
 const useCountdown = (target) => {
@@ -316,10 +317,10 @@ export const Home = () => {
                   </div>
 
                   {/* Card Footer */}
-                  <div className="p-5 flex flex-col gap-2 flex-1">
+                  <div className="flex flex-1 flex-col p-5">
                     <div>
                       <h3 className="font-extrabold text-black text-base leading-snug group-hover:text-[#1da156] transition-colors">
-                        {tr.name}
+                        {formatTrainerName(tr)}
                       </h3>
                       {tr.organization && (
                         <p className="text-xs text-[#1da156] font-bold mt-0.5">{tr.organization}</p>
@@ -328,7 +329,7 @@ export const Home = () => {
 
                     {/* Expertise tags row */}
                     {tr.expertise?.length > 1 && (
-                      <div className="flex flex-wrap gap-1.5 mt-auto pt-2 border-t border-black/10">
+                      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-black/10 pt-3">
                         {tr.expertise.slice(1).map((exp, idx) => (
                           <span
                             key={idx}
@@ -339,7 +340,7 @@ export const Home = () => {
                         ))}
                       </div>
                     )}
-                    <Link to={`/trainers/${tr._id}`} className="mt-2 self-start text-sm font-semibold text-[#1da156] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1da156]">
+                    <Link to={`/trainers/${tr._id}`} className="mt-auto inline-flex min-h-11 items-center self-start pt-4 text-sm font-semibold text-[#1da156] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1da156]">
                       View full profile
                     </Link>
                   </div>
