@@ -9,6 +9,8 @@ import { useTheme } from '../../context/ThemeContext';
 
 const COLORS = ['#1a6b3c', '#2f855a', '#68a67d', '#94a3b8', '#334155', '#0f172a'];
 const PARTICIPANT_TYPE_LABELS = { university_student: 'University Student', highschool_graduate: 'High-School Graduate', developer_it: 'Developer / IT Specialist', professional: 'Professional', general_public: 'General Public', teacher_educator: 'Teacher / Educator', entrepreneur_business: 'Entrepreneur / Business Owner', health_worker: 'Health Worker', community_organization: 'Community Organization Representative', other: 'Other' };
+const GENDER_LABELS = { male: 'Male', female: 'Female', not_specified: 'Not specified' };
+const GENDER_COLORS = { Male: '#1a6b3c', Female: '#2563eb', 'Not specified': '#94a3b8' };
 
 export const Reports = () => {
   const { isDark } = useTheme();
@@ -18,6 +20,7 @@ export const Reports = () => {
   const [overview, setOverview] = useState(null);
   const [regionData, setRegionData] = useState([]);
   const [typeData, setTypeData] = useState([]);
+  const [genderData, setGenderData] = useState([]);
   const [attendanceData, setAttendanceData] = useState(null);
   const [dailyData, setDailyData] = useState([]);
   const [feedbackData, setFeedbackData] = useState(null);
@@ -36,15 +39,16 @@ export const Reports = () => {
         if (filters.eventDay) query.set('eventDayId', filters.eventDay);
         if (filters.training) query.set('trainingId', filters.training);
         const suffix = query.toString() ? `?${query.toString()}` : '';
-        const [ovRes, regionRes, regRes, typeRes, attRes, dailyRes, fbRes, certRes, trainingRes] = await Promise.all([
+        const [ovRes, regionRes, regRes, typeRes, genderRes, attRes, dailyRes, fbRes, certRes, trainingRes] = await Promise.all([
           api.get(`/admin/reports/overview${suffix}`), api.get(`/admin/reports/participants-by-region${suffix}`), api.get(`/admin/reports/registrations${suffix}`),
-          api.get(`/admin/reports/participants-by-type${suffix}`), api.get(`/admin/reports/attendance${suffix}`),
+          api.get(`/admin/reports/participants-by-type${suffix}`), api.get(`/admin/reports/participants-by-gender${suffix}`), api.get(`/admin/reports/attendance${suffix}`),
           api.get(`/admin/reports/daily-attendance${suffix}`), api.get(`/admin/reports/feedback${suffix}`), api.get(`/admin/reports/certificates${suffix}`), api.get(`/admin/trainings?limit=100${filters.event ? `&event=${filters.event}` : ''}${filters.eventDay ? `&eventDay=${filters.eventDay}` : ''}`),
         ]);
         if (ovRes.success) setOverview(ovRes.data);
         if (regionRes.success) setRegionData(regionRes.data.byRegion || []);
         if (regRes.success) setRegistrationData(regRes.data);
         if (typeRes.success) setTypeData((typeRes.data.byType || []).map((item) => ({ ...item, _id: PARTICIPANT_TYPE_LABELS[item._id] || item._id || 'Not specified' })));
+        if (genderRes.success) setGenderData((genderRes.data.byGender || []).map((item) => ({ ...item, name: GENDER_LABELS[item._id] || 'Not specified' })));
         if (attRes.success) setAttendanceData(attRes.data);
         if (dailyRes.success) setDailyData(dailyRes.data.dailySummary || []);
         if (fbRes.success) setFeedbackData(fbRes.data);
@@ -88,6 +92,8 @@ export const Reports = () => {
       ...regionData.map((item) => [item._id || 'Not specified', item.count]), [],
       ['Participants by Audience Type'], ['Audience Type', 'Participants'],
       ...typeData.map((item) => [item._id || 'Not specified', item.count]), [],
+      ['Participants by Gender'], ['Gender', 'Participants', 'Percentage'],
+      ...genderData.map((item) => [item.name, item.count, `${item.percentage}%`]), [],
       ['Session Details'], ['Session', 'Trainer', 'Moderator', 'Registrations', 'Approved', 'Present', 'Feedback', 'Rating', 'Certificates'],
       ...sessionRows.map((item) => [item.title, item.trainer?.name || 'Unassigned', item.moderator?.fullName || 'Unassigned', item.registrations, item.approved, item.pending, item.rejected, item.cancelled, item.attendance, item.feedback, item.rating?.toFixed?.(1) || '—', item.trainerRating?.toFixed?.(1) || '—', item.organizationRating?.toFixed?.(1) || '—', item.certificates]), [],
       ['Trainer Workload'], ['Trainer', 'Sessions'], ...staffWorkload.trainers.map(([name, count]) => [name, count]), [],
@@ -130,9 +136,10 @@ export const Reports = () => {
         {summaryCards.map(({ label, value, Icon }) => <div key={label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><span className="text-sm font-semibold text-slate-500">{label}</span><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-[#1a6b3c]"><Icon className="h-5 w-5" /></span></div><p className="mt-5 text-3xl font-bold tracking-tight text-slate-950">{value}</p></div>)}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="font-bold text-slate-950">Regional distribution</h2><p className="mt-1 text-xs text-slate-500">Participants grouped by region</p><div className="mt-5 h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={regionData} margin={{ left: -20 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGrid} /><XAxis dataKey="_id" tick={{ fontSize: 11, fill: chartText }} axisLine={false} tickLine={false} /><YAxis allowDecimals={false} tick={{ fontSize: 11, fill: chartText }} axisLine={false} tickLine={false} /><Tooltip contentStyle={tooltipStyle} /><Bar dataKey="count" fill="#1a6b3c" radius={[8, 8, 0, 0]} maxBarSize={52} /></BarChart></ResponsiveContainer></div></div>
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="font-bold text-slate-950">Audience categories</h2><p className="mt-1 text-xs text-slate-500">Participant composition by type</p><div className="mt-5 h-72"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={typeData} dataKey="count" nameKey="_id" cx="50%" cy="50%" innerRadius={54} outerRadius={92} paddingAngle={3}>{typeData.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip contentStyle={tooltipStyle} /></PieChart></ResponsiveContainer></div></div>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2 2xl:col-span-1"><h2 className="font-bold text-slate-950">Gender distribution</h2><p className="mt-1 text-xs text-slate-500">Unique participants by gender</p>{genderData.length ? <><div className="mt-3 h-56" aria-label="Gender distribution pie chart"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={genderData} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={48} outerRadius={78} paddingAngle={3}>{genderData.map((item) => <Cell key={item.name} fill={GENDER_COLORS[item.name]} />)}</Pie><Tooltip contentStyle={tooltipStyle} formatter={(value, name, item) => [`${value} (${item.payload.percentage}%)`, name]} /></PieChart></ResponsiveContainer></div><dl className="grid gap-2 sm:grid-cols-3 lg:grid-cols-3">{genderData.map((item) => <div key={item.name} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2 text-xs"><dt className="flex min-w-0 items-center gap-2 font-semibold text-slate-700"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: GENDER_COLORS[item.name] }} />{item.name}</dt><dd className="shrink-0 font-bold text-slate-950">{item.count} · {item.percentage}%</dd></div>)}</dl></> : <div className="flex h-72 items-center justify-center text-sm text-slate-500">No gender data is available for the selected filters.</div>}</div>
       </div>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="font-bold text-slate-950">Attendance trend</h2><p className="mt-1 text-xs text-slate-500">Daily attendance rate across scheduled event days</p><div className="mt-5 h-72"><ResponsiveContainer width="100%" height="100%"><LineChart data={dailyData} margin={{ left: -20, right: 12 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGrid} /><XAxis dataKey="day" tick={{ fontSize: 11, fill: chartText }} axisLine={false} tickLine={false} /><YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: chartText }} axisLine={false} tickLine={false} /><Tooltip contentStyle={tooltipStyle} /><Line type="monotone" dataKey="rate" stroke="#1a6b3c" strokeWidth={3} dot={{ fill: '#1a6b3c', r: 4 }} /></LineChart></ResponsiveContainer></div></div>
