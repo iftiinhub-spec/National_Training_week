@@ -12,7 +12,7 @@ import { getCategories, getCategory, createCategory, updateCategory, deleteCateg
 import { getTrainers, getTrainer, createTrainer, updateTrainer, deleteTrainer, deleteTrainers, reviewTrainer } from '../controllers/admin/trainer.controller.js';
 import { getTrainings, getTraining, createTraining, updateTraining, updateTrainingStatus, completeTraining, assignTrainingStaff, deleteTraining } from '../controllers/admin/training.controller.js';
 import { getParticipants, getParticipant, toggleParticipantStatus, deleteParticipant, deleteParticipants, getModerators, getModerator, createModerator, updateModerator, toggleModeratorStatus, resetModeratorPassword, deleteModerator, deleteModerators } from '../controllers/admin/user.controller.js';
-import { getRegistrations, getRegistration, updateRegistrationStatus, deleteRegistration, deleteRegistrations } from '../controllers/admin/registration.controller.js';
+import { getRegistrations, getRegistration, updateRegistrationStatus, approveFilteredRegistrations, deleteRegistration, deleteRegistrations } from '../controllers/admin/registration.controller.js';
 import { getMeeting, createMeeting, updateMeeting, deleteMeeting, releaseMeeting, sendTrainerInvitation, sendParticipantInvitations, getCommunications } from '../controllers/admin/meeting.controller.js';
 import { openQRSession, closeQRSession, getAttendance, updateAttendance, createManualAttendance } from '../controllers/admin/attendance.controller.js';
 import { getTrainingFeedback } from '../controllers/admin/feedback.controller.js';
@@ -71,6 +71,7 @@ router.get('/trainings/:trainingId/feedback', getTrainingFeedback);
 
 // Registrations
 router.route('/registrations').get(paginationValidation, ...optionalObjectIdQueries('event', 'eventDay', 'training', 'participant'), query('status').optional({ checkFalsy: true }).isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getRegistrations);
+router.patch('/registrations/approve-filtered', ...optionalObjectIdQueries('event', 'eventDay', 'training', 'participant'), validate, approveFilteredRegistrations);
 router.delete('/registrations', body('ids').isArray({ min: 1 }).withMessage('Select at least one registration.'), body('ids.*').isMongoId().withMessage('Valid registration IDs are required.'), validate, deleteRegistrations);
 router.route('/registrations/:id').get(idParam(), validate, getRegistration).delete(idParam(), validate, deleteRegistration);
 router.patch('/registrations/:id/status', idParam(), registrationStatusValidation, validate, updateRegistrationStatus);

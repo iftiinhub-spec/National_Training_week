@@ -9,6 +9,24 @@ import { escapeRegex } from '../../utils/search.js';
 
 const idsFromRequest = (req) => [...new Set((req.body?.ids || [req.params.id]).filter(Boolean).map(String))];
 
+const buildRegistrationFilter = async (query, { pendingOnly = false } = {}) => {
+  const filter = {};
+  const trainingScope = await resolveTrainingScope(query);
+  if (trainingScope) filter.training = trainingScope;
+  if (pendingOnly) filter.status = 'pending';
+  else if (query.status) filter.status = query.status;
+  if (query.participant) filter.participant = query.participant;
+  if (query.search) {
+    const search = { $regex: escapeRegex(query.search), $options: 'i' };
+    const [participantIds, trainingIds] = await Promise.all([
+      User.find({ role: 'participant', $or: [{ fullName: search }, { email: search }] }).distinct('_id'),
+      Training.find({ title: search }).distinct('_id'),
+    ]);
+    filter.$or = [{ participant: { $in: participantIds } }, { training: { $in: trainingIds } }];
+  }
+  return filter;
+};
+
 const deleteRegistrationIds = async (ids) => {
   const registrations = await Registration.find({ _id: { $in: ids } }).select('participant training status');
   const approvedByTraining = registrations
@@ -35,19 +53,7 @@ const deleteRegistrationIds = async (ids) => {
 export const getRegistrations = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
-    const filter = {};
-    const trainingScope = await resolveTrainingScope(req.query);
-    if (trainingScope) filter.training = trainingScope;
-    if (req.query.status) filter.status = req.query.status;
-    if (req.query.participant) filter.participant = req.query.participant;
-    if (req.query.search) {
-      const search = { $regex: escapeRegex(req.query.search), $options: 'i' };
-      const [participantIds, trainingIds] = await Promise.all([
-        User.find({ role: 'participant', $or: [{ fullName: search }, { email: search }] }).distinct('_id'),
-        Training.find({ title: search }).distinct('_id'),
-      ]);
-      filter.$or = [{ participant: { $in: participantIds } }, { training: { $in: trainingIds } }];
-    }
+    const filter = await buildRegistrationFilter(req.query);
 
     const [registrations, total] = await Promise.all([
       Registration.find(filter)
@@ -143,6 +149,62 @@ export const updateRegistrationStatus = async (req, res, next) => {
     }
 
     return successResponse(res, { registration: reg }, `Registration ${status}.`);
+  } catch (err) { next(err); }
+};
+
+// PATCH /api/admin/registrations/approve-filtered
+export const approveFilteredRegistrations = async (req, res, next) => {
+  try {
+    const filter = await buildRegistrationFilter(req.query, { pendingOnly: true });
+    const registrations = await Registration.find(filter)
+      .populate('training')
+      .populate('participant', 'fullName email')
+      .sort({ registeredAt: 1 });
+
+    let approved = 0;
+    let capacitySkipped = 0;
+    let emailFailures = 0;
+
+    for (const registration of registrations) {
+      const { training, participant } = registration;
+      if (training.capacity) {
+        const reserved = await Training.findOneAndUpdate(
+          { _id: training._id, $expr: { $lt: ['$filledSeats', '$capacity'] } },
+          { $inc: { filledSeats: 1 } },
+        );
+        if (!reserved) {
+          capacitySkipped += 1;
+          continue;
+        }
+      }
+
+      registration.status = 'approved';
+      registration.updatedBy = req.user._id;
+      await registration.save();
+      await Attendance.findOneAndUpdate(
+        { participant: participant._id, training: training._id },
+        { $setOnInsert: { participant: participant._id, training: training._id, status: 'not_marked' } },
+        { upsert: true, new: true },
+      );
+      approved += 1;
+
+      try {
+        await sendRegistrationStatusEmail({
+          to: participant.email,
+          participantName: participant.fullName,
+          trainingTitle: training.title,
+          status: 'approved',
+          date: training.date,
+          startTime: training.startTime,
+        });
+      } catch {
+        emailFailures += 1;
+      }
+    }
+
+    return successResponse(res, {
+      summary: { matched: registrations.length, approved, capacitySkipped, emailFailures },
+    }, approved ? `Approved ${approved} filtered registration(s).` : 'No pending filtered registrations could be approved.');
   } catch (err) { next(err); }
 };
 
