@@ -11,6 +11,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useCurrentEvent } from '../../context/EventContext';
 import { formatTimeRange12 } from '../../utils/timeFormat';
+import { formatTrainerName } from '../../utils/trainerName';
 
 const assetUrl = (value) => {
   if (!value) return null;
@@ -60,9 +61,8 @@ export const TrainerDetails = () => {
             </div>
             <div>
               <p className="text-xs font-black uppercase tracking-[.18em] text-[#1da156]">Trainer & Keynote Speaker</p>
-              <h1 className="mt-3 text-4xl font-black leading-tight sm:text-5xl">{trainer.name}</h1>
-              {trainer.title && <p className="mt-4 text-lg font-bold text-[#1da156]">{trainer.title}</p>}
-              {trainer.organization && <p className="mt-1 text-base font-semibold text-white/70">{trainer.organization}</p>}
+              <h1 className="mt-3 text-4xl font-black leading-tight sm:text-5xl">{formatTrainerName(trainer)}</h1>
+              {trainer.organization && <p className="mt-4 text-base font-semibold text-white/70">{trainer.organization}</p>}
               {trainer.expertise?.length > 0 && (
                 <div className="mt-6 flex flex-wrap gap-2">
                   {trainer.expertise.map((item) => <span key={item} className="rounded-full border border-[#1da156]/50 bg-[#1da156]/15 px-3 py-1.5 text-xs font-bold text-white">{item}</span>)}
