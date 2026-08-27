@@ -107,8 +107,8 @@ export const TrainingsManagement = () => {
         api.get('/admin/trainings?limit=100'),
         api.get('/admin/events'),
         api.get('/admin/categories'),
-        api.get('/admin/trainers'),
-        api.get('/admin/moderators'),
+        api.get('/admin/trainers?limit=100'),
+        api.get('/admin/moderators?limit=100'),
       ]);
 
       if (trRes.success) setTrainings(trRes.data || []);
@@ -123,8 +123,8 @@ export const TrainingsManagement = () => {
         }
       }
       if (catRes.success) setCategories(catRes.data.categories || []);
-      if (trnerRes.success) setTrainers(trnerRes.data || []);
-      if (modRes.success) setModerators(modRes.data || []);
+      if (trnerRes.success) setTrainers((trnerRes.data || []).filter((trainer) => trainer.isActive && trainer.accessStatus === 'approved'));
+      if (modRes.success) setModerators((modRes.data || []).filter((moderator) => moderator.isActive));
     } catch (err) {
       toast.error('Failed to load training management data.');
     } finally {
