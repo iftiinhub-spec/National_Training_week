@@ -527,11 +527,10 @@ const HomeSessionCard = ({ session: s }) => {
     return p.startsWith('http') ? p : `/${p.replace(/^\//, '')}`;
   };
 
-  const trainerLabel = s.trainer
-    ? (s.trainer.name?.startsWith(s.trainer.title)
-        ? s.trainer.name
-        : `${s.trainer.title || ''} ${s.trainer.name}`.trim())
-    : 'Expert Trainer';
+  const assignedTrainers = s.trainers?.length ? s.trainers : s.trainer ? [s.trainer] : [];
+  const trainerLabel = assignedTrainers.map((trainer) => (
+    trainer.name?.startsWith(trainer.title) ? trainer.name : `${trainer.title || ''} ${trainer.name}`.trim()
+  )).join(', ') || 'Expert Trainers';
 
   return (
     <Link

@@ -86,7 +86,7 @@ export const ModeratorDashboard = () => {
                     {tr.trainer && (
                       <span className="flex items-center gap-1 text-slate-800 font-semibold">
                         <UserIcon className="w-4 h-4 text-blue-600" />
-                        Trainer: {tr.trainer.name}
+                        Trainers: {(tr.trainers?.length ? tr.trainers : [tr.trainer]).filter(Boolean).map((trainer) => trainer.name).join(', ')}
                       </span>
                     )}
                   </div>

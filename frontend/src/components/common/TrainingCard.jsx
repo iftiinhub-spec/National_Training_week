@@ -10,6 +10,7 @@ export const TrainingCard = ({ training }) => {
     title,
     coverImage,
     trainer,
+    trainers,
     eventDay,
     category,
     date,
@@ -18,6 +19,7 @@ export const TrainingCard = ({ training }) => {
     level,
     status,
   } = training;
+  const assignedTrainers = trainers?.length ? trainers : trainer ? [trainer] : [];
 
   // Fallback image graphic generator
   const imageUrl = coverImage
@@ -94,15 +96,15 @@ export const TrainingCard = ({ training }) => {
               <ClockIcon className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{formatTimeRange12(startTime, endTime)}</span>
             </div>
-            {trainer && (
+            {assignedTrainers.length > 0 && (
               <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                {trainer.photo ? (
-                  <img src={`/${trainer.photo}`} alt={trainer.name} className="w-5 h-5 rounded-full object-cover shrink-0" />
+                {assignedTrainers[0].photo ? (
+                  <img src={`/${assignedTrainers[0].photo}`} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
                 ) : (
                   <UserIcon className="w-4 h-4 text-blue-600 shrink-0" />
                 )}
                 <span className="font-medium text-slate-700">
-                  {trainer.title ? `${trainer.title} ` : ''}{trainer.name}
+                  {assignedTrainers.map((item) => `${item.title || ''} ${item.name}`.trim()).join(', ')}
                 </span>
               </div>
             )}

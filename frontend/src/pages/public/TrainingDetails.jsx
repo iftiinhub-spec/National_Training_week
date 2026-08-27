@@ -97,6 +97,7 @@ export const TrainingDetails = () => {
     description,
     coverImage,
     trainer,
+    trainers,
     event,
     eventDay,
     category,
@@ -109,6 +110,7 @@ export const TrainingDetails = () => {
     capacity,
     status,
   } = training;
+  const assignedTrainers = trainers?.length ? trainers : trainer ? [trainer] : [];
 
   const imageUrl = coverImage ? `/${coverImage}` : null;
   const registrationNow = Date.now();
@@ -203,8 +205,8 @@ export const TrainingDetails = () => {
           </div>
 
           {/* Trainer / Speaker Profile Box */}
-          {trainer && (
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-black/10 shadow-xs space-y-4">
+          {assignedTrainers.map((trainer) => (
+            <div key={trainer._id} className="bg-white rounded-2xl p-6 sm:p-8 border border-black/10 shadow-xs space-y-4">
               <span className="text-xs font-bold uppercase tracking-wider text-[#1da156]">
                 Assigned Trainer / Speaker
               </span>
@@ -249,7 +251,7 @@ export const TrainingDetails = () => {
                 </div>
               </div>
             </div>
-          )}
+          ))}
 
         </div>
 

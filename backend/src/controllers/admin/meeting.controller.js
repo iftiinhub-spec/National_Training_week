@@ -102,7 +102,7 @@ export const sendTrainerInvitation = async (req, res, next) => {
     const hasAccess = await checkModeratorAccess(trainingId, req.user._id, req.user.role);
     if (!hasAccess) return errorResponse(res, 'Access denied.', 403);
 
-    const training = await Training.findById(trainingId).populate('trainer').populate('event', 'name');
+    const training = await Training.findById(trainingId).populate('trainer').populate('trainers').populate('event', 'name');
     if (!training) return errorResponse(res, 'Training not found.', 404);
     const trainerInviteStartsAt = getTrainingDateTime(training.date, training.startTime);
     const trainerInviteEndsAt = getTrainingDateTime(training.date, training.endTime);
@@ -112,14 +112,16 @@ export const sendTrainerInvitation = async (req, res, next) => {
     if (trainerInviteEndsAt && trainerInviteEndsAt <= new Date()) {
       return errorResponse(res, 'This session has already ended. Invitations can no longer be sent.', 400);
     }
-    if (!training.trainer) return errorResponse(res, 'No trainer assigned to this training.', 400);
-    if (!training.trainer.email) return errorResponse(res, 'Trainer has no email address.', 400);
+    const trainers = [...new Map([...(training.trainers || []), ...(training.trainer ? [training.trainer] : [])].map((trainer) => [String(trainer._id), trainer])).values()];
+    if (!trainers.length) return errorResponse(res, 'No trainers are assigned to this training.', 400);
+    const trainersWithEmail = trainers.filter((trainer) => trainer.email);
+    if (!trainersWithEmail.length) return errorResponse(res, 'The assigned trainers have no email addresses.', 400);
 
     const meeting = await Meeting.findOne({ training: trainingId });
     if (!meeting) return errorResponse(res, 'Please create meeting details before sending invitation.', 400);
 
-    const result = await sendInvitationEmail({
-      to: training.trainer.email,
+    const results = await Promise.all(trainersWithEmail.map((trainer) => sendInvitationEmail({
+      to: trainer.email,
       trainingTitle: training.title,
       eventName: training.event?.name || 'National Training Week',
       meetingUrl: meeting.meetingUrl,
@@ -128,21 +130,24 @@ export const sendTrainerInvitation = async (req, res, next) => {
       startTime: meeting.startTime || training.date,
       platform: meeting.platform,
       notes: meeting.notes,
-    });
+    })));
+    const failedEmails = trainersWithEmail.filter((_, index) => !results[index].success).map((trainer) => trainer.email);
+    const recipients = trainersWithEmail.map((trainer) => trainer.email);
 
     await Communication.create({
       training: trainingId,
       type: 'invitation',
       recipientType: 'trainer',
-      recipients: [training.trainer.email],
+      recipients,
       subject: `Invitation: ${training.title}`,
-      body: `Meeting invitation sent to trainer ${training.trainer.name}`,
+      body: `Meeting invitation sent to ${recipients.length} assigned trainer${recipients.length === 1 ? '' : 's'}.`,
       sentBy: req.user._id,
-      deliveryStatus: result.success ? 'sent' : 'failed',
+      deliveryStatus: failedEmails.length === recipients.length ? 'failed' : failedEmails.length ? 'partial' : 'sent',
+      failedRecipients: failedEmails,
     });
 
-    if (!result.success) return errorResponse(res, `Trainer invitation could not be sent: ${result.error}`, 502);
-    return successResponse(res, null, 'Trainer invitation sent.');
+    if (failedEmails.length === recipients.length) return errorResponse(res, 'Trainer invitations could not be sent.', 502);
+    return successResponse(res, { sent: recipients.length - failedEmails.length, failed: failedEmails.length }, `Trainer invitation${recipients.length === 1 ? '' : 's'} sent.`);
   } catch (err) { next(err); }
 };
 

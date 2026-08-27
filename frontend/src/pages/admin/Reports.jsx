@@ -73,7 +73,7 @@ export const Reports = () => {
 
   const staffWorkload = useMemo(() => {
     const trainers = {}; const moderators = {};
-    sessionRows.forEach((session) => { const trainer = session.trainer?.name || 'Unassigned'; const moderator = session.moderator?.fullName || 'Unassigned'; trainers[trainer] = (trainers[trainer] || 0) + 1; moderators[moderator] = (moderators[moderator] || 0) + 1; });
+    sessionRows.forEach((session) => { const assigned = session.trainers?.length ? session.trainers : session.trainer ? [session.trainer] : []; assigned.forEach((trainer) => { trainers[trainer.name] = (trainers[trainer.name] || 0) + 1; }); if (!assigned.length) trainers.Unassigned = (trainers.Unassigned || 0) + 1; const moderator = session.moderator?.fullName || 'Unassigned'; moderators[moderator] = (moderators[moderator] || 0) + 1; });
     return { trainers: Object.entries(trainers).sort((a, b) => b[1] - a[1]), moderators: Object.entries(moderators).sort((a, b) => b[1] - a[1]) };
   }, [sessionRows]);
 

@@ -38,7 +38,7 @@ export const getTrainerDashboard = async (req, res, next) => {
   try {
     const trainer = await ownTrainer(req.user);
     if (!trainer) return errorResponse(res, 'Approved trainer profile not found.', 403);
-    const sessions = await Training.find({ trainer: trainer._id }).populate('event', 'name year').populate('eventDay', 'dayNumber theme date').populate('category', 'name').sort({ date: 1, startTime: 1 }).lean();
+    const sessions = await Training.find({ $or: [{ trainers: trainer._id }, { trainer: trainer._id }] }).populate('event', 'name year').populate('eventDay', 'dayNumber theme date').populate('category', 'name').sort({ date: 1, startTime: 1 }).lean();
     const sessionIds = sessions.map((session) => session._id);
     const [participants, presentCounts, feedback, meetings, materials] = await Promise.all([
       Registration.find({ training: { $in: sessionIds }, status: 'approved' }).populate('participant', 'fullName').select('participant training').lean(),
@@ -127,7 +127,7 @@ export const downloadTrainerCertificate = async (req, res, next) => {
 const assignedTraining = async (user, trainingId) => {
   const trainer = await ownTrainer(user);
   if (!trainer) return null;
-  const training = await Training.findOne({ _id: trainingId, trainer: trainer._id });
+  const training = await Training.findOne({ _id: trainingId, $or: [{ trainers: trainer._id }, { trainer: trainer._id }] });
   return training ? { trainer, training } : null;
 };
 

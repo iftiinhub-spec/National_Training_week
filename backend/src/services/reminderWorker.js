@@ -36,6 +36,7 @@ const processTraining = async (training) => {
     const registrations = await Registration.find({ training: training._id, status: 'approved' }).populate('participant', 'email').lean();
     const emails = [...new Set([
       ...registrations.map(({ participant }) => participant?.email),
+      ...(training.trainers || []).map((trainer) => trainer?.email),
       training.trainer?.email,
       training.moderator?.email,
     ].filter(Boolean))];
@@ -68,7 +69,7 @@ const work = async () => {
   if (running || stopped) return;
   running = true;
   try {
-    const trainings = await Training.find({ status: { $in: ['published', 'registration_open'] } }).populate('trainer', 'email').populate('moderator', 'email').lean();
+    const trainings = await Training.find({ status: { $in: ['published', 'registration_open'] } }).populate('trainer', 'email').populate('trainers', 'email').populate('moderator', 'email').lean();
     for (const training of trainings) await processTraining(training);
   } catch (error) { console.error('Reminder worker error:', error.message); }
   finally { running = false; }

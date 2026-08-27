@@ -44,6 +44,7 @@ export const getPublicTrainings = async (req, res, next) => {
         .populate('eventDay', 'dayNumber theme date')
         .populate('category', 'name')
         .populate('trainer', 'name title organization photo')
+        .populate('trainers', 'name title organization photo')
         .select('-moderator') // don't expose moderator to public
         .sort({ date: 1 })
         .skip(skip).limit(limit),
@@ -61,6 +62,7 @@ export const getPublicTraining = async (req, res, next) => {
       .populate('eventDay', 'dayNumber theme date')
       .populate('category', 'name')
       .populate('trainer', 'name title organization biography photo expertise');
+    await training?.populate('trainers', 'name title organization biography photo expertise');
 
     if (!training) return errorResponse(res, 'Training not found.', 404);
     if (!['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'].includes(training.status)) {
@@ -121,6 +123,7 @@ export const getPublicProgram = async (req, res, next) => {
       status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] },
     })
       .populate('trainer', 'name title photo organization')
+      .populate('trainers', 'name title photo organization')
       .populate('category', 'name')
       .sort({ eventDay: 1, startTime: 1 });
     const sessionsByDay = new Map();
@@ -145,6 +148,7 @@ export const getFeaturedTrainings = async (req, res, next) => {
       status: { $in: ['published', 'registration_open'] },
     })
       .populate('trainer', 'name title photo')
+      .populate('trainers', 'name title photo')
       .populate('category', 'name')
       .populate('event', 'name year')
       .sort({ date: 1 })

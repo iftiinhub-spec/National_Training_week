@@ -11,11 +11,20 @@ import { escapeRegex } from '../../utils/search.js';
 import { pick } from '../../utils/pick.js';
 import { deleteTrainingCascade } from '../../utils/cascadeDelete.js';
 
-const trainingPayload = (input) => pick(input, ['title', 'description', 'event', 'eventDay', 'category', 'trainer', 'moderator', 'date', 'startTime', 'endTime', 'audience', 'level', 'language', 'capacity', 'registrationRequired', 'status']);
+const trainingPayload = (input) => pick(input, ['title', 'description', 'event', 'eventDay', 'category', 'trainers', 'moderator', 'date', 'startTime', 'endTime', 'audience', 'level', 'language', 'capacity', 'registrationRequired', 'status']);
+
+const trainerIdsFor = (training) => [...new Set([
+  ...(training?.trainers || []).map((value) => String(value?._id || value)),
+  ...(training?.trainer ? [String(training.trainer?._id || training.trainer)] : []),
+])];
 
 const normalizeTimes = (data) => {
   for (const field of ['startTime', 'endTime']) {
     if (data[field] !== undefined) data[field] = normalizeTrainingTime(data[field]) || data[field];
+  }
+  if (data.trainers !== undefined) {
+    data.trainers = [...new Set(data.trainers.map(String))];
+    data.trainer = data.trainers[0] || null;
   }
   return data;
 };
@@ -68,9 +77,15 @@ const validateStaffAvailability = async (data, existing = null) => {
     endTime: { $gt: data.startTime ?? existing?.startTime },
   };
 
-  if (data.trainer || existing?.trainer) {
-    const trainerId = data.trainer ?? existing?.trainer;
-    if (trainerId && await Training.exists({ ...baseFilter, trainer: trainerId })) conflicts.push('trainer');
+  const trainerIds = data.trainers !== undefined ? data.trainers.map(String) : trainerIdsFor(existing);
+  if (trainerIds.length) {
+    const conflicting = await Training.find({
+      ...baseFilter,
+      $or: [{ trainers: { $in: trainerIds } }, { trainer: { $in: trainerIds } }],
+    }).select('trainers trainer').lean();
+    const busyIds = new Set(conflicting.flatMap(trainerIdsFor));
+    const busy = trainerIds.filter((id) => busyIds.has(id));
+    if (busy.length) conflicts.push(`${busy.length} trainer${busy.length === 1 ? '' : 's'}`);
   }
   if (data.moderator || existing?.moderator) {
     const moderatorId = data.moderator ?? existing?.moderator;
@@ -81,6 +96,15 @@ const validateStaffAvailability = async (data, existing = null) => {
     const error = new Error(`The assigned ${conflicts.join(' and ')} already has another session at this time on the selected day.`);
     error.statusCode = 409;
     throw error;
+  }
+};
+
+const validateTrainerAssignments = async (data) => {
+  if (data.trainers === undefined) return;
+  const ids = [...new Set(data.trainers.map(String))];
+  const count = await Trainer.countDocuments({ _id: { $in: ids }, accessStatus: 'approved', isActive: true });
+  if (count !== ids.length) {
+    const error = new Error('Select only active, approved trainers.'); error.statusCode = 400; throw error;
   }
 };
 
@@ -127,6 +151,7 @@ export const getTrainings = async (req, res, next) => {
         .populate('eventDay', 'dayNumber theme date')
         .populate('category', 'name')
         .populate('trainer', 'name title organization photo')
+        .populate('trainers', 'name title organization photo')
         .populate('moderator', 'fullName email')
         .sort({ date: 1 })
         .skip(skip).limit(limit),
@@ -144,6 +169,7 @@ export const getTraining = async (req, res, next) => {
       .populate('eventDay', 'dayNumber theme date')
       .populate('category', 'name')
       .populate('trainer', 'name title organization photo biography expertise')
+      .populate('trainers', 'name title organization photo biography expertise')
       .populate('moderator', 'fullName email phone');
     if (!training) return errorResponse(res, 'Training not found.', 404);
     return successResponse(res, { training });
@@ -155,6 +181,7 @@ export const createTraining = async (req, res, next) => {
   try {
     const data = normalizeTimes(trainingPayload(req.body));
     await validateTrainingDay(data);
+    await validateTrainerAssignments(data);
     await validateStaffAvailability(data);
     if (req.file) data.coverImage = `uploads/coverImage/${req.file.filename}`;
     const training = await Training.create(data);
@@ -169,6 +196,7 @@ export const updateTraining = async (req, res, next) => {
     const existing = await Training.findById(req.params.id);
     if (!existing) return errorResponse(res, 'Training not found.', 404);
     await validateTrainingDay(data, existing);
+    await validateTrainerAssignments(data);
     await validateStaffAvailability(data, existing);
     if (req.file) data.coverImage = `uploads/coverImage/${req.file.filename}`;
     // Remove status from update — use dedicated status endpoint
@@ -235,10 +263,11 @@ export const completeTraining = async (req, res, next) => {
 // PATCH /api/admin/trainings/:id/assign
 export const assignTrainingStaff = async (req, res, next) => {
   try {
-    const { trainerId, moderatorId } = req.body;
-    if (trainerId) {
-      const trainer = await Trainer.findOne({ _id: trainerId, accessStatus: 'approved', isActive: true });
-      if (!trainer) return errorResponse(res, 'Select an active, approved trainer.', 400);
+    const { trainerIds, moderatorId } = req.body;
+    if (trainerIds !== undefined) {
+      const uniqueIds = [...new Set(trainerIds.map(String))];
+      const validCount = await Trainer.countDocuments({ _id: { $in: uniqueIds }, accessStatus: 'approved', isActive: true });
+      if (validCount !== uniqueIds.length) return errorResponse(res, 'Select only active, approved trainers.', 400);
     }
     if (moderatorId) {
       const moderator = await User.findOne({ _id: moderatorId, role: 'moderator', isActive: true });
@@ -250,15 +279,19 @@ export const assignTrainingStaff = async (req, res, next) => {
       eventDay: existing.eventDay,
       startTime: existing.startTime,
       endTime: existing.endTime,
-      trainer: trainerId !== undefined ? trainerId : existing.trainer,
+      trainers: trainerIds !== undefined ? [...new Set(trainerIds.map(String))] : trainerIdsFor(existing),
       moderator: moderatorId !== undefined ? moderatorId : existing.moderator,
     }, existing);
     const update = {};
-    if (trainerId !== undefined) update.trainer = trainerId || null;
+    if (trainerIds !== undefined) {
+      update.trainers = [...new Set(trainerIds.map(String))];
+      update.trainer = update.trainers[0] || null;
+    }
     if (moderatorId !== undefined) update.moderator = moderatorId || null;
 
     const training = await Training.findByIdAndUpdate(req.params.id, update, { new: true })
       .populate('trainer', 'name title organization')
+      .populate('trainers', 'name title organization')
       .populate('moderator', 'fullName email');
     return successResponse(res, { training }, 'Assignments updated successfully.');
   } catch (err) { next(err); }

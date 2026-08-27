@@ -136,7 +136,8 @@ export const registrationStatusValidation = [
 ];
 
 export const assignmentValidation = [
-  body('trainerId').optional({ nullable: true, checkFalsy: true }).isMongoId().withMessage('Select a valid trainer.'),
+  body('trainerIds').optional().isArray({ max: 10 }).withMessage('Select no more than 10 trainers.'),
+  body('trainerIds.*').isMongoId().withMessage('Select valid trainers.'),
   body('moderatorId').optional({ nullable: true, checkFalsy: true }).isMongoId().withMessage('Select a valid moderator.'),
 ];
 
@@ -165,7 +166,9 @@ export const trainingValidation = [
   body('description').optional({ checkFalsy: true }).trim().isLength({ max: 10000 }),
   objectId(body, 'event', 'event ID'), objectId(body, 'eventDay', 'event-day ID'),
   objectId(body, 'category', 'category ID').optional({ checkFalsy: true }),
-  objectId(body, 'trainer', 'trainer ID').optional({ checkFalsy: true }),
+  body('trainers').customSanitizer((value) => value === undefined || value === '' ? [] : Array.isArray(value) ? value : [value]),
+  body('trainers').isArray({ max: 10 }).withMessage('Select no more than 10 trainers.'),
+  body('trainers.*').isMongoId().withMessage('Select valid trainers.'),
   objectId(body, 'moderator', 'moderator ID').optional({ checkFalsy: true }),
   body('date').optional().isISO8601(),
   body('startTime').matches(/^([01]\d|2[0-3]):[0-5]\d$/),

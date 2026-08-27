@@ -83,7 +83,7 @@ export const TrainersManagement = () => {
       const matchesSearch = !query || [trainer.name, trainer.email, trainer.organization, trainer.expertise]
         .some((value) => String(value || '').toLowerCase().includes(query));
       const matchesAssignment = !hasAssignmentFilter || assignedSessions.some((session) => (
-        String(session.trainer?._id || session.trainer) === String(trainer._id)
+        (session.trainers?.length ? session.trainers : session.trainer ? [session.trainer] : []).some((assigned) => String(assigned?._id || assigned) === String(trainer._id))
         && (!filters.event || String(session.event?._id || session.event) === filters.event)
         && (!filters.eventDay || String(session.eventDay?._id || session.eventDay) === filters.eventDay)
         && (!filters.training || String(session._id) === filters.training)
