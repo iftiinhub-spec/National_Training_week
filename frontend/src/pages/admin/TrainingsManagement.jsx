@@ -91,7 +91,7 @@ export const TrainingsManagement = () => {
     event: '',
     eventDay: '',
     category: '',
-    trainer: '',
+    trainers: [],
     moderator: '',
     startTime: '',
     endTime: '',
@@ -175,7 +175,7 @@ export const TrainingsManagement = () => {
       event: defaultEv,
       eventDay: days[0]?._id || '',
       category: categories[0]?._id || '',
-      trainer: trainers[0]?._id || '',
+      trainers: [],
       moderator: moderators[0]?._id || '',
       startTime: '',
       endTime: '',
@@ -206,7 +206,7 @@ export const TrainingsManagement = () => {
       event: evId,
       eventDay: tr.eventDay?._id || tr.eventDay || '',
       category: tr.category?._id || tr.category || '',
-      trainer: tr.trainer?._id || tr.trainer || '',
+      trainers: [...new Set([...(tr.trainers || []).map((trainer) => trainer?._id || trainer), ...(tr.trainer ? [tr.trainer?._id || tr.trainer] : [])])],
       moderator: tr.moderator?._id || tr.moderator || '',
       startTime: toTimeInputValue(tr.startTime),
       endTime: toTimeInputValue(tr.endTime),
@@ -228,7 +228,8 @@ export const TrainingsManagement = () => {
     try {
       const formData = new FormData();
       Object.keys(form).forEach((key) => {
-        if (form[key]) formData.append(key, form[key]);
+        if (key === 'trainers') form.trainers.forEach((trainerId) => formData.append('trainers', trainerId));
+        else if (form[key]) formData.append(key, form[key]);
       });
       if (coverImageFile) {
         formData.append('coverImage', coverImageFile);
@@ -336,7 +337,7 @@ export const TrainingsManagement = () => {
                     <span className="text-[11px] text-slate-400">{tr.category?.name || '—'}</span>
                   </td>
                   <td className="p-4">
-                    <span className="block text-slate-800 font-semibold">T: {tr.trainer?.name || 'Unassigned'}</span>
+                    <span className="block text-slate-800 font-semibold">T: {([...(tr.trainers || []), ...(!tr.trainers?.length && tr.trainer ? [tr.trainer] : [])].map((trainer) => trainer.name).join(', ')) || 'Unassigned'}</span>
                     <span className="text-[11px] text-slate-500 block">M: {tr.moderator?.fullName || 'Unassigned'}</span>
                   </td>
                   <td className="p-4">
@@ -465,19 +466,26 @@ export const TrainingsManagement = () => {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block font-bold uppercase text-slate-700 mb-1">Assign Trainer Profile</label>
-                  <select
-                    value={form.trainer}
-                    onChange={(e) => setForm({ ...form, trainer: e.target.value })}
-                    className="w-full p-2.5 rounded-lg border border-slate-300 bg-white"
-                  >
-                    <option value="">None / Unassigned</option>
-                    {trainers.map((t) => (
-                      <option key={t._id} value={t._id}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
+                <fieldset className="min-w-0">
+                  <legend className="block font-bold uppercase text-slate-700 mb-1">Assign Trainers</legend>
+                  <details className="group relative" aria-describedby="trainer-selection-help">
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition hover:border-slate-400 focus-visible:ring-2 focus-visible:ring-[#1a6b3c] focus-visible:ring-offset-1 [&::-webkit-details-marker]:hidden">
+                      <span className="truncate">{form.trainers.length ? `${form.trainers.length} trainer${form.trainers.length === 1 ? '' : 's'} selected` : 'Select trainers'}</span>
+                      <ChevronDownIcon className="h-4 w-4 shrink-0 text-slate-500 transition-transform group-open:rotate-180" aria-hidden="true" />
+                    </summary>
+                    <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-60 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                    {form.trainers.length > 0 && <button type="button" onClick={() => setForm((current) => ({ ...current, trainers: [] }))} className="flex min-h-10 w-full items-center justify-end rounded-lg px-3 text-xs font-bold text-rose-600 hover:bg-rose-50">Clear selection</button>}
+                    {trainers.length ? trainers.map((trainer) => {
+                      const selected = form.trainers.includes(trainer._id);
+                      return <label key={trainer._id} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${selected ? 'bg-emerald-50 text-[#1a6b3c]' : 'hover:bg-slate-50'}`}>
+                        <input type="checkbox" checked={selected} onChange={() => setForm((current) => ({ ...current, trainers: selected ? current.trainers.filter((id) => id !== trainer._id) : [...current.trainers, trainer._id] }))} className="h-4 w-4 rounded border-slate-300 text-[#1a6b3c] focus:ring-[#1a6b3c]" />
+                        <span className="min-w-0"><span className="block truncate font-semibold">{trainer.name}</span>{trainer.organization && <span className="block truncate text-xs text-slate-500">{trainer.organization}</span>}</span>
+                      </label>;
+                    }) : <p className="p-3 text-sm text-slate-500">No approved trainers available.</p>}
+                    </div>
+                  </details>
+                  <p id="trainer-selection-help" className="mt-1 text-xs text-slate-500">{form.trainers.length ? `${form.trainers.length} trainer${form.trainers.length === 1 ? '' : 's'} selected` : 'Optional — select one or more trainers.'}</p>
+                </fieldset>
 
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Assign Moderator Account</label>

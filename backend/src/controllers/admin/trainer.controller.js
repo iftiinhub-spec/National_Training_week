@@ -17,8 +17,15 @@ const deleteTrainerIds = async (ids) => {
   const trainers = await Trainer.find({ _id: { $in: ids } }).select('user photo');
   const userIds = trainers.map((trainer) => trainer.user).filter(Boolean);
   trainers.forEach((trainer) => { if (trainer.photo) deleteFile(trainer.photo); });
-  const [trainingUpdate, materials, certificates, deletedTrainers] = await Promise.all([
-    Training.updateMany({ trainer: { $in: ids } }, { $set: { trainer: null } }),
+  const deletedIdSet = new Set(ids.map(String));
+  const affectedTrainings = await Training.find({ $or: [{ trainers: { $in: ids } }, { trainer: { $in: ids } }] });
+  for (const training of affectedTrainings) {
+    training.trainers = [...new Set([...(training.trainers || []), ...(training.trainer ? [training.trainer] : [])].map(String))]
+      .filter((id) => !deletedIdSet.has(id));
+    training.trainer = training.trainers[0] || null;
+    await training.save();
+  }
+  const [materials, certificates, deletedTrainers] = await Promise.all([
     TrainingMaterial.deleteMany({ trainer: { $in: ids } }),
     TrainerCertificate.deleteMany({ trainer: { $in: ids } }),
     Trainer.deleteMany({ _id: { $in: ids } }),
@@ -27,7 +34,7 @@ const deleteTrainerIds = async (ids) => {
   return {
     trainers: deletedTrainers.deletedCount,
     users: userIds.length,
-    unassignedSessions: trainingUpdate.modifiedCount || 0,
+    unassignedSessions: affectedTrainings.length,
     materials: materials.deletedCount,
     certificates: certificates.deletedCount,
     files: trainers.filter((trainer) => trainer.photo).length,
@@ -52,7 +59,7 @@ export const getPublicTrainers = async (req, res, next) => {
   try {
     const sessionFilter = {
       status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] },
-      trainer: { $ne: null },
+      $or: [{ trainers: { $exists: true, $ne: [] } }, { trainer: { $ne: null } }],
     };
     if (req.query.event) sessionFilter.event = req.query.event;
     else {
@@ -63,16 +70,17 @@ export const getPublicTrainers = async (req, res, next) => {
     }
     if (req.query.eventDay) sessionFilter.eventDay = req.query.eventDay;
     const sessions = await Training.find(sessionFilter)
-      .select('title date startTime endTime trainer event eventDay category status')
+      .select('title date startTime endTime trainer trainers event eventDay category status')
       .populate('event', 'name year')
       .populate('eventDay', 'dayNumber theme date')
       .populate('category', 'name')
       .sort({ date: 1, startTime: 1 });
-    const trainerIds = [...new Set(sessions.map((session) => String(session.trainer)))];
+    const sessionTrainerIds = (session) => [...new Set([...(session.trainers || []).map(String), ...(session.trainer ? [String(session.trainer)] : [])])];
+    const trainerIds = [...new Set(sessions.flatMap(sessionTrainerIds))];
     const trainers = await Trainer.find({ _id: { $in: trainerIds } }).sort({ name: 1 }).lean();
     const enriched = trainers.map((trainer) => ({
       ...trainer,
-      sessions: sessions.filter((session) => String(session.trainer) === String(trainer._id)),
+      sessions: sessions.filter((session) => sessionTrainerIds(session).includes(String(trainer._id))),
     }));
     return successResponse(res, { trainers: enriched });
   } catch (err) { next(err); }
@@ -83,7 +91,7 @@ export const getPublicTrainer = async (req, res, next) => {
     const trainer = await Trainer.findById(req.params.id).lean();
     if (!trainer) return errorResponse(res, 'Trainer not found.', 404);
     const sessionFilter = {
-      trainer: trainer._id,
+      $or: [{ trainers: trainer._id }, { trainer: trainer._id }],
       status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] },
     };
     if (req.query.event) sessionFilter.event = req.query.event;

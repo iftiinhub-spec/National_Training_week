@@ -57,27 +57,27 @@ const issueParticipantCertificate = async ({ participant, training, requestedBy 
   await emailUpdate(Certificate, certificate, result);
 };
 
-const issueTrainerCertificate = async ({ training, requestedBy }) => {
-  if (!training.trainer) return;
-  let certificate = await TrainerCertificate.findOne({ trainer: training.trainer._id, training: training._id });
+const issueTrainerCertificate = async ({ training, trainer, requestedBy }) => {
+  if (!trainer) return;
+  let certificate = await TrainerCertificate.findOne({ trainer: trainer._id, training: training._id });
   if (!certificate) {
     try {
       certificate = await TrainerCertificate.create({
-        trainer: training.trainer._id,
+        trainer: trainer._id,
         training: training._id,
         certificateId: generateTrainerCertificateId(training.event?.year || new Date().getFullYear()),
         issuedBy: requestedBy,
       });
     } catch (error) {
       if (error.code !== 11000) throw error;
-      certificate = await TrainerCertificate.findOne({ trainer: training.trainer._id, training: training._id });
+      certificate = await TrainerCertificate.findOne({ trainer: trainer._id, training: training._id });
     }
   }
   if (!certificate || certificate.emailStatus === 'sent' || certificate.emailAttempts >= maxEmailAttempts) return;
   await TrainerCertificate.updateOne({ _id: certificate._id }, { $set: { emailStatus: 'processing' }, $inc: { emailAttempts: 1 } });
   const result = await sendTrainerCertificateIssuedEmail({
-    to: training.trainer.email,
-    trainerName: training.trainer.name,
+    to: trainer.email,
+    trainerName: trainer.name,
     trainingTitle: training.title,
     certificateId: certificate.certificateId,
     verifyUrl: `${process.env.FRONTEND_URL}/verify-certificate?id=${certificate.certificateId}`,
@@ -89,7 +89,8 @@ const issueTrainerCertificate = async ({ training, requestedBy }) => {
 const processJob = async (job) => {
   const training = await Training.findById(job.training)
     .populate('event', 'name year')
-    .populate('trainer', 'name email');
+    .populate('trainer', 'name email')
+    .populate('trainers', 'name email');
   if (!training || training.status !== 'completed') throw new Error('Completed training not found for certificate job.');
 
   const presentIds = await Attendance.find({ training: training._id, status: 'present' }).distinct('participant');
@@ -110,21 +111,22 @@ const processJob = async (job) => {
     await issueParticipantCertificate({ participant: registration.participant, training, requestedBy: job.requestedBy });
     await CertificateIssuanceJob.updateOne({ _id: job._id, lockedBy: workerId }, { $set: { lockedAt: new Date() } });
   }
-  await issueTrainerCertificate({ training, requestedBy: job.requestedBy });
+  const trainers = [...new Map([...(training.trainers || []), ...(training.trainer ? [training.trainer] : [])].map((trainer) => [String(trainer._id), trainer])).values()];
+  for (const trainer of trainers) await issueTrainerCertificate({ training, trainer, requestedBy: job.requestedBy });
 
-  const [participantCertificates, participantEmailsSent, participantEmailsFailed, trainerCertificate] = await Promise.all([
+  const [participantCertificates, participantEmailsSent, participantEmailsFailed, trainerCertificates] = await Promise.all([
     Certificate.countDocuments({ training: training._id }),
     Certificate.countDocuments({ training: training._id, emailStatus: 'sent' }),
     Certificate.countDocuments({ training: training._id, emailStatus: 'failed', emailAttempts: { $gte: maxEmailAttempts } }),
-    TrainerCertificate.findOne({ training: training._id }).select('emailStatus emailAttempts').lean(),
+    TrainerCertificate.find({ training: training._id, trainer: { $in: trainers.map((trainer) => trainer._id) } }).select('emailStatus emailAttempts').lean(),
   ]);
   const processedParticipants = participantEmailsSent + participantEmailsFailed;
   const participantsFinished = processedParticipants >= validRegistrations.length;
-  const trainerFinished = !training.trainer || trainerCertificate?.emailStatus === 'sent' || trainerCertificate?.emailAttempts >= maxEmailAttempts;
+  const trainerFinished = trainers.length === 0 || (trainerCertificates.length >= trainers.length && trainerCertificates.every((certificate) => certificate.emailStatus === 'sent' || certificate.emailAttempts >= maxEmailAttempts));
   const finished = participantsFinished && trainerFinished;
   const hasErrors = participantEmailsFailed > 0
     || validRegistrations.length < registrations.length
-    || (training.trainer && trainerCertificate?.emailStatus !== 'sent');
+    || trainerCertificates.some((certificate) => certificate.emailStatus !== 'sent');
 
   await CertificateIssuanceJob.updateOne({ _id: job._id, lockedBy: workerId }, {
     $set: {
@@ -139,9 +141,9 @@ const processJob = async (job) => {
         participantCertificates,
         participantEmailsSent,
         participantEmailsFailed,
-        trainerCertificateIssued: Boolean(trainerCertificate),
-        trainerEmailSent: trainerCertificate?.emailStatus === 'sent',
-        trainerEmailFailed: Boolean(trainerCertificate && trainerCertificate.emailStatus === 'failed' && trainerCertificate.emailAttempts >= maxEmailAttempts),
+        trainerCertificateIssued: trainerCertificates.length === trainers.length && trainers.length > 0,
+        trainerEmailSent: trainers.length > 0 && trainerCertificates.every((certificate) => certificate.emailStatus === 'sent'),
+        trainerEmailFailed: trainerCertificates.some((certificate) => certificate.emailStatus === 'failed' && certificate.emailAttempts >= maxEmailAttempts),
       },
     },
   });

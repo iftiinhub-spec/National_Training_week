@@ -29,6 +29,10 @@ const trainingSchema = new mongoose.Schema(
       ref: 'Trainer',
       default: null,
     },
+    trainers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Trainer',
+    }],
     moderator: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -81,6 +85,14 @@ trainingSchema.index({ event: 1, status: 1 });
 trainingSchema.index({ eventDay: 1 });
 trainingSchema.index({ status: 1 });
 trainingSchema.index({ trainer: 1 });
+trainingSchema.index({ trainers: 1 });
+
+trainingSchema.pre('validate', function syncTrainerAssignments() {
+  const ids = [...new Set((this.trainers || []).map(String))];
+  if (!ids.length && this.trainer) ids.push(String(this.trainer));
+  this.trainers = ids;
+  this.trainer = ids[0] || null; // Temporary compatibility for older readers during migration.
+});
 
 const Training = mongoose.model('Training', trainingSchema);
 export default Training;

@@ -135,7 +135,7 @@ export const MyRegistrations = () => {
                     </div>
                     {tr.trainer && (
                       <span className="text-slate-700 font-semibold">
-                        Trainer: {tr.trainer.name}
+                        Trainers: {(tr.trainers?.length ? tr.trainers : [tr.trainer]).filter(Boolean).map((trainer) => trainer.name).join(', ')}
                       </span>
                     )}
                   </div>

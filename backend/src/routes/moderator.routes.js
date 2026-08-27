@@ -22,6 +22,7 @@ router.get('/dashboard', async (req, res, next) => {
       .populate('event', 'name year')
       .populate('eventDay', 'dayNumber theme date')
       .populate('trainer', 'name title photo')
+      .populate('trainers', 'name title photo')
       .populate('category', 'name')
       .sort({ date: 1 });
 
@@ -43,6 +44,7 @@ router.get('/trainings', async (req, res, next) => {
       .populate('event', 'name year')
       .populate('eventDay', 'dayNumber theme')
       .populate('trainer', 'name title photo organization')
+      .populate('trainers', 'name title photo organization')
       .populate('category', 'name')
       .sort({ date: 1 });
     return successResponse(res, { trainings });
@@ -55,6 +57,7 @@ router.get('/trainings/:id', idParam(), validate, async (req, res, next) => {
       .populate('event', 'name year theme')
       .populate('eventDay', 'dayNumber theme date')
       .populate('trainer', 'name title organization biography photo expertise email phone')
+      .populate('trainers', 'name title organization biography photo expertise email phone')
       .populate('category', 'name');
     if (!training) return errorResponse(res, 'Training not found or not assigned to you.', 404);
     return successResponse(res, { training });

@@ -182,6 +182,7 @@ export const SessionOperation = () => {
 
   if (loading) return <LoadingSpinner label="Loading session operational controls..." />;
   if (!training) return <div className="p-8 text-center">Session not found.</div>;
+  const assignedTrainers = training.trainers?.length ? training.trainers : training.trainer ? [training.trainer] : [];
 
   return (
     <div className="space-y-6">
@@ -348,10 +349,9 @@ export const SessionOperation = () => {
               <p className="text-xs text-slate-600">
                 Per requirement: Trainer is a managed profile (no system login needed). Sends official invitation email containing meeting link.
               </p>
-              {training.trainer ? (
-                <div className="bg-white p-3 rounded-xl border border-slate-200 text-xs space-y-1">
-                  <p className="font-bold text-slate-900">{training.trainer.name}</p>
-                  <p className="text-slate-500">{training.trainer.email}</p>
+              {assignedTrainers.length ? (
+                <div className="space-y-2">
+                  {assignedTrainers.map((trainer) => <div key={trainer._id} className="bg-white p-3 rounded-xl border border-slate-200 text-xs space-y-1"><p className="font-bold text-slate-900">{trainer.name}</p><p className="text-slate-500">{trainer.email || 'No email address'}</p></div>)}
                 </div>
               ) : (
                 <p className="text-xs text-rose-600 font-bold">No trainer assigned yet by Administrator.</p>
@@ -359,10 +359,10 @@ export const SessionOperation = () => {
 
               <button
                 onClick={handleSendTrainerInvite}
-                disabled={!training.trainer || !meeting}
+                disabled={!assignedTrainers.length || !meeting}
                 className="w-full py-2.5 bg-[#155289] hover:bg-[#11426e] text-white font-bold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50"
               >
-                Send Trainer Meeting Invitation
+                Send Trainer Meeting Invitations
               </button>
             </div>
 

@@ -105,7 +105,7 @@ export const getPublicRecordings = async (req, res, next) => {
     if (req.query.event) trainingQuery.event = req.query.event;
     if (req.query.eventDay) trainingQuery.eventDay = req.query.eventDay;
     if (req.query.category) trainingQuery.category = req.query.category;
-    if (req.query.trainer) trainingQuery.trainer = req.query.trainer;
+    if (req.query.trainer) trainingQuery.$or = [{ trainers: req.query.trainer }, { trainer: req.query.trainer }];
     if (req.query.language) trainingQuery.language = req.query.language;
     if (Object.keys(trainingQuery).length) {
       const trainingIds = await Training.find(trainingQuery).distinct('_id');
@@ -113,7 +113,7 @@ export const getPublicRecordings = async (req, res, next) => {
     }
     const [recordings, total] = await Promise.all([
       Recording.find(filter)
-        .populate({ path: 'training', select: 'title date coverImage language event eventDay category trainer', populate: [{ path: 'event', select: 'name year' }, { path: 'eventDay', select: 'dayNumber theme' }, { path: 'category', select: 'name' }, { path: 'trainer', select: 'name title' }] })
+        .populate({ path: 'training', select: 'title date coverImage language event eventDay category trainer trainers', populate: [{ path: 'event', select: 'name year' }, { path: 'eventDay', select: 'dayNumber theme' }, { path: 'category', select: 'name' }, { path: 'trainer', select: 'name title' }, { path: 'trainers', select: 'name title' }] })
         .sort({ publishedAt: -1 }).skip(skip).limit(limit),
       Recording.countDocuments(filter),
     ]);
@@ -130,12 +130,13 @@ export const getPublicRecording = async (req, res, next) => {
       isArchived: { $ne: true },
     }).populate({
       path: 'training',
-      select: 'title date coverImage language event eventDay category trainer',
+      select: 'title date coverImage language event eventDay category trainer trainers',
       populate: [
         { path: 'event', select: 'name year' },
         { path: 'eventDay', select: 'dayNumber theme' },
         { path: 'category', select: 'name' },
         { path: 'trainer', select: 'name title' },
+        { path: 'trainers', select: 'name title' },
       ],
     });
     if (!recording) return errorResponse(res, 'Recording not found.', 404);

@@ -185,6 +185,7 @@ export const getParticipantDashboard = async (req, res, next) => {
       (await import('../../models/Certificate.js')).default.countDocuments({ participant: participantId, isRevoked: false }),
       Training.find({ status: { $in: ['published', 'registration_open'] }, date: { $gte: new Date() } })
         .populate('trainer', 'name title photo')
+        .populate('trainers', 'name title photo')
         .populate('category', 'name')
         .sort({ date: 1 }).limit(6),
     ]);

@@ -15,6 +15,7 @@ import { pick } from '../src/utils/pick.js';
 import { hasValidImageSignature } from '../src/middleware/upload.js';
 import { isValidHumanName, normalizeHumanName } from '../src/utils/humanName.js';
 import User from '../src/models/User.js';
+import Training from '../src/models/Training.js';
 import { formatValidationField } from '../src/middleware/validate.js';
 import { eventDayTimelineError } from '../src/utils/eventTimeline.js';
 
@@ -91,6 +92,26 @@ test('valid training payload passes boundary validation', async () => {
     startTime: '09:00', endTime: '11:00', capacity: 100,
   });
   assert.deepEqual(errors, []);
+});
+
+test('training validation accepts multiple unique trainer IDs', async () => {
+  const ids = ['507f1f77bcf86cd799439011', '507f191e810c19729de860ea'];
+  const errors = await runRules(trainingValidation, {
+    title: 'Panel Session', event: ids[0], eventDay: ids[0], trainers: ids,
+    date: '2030-01-01', startTime: '09:00', endTime: '11:00', capacity: 100,
+  });
+  assert.deepEqual(errors, []);
+});
+
+test('training model keeps multiple trainers and a legacy primary trainer', async () => {
+  const ids = ['507f1f77bcf86cd799439011', '507f191e810c19729de860ea'];
+  const training = new Training({
+    title: 'Panel Session', event: ids[0], eventDay: ids[0], trainers: ids,
+    date: '2030-01-01', startTime: '09:00', endTime: '11:00',
+  });
+  await training.validate();
+  assert.deepEqual(training.trainers.map(String), ids);
+  assert.equal(String(training.trainer), ids[0]);
 });
 
 test('field allowlisting removes unexpected update properties', () => {

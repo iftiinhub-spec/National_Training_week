@@ -23,6 +23,11 @@ const statusColor = (s) => ({
   registration_closed: 'bg-black/60',
 }[s] || 'bg-black/60');
 
+const trainerNames = (training) => {
+  const assigned = training.trainers?.length ? training.trainers : training.trainer ? [training.trainer] : [];
+  return assigned.map((trainer) => `${trainer.title || ''} ${trainer.name}`.trim()).join(', ');
+};
+
 /* ── Training card ── */
 const TrainingCard = ({ training: t }) => (
   <Link
@@ -62,9 +67,7 @@ const TrainingCard = ({ training: t }) => (
         {t.title}
       </h3>
       <p className="text-xs text-[#1da156] font-bold mb-3">
-        {t.trainer
-          ? `${t.trainer.title || ''} ${t.trainer.name}`.trim()
-          : 'Expert Trainer'}
+        {trainerNames(t) || 'Expert Trainers'}
       </p>
       <div className="flex items-center justify-between text-[11px] text-black/70 font-medium border-t border-black/10 pt-3">
         <span>
