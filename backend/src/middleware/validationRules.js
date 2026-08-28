@@ -21,6 +21,13 @@ const objectId = (location, name, label = 'ID') => location(name)
 
 export const idParam = (name = 'id', label = 'ID') => objectId(param, name, label);
 
+// Accepts a readable slug or a legacy ObjectId, for public URLs that must keep old links working.
+export const slugOrIdParam = (name, label = 'ID') => param(name)
+  .trim()
+  .isLength({ max: 120 })
+  .custom((value) => mongoose.isObjectIdOrHexString(value) || /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value))
+  .withMessage(`Valid ${label} is required.`);
+
 export const paginationValidation = [
   query('page').optional().isInt({ min: 1, max: 100000 }).withMessage('Page must be a positive integer.').toInt(),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100.').toInt(),

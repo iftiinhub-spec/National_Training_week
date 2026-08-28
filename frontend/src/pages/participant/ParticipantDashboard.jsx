@@ -4,6 +4,7 @@ import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { trainingPath } from '../../utils/trainingLink';
 import {
   AcademicCapIcon,
   CheckBadgeIcon,
@@ -150,7 +151,7 @@ export const ParticipantDashboard = () => {
                   </p>
                 </div>
                 <Link
-                  to={`/trainings/${tr._id}`}
+                  to={trainingPath(tr)}
                   className="w-full text-center py-2 bg-emerald-50 hover:bg-[#1a6b3c] hover:text-white text-[#1a6b3c] font-bold rounded-lg text-xs transition-colors"
                 >
                   View Details

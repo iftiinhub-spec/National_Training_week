@@ -10,6 +10,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useCurrentEvent } from '../../context/EventContext';
 import { formatTimeRange12 } from '../../utils/timeFormat';
 import { formatTrainerName } from '../../utils/trainerName';
+import { trainingPath } from '../../utils/trainingLink';
 
 const assetUrl = (value) => {
   if (!value) return null;
@@ -83,7 +84,7 @@ export const TrainerDetails = () => {
             {trainer.sessions?.length ? (
               <div className="mt-6 grid gap-4">
                 {trainer.sessions.map((session) => (
-                  <Link key={session._id} to={`/trainings/${session._id}`} className="group rounded-2xl border border-black/10 p-5 transition hover:border-[#1da156] hover:shadow-lg sm:p-6">
+                  <Link key={session._id} to={trainingPath(session)} className="group rounded-2xl border border-black/10 p-5 transition hover:border-[#1da156] hover:shadow-lg sm:p-6">
                     <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-[#1da156]">
                       {session.eventDay && <span>Day {session.eventDay.dayNumber} · {session.eventDay.theme}</span>}
                       {session.category?.name && <span className="rounded-full bg-[#1da156]/10 px-2.5 py-1">{session.category.name}</span>}

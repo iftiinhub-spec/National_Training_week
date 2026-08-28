@@ -96,7 +96,7 @@ export const getPublicTrainer = async (req, res, next) => {
     };
     if (req.query.event) sessionFilter.event = req.query.event;
     const sessions = await Training.find(sessionFilter)
-      .select('title description coverImage date startTime endTime audience level language status event eventDay category')
+      .select('title slug description coverImage date startTime endTime audience level language status event eventDay category')
       .populate('event', 'name year')
       .populate('eventDay', 'dayNumber theme date')
       .populate('category', 'name')

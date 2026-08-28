@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 import { CalendarIcon, ClockIcon, UserIcon } from '@heroicons/react/24/outline';
 import { formatTimeRange12 } from '../../utils/timeFormat';
+import { trainingPath } from '../../utils/trainingLink';
 
 export const TrainingCard = ({ training }) => {
   const {
@@ -83,7 +84,7 @@ export const TrainingCard = ({ training }) => {
           </div>
 
           <h3 className="font-bold text-slate-900 text-lg group-hover:text-[#1a6b3c] transition-colors line-clamp-2 mb-3">
-            <Link to={`/trainings/${_id}`}>{title}</Link>
+            <Link to={trainingPath(training)}>{title}</Link>
           </h3>
 
           {/* Details list */}
@@ -114,7 +115,7 @@ export const TrainingCard = ({ training }) => {
         {/* Action Button */}
         <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
           <Link
-            to={`/trainings/${_id}`}
+            to={trainingPath(training)}
             className="w-full text-center bg-slate-900 hover:bg-[#1a6b3c] text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 group-hover:bg-[#1a6b3c]"
           >
             <span>View Session Details</span>

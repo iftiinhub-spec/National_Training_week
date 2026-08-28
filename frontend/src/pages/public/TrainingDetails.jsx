@@ -28,6 +28,9 @@ export const TrainingDetails = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  // The URL carries a slug (or a legacy ObjectId); everything else keys off the resolved id.
+  const trainingId = training?._id;
+
   const fetchDetails = useCallback(async () => {
     try {
       const res = await api.get(`/public/trainings/${id}`);
@@ -43,25 +46,28 @@ export const TrainingDetails = () => {
   }, [id]);
 
   const checkUserRegistration = useCallback(async () => {
-    if (isAuthenticated && isParticipant) {
+    if (trainingId && isAuthenticated && isParticipant) {
       try {
         const res = await api.get('/participant/registrations');
         if (res.success && res.data) {
           const records = res.data || [];
           // setMyRegistrations(records);
-          const found = records.find((r) => r.training?._id === id || r.training === id);
+          const found = records.find((r) => r.training?._id === trainingId || r.training === trainingId);
           if (found) setUserRegistration(found);
         }
       } catch (err) {
         // ignore
       }
     }
-  }, [id, isAuthenticated, isParticipant]);
+  }, [trainingId, isAuthenticated, isParticipant]);
 
   useEffect(() => {
     fetchDetails();
+  }, [fetchDetails]);
+
+  useEffect(() => {
     checkUserRegistration();
-  }, [fetchDetails, checkUserRegistration]);
+  }, [checkUserRegistration]);
 
   const handleRegister = async () => {
     if (!isAuthenticated) {
@@ -77,7 +83,7 @@ export const TrainingDetails = () => {
 
     setSubmitting(true);
     try {
-      const res = await api.post('/participant/registrations', { trainingId: id });
+      const res = await api.post('/participant/registrations', { trainingId });
       if (res.success) {
         toast.success('Registration submitted! Status: Pending Approval.');
         setUserRegistration(res.data.registration);

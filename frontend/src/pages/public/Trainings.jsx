@@ -7,6 +7,7 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
 import { formatTimeRange12 } from '../../utils/timeFormat';
+import { trainingPath } from '../../utils/trainingLink';
 
 const photoUrl = (p) => {
   if (!p) return null;
@@ -31,7 +32,7 @@ const trainerNames = (training) => {
 /* ── Training card ── */
 const TrainingCard = ({ training: t }) => (
   <Link
-    to={`/trainings/${t._id}`}
+    to={trainingPath(t)}
     className="group block relative overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all card-hover-lift bg-white border border-black/10"
   >
     {/* Cover image / placeholder */}

@@ -14,7 +14,7 @@ import { isValidInternationalPhone, normalizePhone } from '../utils/phone.js';
 import { getPublicFAQs } from '../controllers/admin/faq.controller.js';
 import { getPublicSponsors } from '../controllers/admin/sponsor.controller.js';
 import { HUMAN_NAME_MESSAGE, isValidHumanName, normalizeHumanName } from '../utils/humanName.js';
-import { idParam, optionalObjectIdQueries, paginationValidation, validateObjectIdParam } from '../middleware/validationRules.js';
+import { idParam, optionalObjectIdQueries, paginationValidation, slugOrIdParam, validateObjectIdParam } from '../middleware/validationRules.js';
 
 const router = express.Router();
 router.param('id', validateObjectIdParam);
@@ -25,7 +25,8 @@ router.get('/sponsors', ...optionalObjectIdQueries('event'), validate, getPublic
 
 // Trainings & Trainers
 router.get('/trainings', paginationValidation, ...optionalObjectIdQueries('event', 'eventDay', 'category', 'trainer'), validate, getPublicTrainings);
-router.get('/trainings/:id', idParam(), validate, getPublicTraining);
+// Named :trainingRef rather than :id so the router-level ObjectId check above does not reject slugs.
+router.get('/trainings/:trainingRef', slugOrIdParam('trainingRef', 'training ID'), validate, getPublicTraining);
 router.get('/featured-trainings', ...optionalObjectIdQueries('event'), validate, getFeaturedTrainings);
 router.get('/trainers', paginationValidation, validate, getPublicTrainers);
 router.get('/trainers/:id', idParam(), validate, getPublicTrainer);
