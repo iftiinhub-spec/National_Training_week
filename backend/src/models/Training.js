@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { randomBytes } from 'node:crypto';
 import { normalizeTrainingTime } from '../utils/trainingDateTime.js';
 
 const trainingSchema = new mongoose.Schema(
@@ -8,6 +9,7 @@ const trainingSchema = new mongoose.Schema(
       required: [true, 'Training title is required'],
       trim: true,
     },
+    slug: { type: String, unique: true, sparse: true },
     description: { type: String },
     coverImage: { type: String, default: null },
     event: {
@@ -86,6 +88,17 @@ trainingSchema.index({ eventDay: 1 });
 trainingSchema.index({ status: 1 });
 trainingSchema.index({ trainer: 1 });
 trainingSchema.index({ trainers: 1 });
+
+// Slugs are generated once and never regenerated: a changed slug would break links already emailed out.
+trainingSchema.pre('validate', function generateSlug() {
+  if (this.slug || !this.title) return;
+  const base = this.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .slice(0, 60)
+    .replace(/^-+|-+$/g, '');
+  this.slug = base ? `${base}-${randomBytes(3).toString('hex')}` : randomBytes(6).toString('hex');
+});
 
 trainingSchema.pre('validate', function syncTrainerAssignments() {
   const ids = [...new Set((this.trainers || []).map(String))];

@@ -6,6 +6,7 @@ import { ClockIcon } from '@heroicons/react/24/outline';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
 import { formatTime12, formatTimeRange12 } from '../../utils/timeFormat';
+import { trainingPath } from '../../utils/trainingLink';
 
 export const Program = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -163,7 +164,7 @@ const SessionCard = ({ session: s, dayNumber }) => {
 
   return (
     <Link
-      to={`/trainings/${s._id}`}
+      to={trainingPath(s)}
       className="group block relative overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all card-hover-lift bg-white border border-black/10"
     >
       {/* Cover image / logo fallback */}

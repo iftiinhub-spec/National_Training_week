@@ -19,6 +19,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { formatTime12, formatTimeRange12 } from '../../utils/timeFormat';
 import { formatTrainerName } from '../../utils/trainerName';
+import { trainingPath } from '../../utils/trainingLink';
 
 /* ── Countdown hook ──────────────────────────────── */
 const useCountdown = (target) => {
@@ -534,7 +535,7 @@ const HomeSessionCard = ({ session: s }) => {
 
   return (
     <Link
-      to={`/trainings/${s._id}`}
+      to={trainingPath(s)}
       className="group block relative overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all card-hover-lift bg-white border border-black/10"
     >
       {/* Cover image / logo fallback */}

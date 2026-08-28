@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Training from '../../models/Training.js';
 import { escapeRegex } from '../../utils/search.js';
 import Event from '../../models/Event.js';
@@ -54,10 +55,13 @@ export const getPublicTrainings = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// GET /api/public/trainings/:id
+// GET /api/public/trainings/:trainingRef — accepts a slug or a legacy ObjectId
 export const getPublicTraining = async (req, res, next) => {
   try {
-    const training = await Training.findById(req.params.id)
+    const { trainingRef } = req.params;
+    const training = await Training.findOne(
+      mongoose.isObjectIdOrHexString(trainingRef) ? { _id: trainingRef } : { slug: trainingRef }
+    )
       .populate('event', 'name year theme startDate endDate registrationStart registrationDeadline')
       .populate('eventDay', 'dayNumber theme date')
       .populate('category', 'name')
