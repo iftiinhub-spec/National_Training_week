@@ -10,6 +10,7 @@
     "create:admin": "node src/create_admin.js",
     "backfill:seats": "node src/backfill_filled_seats.js",
     "backfill:slugs": "node src/backfill_training_slugs.js",
+    "migrate:lifecycle": "node src/migrate_lifecycle.js",
     "check:deps": "node -e \"require('mongodb/lib/resource_management'); require('mongoose'); console.log('backend dependencies ok')\"",
     "test": "node --test test/*.test.js"
   },

@@ -284,7 +284,7 @@ export const assignParticipants = async (req, res, next) => {
 
     const training = await Training.findById(trainingId);
     if (!training) return errorResponse(res, 'Training not found.', 404);
-    if (['draft', 'cancelled', 'completed'].includes(training.status)) {
+    if (training.status !== 'published') {
       return errorResponse(res, `A ${training.status} session cannot have participants assigned to it.`, 400);
     }
 

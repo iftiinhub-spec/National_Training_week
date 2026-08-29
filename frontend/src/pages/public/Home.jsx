@@ -137,12 +137,19 @@ export const Home = () => {
   const formatStageDate = (timestamp) => timestamp ? new Date(timestamp).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) : '';
   const todayKey = new Date(now).toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
   const currentProgramDay = days.find((day) => day.date && new Date(day.date).toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }) === todayKey);
+  // The edition's `phase` is decided by the server from the same dates every other screen uses.
+  // A registration cut-off is optional: without one, registration stays open and each session
+  // simply stops taking sign-ups when its own day begins.
+  const liveStage = eventEndsAt && now <= eventEndsAt
+    ? { key: 'live', message: 'National Training Week is underway', detail: currentProgramDay ? `Day ${currentProgramDay.dayNumber} — ${currentProgramDay.theme}` : 'View the current program and join your approved sessions.' }
+    : { key: 'completed', message: `${event?.name || `National Training Week ${event?.year}`} has concluded`, detail: 'Published sessions remain freely available in the permanent recording library.' };
+
   const lifecycleStage = !event ? null
     : registrationOpensAt && now < registrationOpensAt ? { key: 'scheduled', label: 'Registration opens in', target: registrationOpensAt, detail: `Registration opens on ${formatStageDate(registrationOpensAt)}.`, accent: 'text-sky-300' }
-      : registrationClosesAt && now < registrationClosesAt ? { key: 'open', label: 'Registration closes in', target: registrationClosesAt, detail: `Register before ${formatStageDate(registrationClosesAt)} to select your session.`, accent: 'text-emerald-300' }
-        : eventStartsAt && now < eventStartsAt ? { key: 'awaiting', label: 'Training Week begins in', target: eventStartsAt, detail: 'Registration is closed. Approved participants can review their selected sessions in the portal.', accent: 'text-amber-300' }
-          : eventEndsAt && now <= eventEndsAt ? { key: 'live', message: 'National Training Week is underway', detail: currentProgramDay ? `Day ${currentProgramDay.dayNumber} — ${currentProgramDay.theme}` : 'View the current program and join your approved sessions.' }
-            : { key: 'completed', message: `${event.name || `National Training Week ${event.year}`} has concluded`, detail: 'Published sessions remain freely available in the permanent recording library.' };
+      : registrationClosesAt && now >= registrationClosesAt && eventStartsAt && now < eventStartsAt ? { key: 'awaiting', label: 'Training Week begins in', target: eventStartsAt, detail: 'Registration is closed. Approved participants can review their selected sessions in the portal.', accent: 'text-amber-300' }
+        : registrationClosesAt && now < registrationClosesAt ? { key: 'open', label: 'Registration closes in', target: registrationClosesAt, detail: `Register before ${formatStageDate(registrationClosesAt)} to select your session.`, accent: 'text-emerald-300' }
+          : eventStartsAt && now < eventStartsAt ? { key: 'open', label: 'Training Week begins in', target: eventStartsAt, detail: 'Registration is open. Each session takes sign-ups until its own day begins.', accent: 'text-emerald-300' }
+            : liveStage;
   useEffect(() => {
     const nextBoundary = lifecycleStage?.target;
     if (!nextBoundary) return undefined;
@@ -153,7 +160,7 @@ export const Home = () => {
   const eventDates = event?.startDate && event?.endDate
     ? `${new Date(event.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
     : 'Dates to be announced';
-  const eventStatus = event?.status?.replace(/_/g, ' ') || 'Program announced';
+  const eventStatus = event?.phaseLabel || 'Program announced';
   const heroImage = '/training-week-default-hero.png';
   const formatDayChoiceDate = (date) => (
     date ? new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBA'

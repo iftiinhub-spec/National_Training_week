@@ -1,46 +1,50 @@
+import { dayKey, endOfDay, startOfDay } from './lifecycle.js';
+
 const validDate = (value) => {
   const date = value instanceof Date ? value : new Date(value);
   return Number.isFinite(date.getTime()) ? date : null;
 };
 
+// The rules an edition's dates must follow. There is deliberately no rule forcing registration to
+// finish before the event starts: registration closes per session, on that session's own day, so a
+// six-day edition can keep taking sign-ups for its later days while its first days are running.
 export const eventTimelineError = (event) => {
-  const startKey = validDate(event?.startDate)?.toISOString().slice(0, 10);
-  const endKey = validDate(event?.endDate)?.toISOString().slice(0, 10);
-  const startsAt = startKey ? validDate(`${startKey}T00:00:00+03:00`) : null;
-  const opensAt = validDate(event?.registrationStart);
-  const closesAt = validDate(event?.registrationDeadline);
-  if (!startKey || !endKey || !startsAt) return 'Valid event start and end dates are required.';
+  const startKey = dayKey(event?.startDate);
+  const endKey = dayKey(event?.endDate);
+  if (!startKey || !endKey) return 'Valid event start and end dates are required.';
   if (startKey > endKey) return 'The event end date cannot be before its start date.';
-  if (Number(startKey.slice(0, 4)) !== Number(event.year) || Number(endKey.slice(0, 4)) !== Number(event.year)) return `The event dates must be in ${event.year}.`;
-  if (!opensAt || !closesAt) return 'Valid registration opening and deadline date-times are required.';
-  if (opensAt >= closesAt) return 'Registration must open before it closes.';
-  if (closesAt >= startsAt) return 'Registration must close before the event start date.';
+  if (Number(startKey.slice(0, 4)) !== Number(event.year) || Number(endKey.slice(0, 4)) !== Number(event.year)) {
+    return `The event dates must be in ${event.year}.`;
+  }
+
+  const opensAt = validDate(event?.registrationStart);
+  if (!opensAt) return 'A valid registration opening date and time is required.';
+  const eventEndsAt = endOfDay(endKey);
+  if (opensAt > eventEndsAt) return 'Registration cannot open after the event has finished.';
+
+  // The event-wide cut-off is optional. When it is set it only brings the closing time forward.
+  const closesAt = validDate(event?.registrationDeadline);
+  if (closesAt) {
+    if (opensAt >= closesAt) return 'Registration must open before it closes.';
+    if (closesAt > eventEndsAt) return 'The registration cut-off cannot be after the event has finished.';
+  }
   return null;
 };
 
 export const eventDayTimelineError = (event, value) => {
   const parentError = eventTimelineError(event);
   if (parentError) return parentError;
-  const dayKey = validDate(value)?.toISOString().slice(0, 10);
-  const startKey = validDate(event.startDate).toISOString().slice(0, 10);
-  const endKey = validDate(event.endDate).toISOString().slice(0, 10);
-  if (!dayKey || dayKey < startKey || dayKey > endKey) return `Event day must be between ${startKey} and ${endKey}.`;
+  const key = dayKey(value);
+  const startKey = dayKey(event.startDate);
+  const endKey = dayKey(event.endDate);
+  if (!key || key < startKey || key > endKey) return `Event day must be between ${startKey} and ${endKey}.`;
   return null;
 };
 
-export const eventStatusError = (event, status, now = new Date()) => {
-  if (status === 'draft') return null;
-  const timelineError = eventTimelineError(event);
-  if (timelineError) return timelineError;
-  const startKey = validDate(event.startDate).toISOString().slice(0, 10);
-  const endKey = validDate(event.endDate).toISOString().slice(0, 10);
-  const startsAt = validDate(`${startKey}T00:00:00+03:00`);
-  const endsAt = validDate(`${endKey}T23:59:59.999+03:00`);
-  const opensAt = validDate(event.registrationStart);
-  const closesAt = validDate(event.registrationDeadline);
-  const expected = now < opensAt ? 'registration_scheduled'
-    : now < closesAt ? 'registration_open'
-      : now < startsAt ? 'registration_closed'
-        : now <= endsAt ? 'ongoing' : 'completed';
-  return status === expected ? null : `Event status must be '${expected.replaceAll('_', ' ')}' for the current schedule.`;
-};
+// Kept for callers that need the event's own window as instants rather than as an error message.
+export const eventWindow = (event) => ({
+  startsAt: startOfDay(event?.startDate),
+  endsAt: endOfDay(event?.endDate),
+  opensAt: validDate(event?.registrationStart),
+  closesAt: validDate(event?.registrationDeadline),
+});

@@ -157,15 +157,14 @@ export const eventValidation = [
   body('registrationStart').optional({ checkFalsy: true }).isISO8601(),
   body('registrationDeadline').optional({ checkFalsy: true }).isISO8601(),
   body('description').optional({ checkFalsy: true }).trim().isLength({ max: 5000 }),
-  body('status').optional().isIn(['draft', 'registration_scheduled', 'registration_open', 'registration_closed', 'ongoing', 'completed']),
+  body('status').optional().isIn(['draft', 'published', 'cancelled']),
   body('isActive').optional().isBoolean().toBoolean(),
   body('isCurrent').optional().isBoolean().toBoolean(),
 ];
 
+// Days are generated from the event's date range, so the only thing written to one is its theme.
 export const eventDayValidation = [
-  body('dayNumber').isInt({ min: 1, max: 366 }).withMessage('Day number must be between 1 and 366.').toInt(),
-  body('theme').trim().isLength({ min: 2, max: 250 }),
-  body('date').isISO8601().withMessage('Enter a valid event-day date.'),
+  body('theme').trim().isLength({ min: 2, max: 250 }).withMessage('Enter a theme of at least 2 characters.'),
 ];
 
 export const trainingValidation = [

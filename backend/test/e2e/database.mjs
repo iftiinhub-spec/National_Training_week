@@ -66,7 +66,7 @@ try {
       startDate: dayStart, endDate: dayStart,
       registrationStart: new Date(now.getTime() - 24 * 60 * 60 * 1000),
       registrationDeadline: new Date(now.getTime() + 24 * 60 * 60 * 1000),
-      status: 'registration_open', isActive: true, isCurrent: true,
+      status: 'published', isActive: true, isCurrent: true,
     });
     const eventDay = await EventDay.create({ event: event._id, dayNumber: 1, theme: 'End-to-End Day', date: dayStart });
     const category = await Category.create({ name: 'E2E Testing', description: 'Isolated automated testing category.' });
@@ -74,7 +74,7 @@ try {
       title: 'E2E Complete Workflow Session', description: 'A session used only inside the isolated E2E database.',
       event: event._id, eventDay: eventDay._id, category: category._id,
       trainer: trainer._id, moderator: moderator._id, date: dayStart,
-      startTime: '00:00', endTime: '00:01', status: 'registration_open', capacity: 100,
+      startTime: '00:00', endTime: '00:01', status: 'published', capacity: 100,
       registrationRequired: true, language: 'English', level: 'general',
     });
     const fixturePath = process.env.E2E_FIXTURE_PATH;

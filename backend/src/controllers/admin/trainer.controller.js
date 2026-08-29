@@ -58,14 +58,14 @@ export const getTrainers = async (req, res, next) => {
 export const getPublicTrainers = async (req, res, next) => {
   try {
     const sessionFilter = {
-      status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] },
+      status: { $in: ['published', 'completed'] },
       $or: [{ trainers: { $exists: true, $ne: [] } }, { trainer: { $ne: null } }],
     };
     if (req.query.event) sessionFilter.event = req.query.event;
     else {
-      const currentEvent = await Event.findOne({ status: { $ne: 'draft' }, isActive: { $ne: false }, isCurrent: true })
-        || await Event.findOne({ status: { $ne: 'draft' }, isActive: { $ne: false }, endDate: { $gte: new Date() } }).sort({ startDate: 1 })
-        || await Event.findOne({ status: { $ne: 'draft' }, isActive: { $ne: false } }).sort({ year: -1 });
+      const currentEvent = await Event.findOne({ status: 'published', isActive: { $ne: false }, isCurrent: true })
+        || await Event.findOne({ status: 'published', isActive: { $ne: false }, endDate: { $gte: new Date() } }).sort({ startDate: 1 })
+        || await Event.findOne({ status: 'published', isActive: { $ne: false } }).sort({ year: -1 });
       if (currentEvent) sessionFilter.event = currentEvent._id;
     }
     if (req.query.eventDay) sessionFilter.eventDay = req.query.eventDay;
@@ -92,7 +92,7 @@ export const getPublicTrainer = async (req, res, next) => {
     if (!trainer) return errorResponse(res, 'Trainer not found.', 404);
     const sessionFilter = {
       $or: [{ trainers: trainer._id }, { trainer: trainer._id }],
-      status: { $in: ['published', 'registration_open', 'registration_closed', 'ongoing', 'completed'] },
+      status: { $in: ['published', 'completed'] },
     };
     if (req.query.event) sessionFilter.event = req.query.event;
     const sessions = await Training.find(sessionFilter)

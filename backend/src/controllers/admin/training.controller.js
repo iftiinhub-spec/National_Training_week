@@ -6,7 +6,7 @@ import User from '../../models/User.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { completeTrainingSession } from '../../services/completeTrainingSession.js';
 import { getTrainingDateTime, normalizeTrainingTime } from '../../utils/trainingDateTime.js';
-import { getRegistrationWindowState, registrationClosesAt } from '../../utils/registrationWindow.js';
+import { registrationClosedReason, sessionEndsAt, sessionPhase, withSessionPhase } from '../../utils/lifecycle.js';
 import { escapeRegex } from '../../utils/search.js';
 import { pick } from '../../utils/pick.js';
 import { deleteTrainingCascade } from '../../utils/cascadeDelete.js';
@@ -33,7 +33,7 @@ const validateTrainingDay = async (data, existing = null) => {
   const eventId = data.event || existing?.event;
   const eventDayId = data.eventDay || existing?.eventDay;
   const [event, eventDay] = await Promise.all([
-    Event.findById(eventId).select('year startDate endDate registrationDeadline'),
+    Event.findById(eventId).select('year startDate endDate registrationStart registrationDeadline'),
     EventDay.findById(eventDayId).select('event date'),
   ]);
   if (!event) { const error = new Error('Selected event does not exist.'); error.statusCode = 400; throw error; }
@@ -53,13 +53,9 @@ const validateTrainingDay = async (data, existing = null) => {
   if (!startsAt || !endsAt || startsAt >= endsAt) {
     const error = new Error('Training end time must be later than its start time.'); error.statusCode = 400; throw error;
   }
-  const registrationDeadline = event.registrationDeadline && new Date(event.registrationDeadline);
-  if (!registrationDeadline || !Number.isFinite(registrationDeadline.getTime())) {
-    const error = new Error('The parent event registration deadline is not configured.'); error.statusCode = 400; throw error;
-  }
-  if (startsAt <= registrationDeadline) {
-    const error = new Error('Training must start after the parent event registration deadline.'); error.statusCode = 400; throw error;
-  }
+  // No rule ties a session to an event-wide deadline any more. Registration for a session closes
+  // when that session's own day begins (see utils/lifecycle.js), so later days of a running event
+  // can still accept sign-ups.
   const scheduleChanged = !existing
     || trainingDateKey !== new Date(existing.date).toISOString().slice(0, 10)
     || normalizeTrainingTime(startTime) !== normalizeTrainingTime(existing.startTime);
@@ -108,31 +104,25 @@ const validateTrainerAssignments = async (data) => {
   }
 };
 
+// Marking a session finished is the only status an administrator cannot apply whenever they like:
+// it locks attendance and queues certificates, so it must wait until the session is actually over.
 const validateTimedStatus = (training, status, now = new Date()) => {
-  const startsAt = getTrainingDateTime(training.date, training.startTime);
-  const endsAt = getTrainingDateTime(training.date, training.endTime);
-
-  if (status === 'registration_closed') {
-    const registrationStart = training.event?.registrationStart && new Date(training.event.registrationStart);
-    if (!registrationStart || !Number.isFinite(registrationStart.getTime())) {
-      return 'Configure the event registration window before closing registration.';
-    }
-    if (now < registrationStart) return 'Registration cannot be closed before the event registration window begins.';
-  }
-  if (status === 'ongoing') {
-    if (!startsAt || !endsAt) return 'Configure a valid training date, start time, and end time first.';
-    if (now < startsAt) return 'The training cannot go live before its scheduled start time.';
-    if (now >= endsAt) return 'The training has passed its scheduled end time and cannot be marked live.';
-  }
-  if (status === 'completed') {
-    if (!endsAt) return 'Configure a valid training date and end time before completing the training.';
-    if (now < endsAt) return 'The training cannot be completed before its scheduled end time.';
-  }
+  if (status !== 'completed') return null;
+  const endsAt = sessionEndsAt(training);
+  if (!endsAt) return 'Set this session’s date and end time before marking it finished.';
+  if (now < endsAt) return 'This session cannot be marked finished before its end time.';
   return null;
 };
 
-// All status values — admin can freely transition between any of these
-const ALL_STATUSES = ['draft', 'published', 'registration_open', 'registration_closed', 'ongoing', 'completed', 'cancelled'];
+// The only four values stored on a session. Everything else an administrator sees — registration
+// open, happening now, finished — is worked out from the dates in utils/lifecycle.js.
+const SESSION_STATUSES = ['draft', 'published', 'cancelled', 'completed'];
+
+const STATUS_MESSAGES = {
+  draft: 'Session saved as a draft. It is hidden from the public.',
+  published: 'Session published. Registration follows the event dates.',
+  cancelled: 'Session cancelled.',
+};
 
 // GET /api/admin/trainings
 export const getTrainings = async (req, res, next) => {
@@ -157,7 +147,9 @@ export const getTrainings = async (req, res, next) => {
         .skip(skip).limit(limit),
       Training.countDocuments(filter),
     ]);
-    return paginatedResponse(res, trainings, total, page, limit);
+    // The derived state is computed here, once, and sent to the screen. The admin screen never
+    // recalculates it — that is what used to let the two disagree.
+    return paginatedResponse(res, trainings.map((training) => withSessionPhase(training)), total, page, limit);
   } catch (err) { next(err); }
 };
 
@@ -165,14 +157,14 @@ export const getTrainings = async (req, res, next) => {
 export const getTraining = async (req, res, next) => {
   try {
     const training = await Training.findById(req.params.id)
-      .populate('event', 'name year theme')
+      .populate('event', 'name year theme registrationStart registrationDeadline')
       .populate('eventDay', 'dayNumber theme date')
       .populate('category', 'name')
       .populate('trainer', 'name title organization photo biography expertise')
       .populate('trainers', 'name title organization photo biography expertise')
       .populate('moderator', 'fullName email phone');
     if (!training) return errorResponse(res, 'Training not found.', 404);
-    return successResponse(res, { training });
+    return successResponse(res, { training: withSessionPhase(training) });
   } catch (err) { next(err); }
 };
 
@@ -208,6 +200,8 @@ export const updateTraining = async (req, res, next) => {
 };
 
 // PATCH /api/admin/trainings/:id/status
+// Sets what the administrator decided: draft, published, cancelled or finished. These four are
+// always available — none of them depends on the clock, so nothing is ever greyed out.
 export const updateTrainingStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
@@ -215,24 +209,8 @@ export const updateTrainingStatus = async (req, res, next) => {
       .populate('event', 'registrationStart registrationDeadline');
     if (!training) return errorResponse(res, 'Training not found.', 404);
 
-    if (!ALL_STATUSES.includes(status)) {
-      return errorResponse(res, `Invalid status '${status}'. Valid values: ${ALL_STATUSES.join(', ')}.`, 400);
-    }
-
-    if (status === 'registration_open') {
-      const windowState = getRegistrationWindowState(training.event);
-      if (windowState === 'unconfigured') {
-        return errorResponse(res, 'Configure the event registration start and deadline before opening this training for registration.', 400);
-      }
-      if (windowState === 'scheduled') {
-        return errorResponse(res, `Registration cannot open before ${training.event.registrationStart.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })}.`, 400);
-      }
-      // Registration now closes per session, so the event-wide deadline no longer blocks opening
-      // one. Only a session whose own day has already started cannot be reopened.
-      const closesAt = registrationClosesAt(training);
-      if (closesAt && new Date() >= closesAt) {
-        return errorResponse(res, 'Registration cannot open because the scheduled day of this session has already started.', 400);
-      }
+    if (!SESSION_STATUSES.includes(status)) {
+      return errorResponse(res, `Invalid status '${status}'. Valid values: ${SESSION_STATUSES.join(', ')}.`, 400);
     }
 
     const timedStatusError = validateTimedStatus(training, status);
@@ -240,12 +218,52 @@ export const updateTrainingStatus = async (req, res, next) => {
 
     if (status === 'completed') {
       const result = await completeTrainingSession({ trainingId: training._id, completedBy: req.user._id });
-      return successResponse(res, result, `Training completed. Certificates for ${result.summary.eligible} eligible participant${result.summary.eligible === 1 ? '' : 's'} have been queued.`);
+      return successResponse(res, result, `Session finished. Certificates for ${result.summary.eligible} eligible participant${result.summary.eligible === 1 ? '' : 's'} have been queued.`);
     }
-    if (training.status === 'completed') return errorResponse(res, 'A completed training cannot be reopened because attendance is locked and certificates may already be issued.', 400);
+    if (training.status === 'completed') {
+      return errorResponse(res, 'A finished session cannot be reopened because attendance is locked and certificates may already be issued.', 400);
+    }
+
     training.status = status;
     await training.save();
-    return successResponse(res, { training }, `Training status updated to '${status}'.`);
+    return successResponse(res, { training: withSessionPhase(training, training.event) }, STATUS_MESSAGES[status]);
+  } catch (err) { next(err); }
+};
+
+// PATCH /api/admin/trainings/:id/registration  { open: true | false }
+// Opening clears the manual override so the session follows the event dates again; closing records
+// "closed from now". This is the only registration control an administrator needs.
+export const setTrainingRegistration = async (req, res, next) => {
+  try {
+    const open = req.body.open === true || req.body.open === 'true';
+    const training = await Training.findById(req.params.id)
+      .populate('event', 'registrationStart registrationDeadline');
+    if (!training) return errorResponse(res, 'Training not found.', 404);
+    if (training.status !== 'published') {
+      return errorResponse(res, 'Publish this session first. Only a published session can take registrations.', 400);
+    }
+
+    if (!open) {
+      training.registrationClosesAt = new Date();
+      await training.save();
+      return successResponse(res, { training: withSessionPhase(training, training.event) }, 'Registration closed for this session.');
+    }
+
+    training.registrationClosesAt = null;
+    const { phase, registration } = sessionPhase(training, training.event);
+    // Clearing the override cannot help once the session's own day has arrived, so say why instead
+    // of saving a change that would have no effect.
+    if (phase !== 'registration_open' && phase !== 'scheduled') {
+      return errorResponse(res, registrationClosedReason(registration), 400);
+    }
+    await training.save();
+    return successResponse(
+      res,
+      { training: withSessionPhase(training, training.event) },
+      phase === 'scheduled'
+        ? `Registration will open automatically on ${registration.opensAt.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })}.`
+        : 'Registration is open for this session.'
+    );
   } catch (err) { next(err); }
 };
 
