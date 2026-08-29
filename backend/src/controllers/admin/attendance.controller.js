@@ -5,6 +5,7 @@ import Training from '../../models/Training.js';
 import { randomUUID } from 'node:crypto';
 import { generateQRDataUrl } from '../../utils/qrGenerator.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
+import { enqueueCertificateIssuance } from '../../services/completeTrainingSession.js';
 
 const checkAccess = async (trainingId, userId, role) => {
   if (role === 'admin') return true;
@@ -127,19 +128,43 @@ export const updateAttendance = async (req, res, next) => {
     const { trainingId, attendanceId } = req.params;
     const hasAccess = await checkAccess(trainingId, req.user._id, req.user.role);
     if (!hasAccess) return errorResponse(res, 'Access denied.', 403);
-    if (await attendanceIsLocked(trainingId)) return errorResponse(res, 'Attendance is locked because this training is completed.', 400);
-
     const { status } = req.body;
     const allowed = ['present', 'absent', 'late', 'not_marked'];
     if (!allowed.includes(status)) return errorResponse(res, 'Invalid attendance status.', 400);
 
+    // Once a session is completed the sheet is closed, with one exception: an administrator may
+    // mark a participant present who was never marked at all. Present, absent and late records are
+    // decisions someone already made, and stay untouchable.
+    const locked = await attendanceIsLocked(trainingId);
+    const retroactive = locked && req.user.role === 'admin' && status === 'present';
+    if (locked && !retroactive) {
+      return errorResponse(res, 'Attendance is locked because this training is completed.', 400);
+    }
+
+    const training = retroactive ? await Training.findById(trainingId).select('completedAt') : null;
+    const checkinTime = retroactive ? (training?.completedAt || new Date()) : new Date();
+
     const record = await Attendance.findOneAndUpdate(
-      { _id: attendanceId, training: trainingId },
-      { status, method: 'manual', updatedBy: req.user._id, ...(status === 'present' ? { checkinTime: new Date() } : {}) },
+      // The not_marked guard is part of the query, so a completed session cannot overwrite an
+      // existing decision even if two admins act at the same moment.
+      { _id: attendanceId, training: trainingId, ...(retroactive ? { status: 'not_marked' } : {}) },
+      { status, method: 'manual', updatedBy: req.user._id, ...(status === 'present' ? { checkinTime } : {}) },
       { new: true }
     ).populate('participant', 'fullName email');
 
-    if (!record) return errorResponse(res, 'Attendance record not found.', 404);
+    if (!record) {
+      return retroactive
+        ? errorResponse(res, 'Only a participant with no attendance recorded can be marked present after completion.', 400)
+        : errorResponse(res, 'Attendance record not found.', 404);
+    }
+
+    if (retroactive) {
+      // The worker recomputes who is present and skips anyone already emailed, so this issues a
+      // certificate for exactly this participant.
+      await enqueueCertificateIssuance({ trainingId, requestedBy: req.user._id, restart: true });
+      return successResponse(res, { attendance: record }, `${record.participant?.fullName || 'Participant'} marked present. Their certificate has been queued for delivery.`);
+    }
+
     return successResponse(res, { attendance: record }, 'Attendance updated.');
   } catch (err) { next(err); }
 };
