@@ -14,15 +14,16 @@ const photoUrl = (p) => {
   return p.startsWith('http') ? p : `/${p.replace(/^\//,'')}`;
 };
 
-const statusColor = (s) => ({
-  registration_open:   'bg-[#1da156]',
-  ongoing:             'bg-[#1da156]',
-  published:           'bg-[#1da156]',
-  completed:           'bg-black/60',
-  cancelled:           'bg-black/60',
-  draft:               'bg-black/60',
+// `phase` comes from the server, worked out from the session dates. This page only colours it.
+const phaseColor = (phase) => ({
+  registration_open: 'bg-[#1da156]',
+  live:              'bg-[#1da156]',
+  scheduled:         'bg-black/60',
+  ended:             'bg-black/60',
+  cancelled:         'bg-black/60',
+  draft:             'bg-black/60',
   registration_closed: 'bg-black/60',
-}[s] || 'bg-black/60');
+}[phase] || 'bg-black/60');
 
 const trainerNames = (training) => {
   const assigned = training.trainers?.length ? training.trainers : training.trainer ? [training.trainer] : [];
@@ -60,8 +61,8 @@ const TrainingCard = ({ training: t }) => (
     {/* Card body */}
     <div className="p-5 bg-white">
       <div className="mb-4 flex">
-        <span className={`${statusColor(t.status)} rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white`}>
-          {t.status?.replace(/_/g, ' ')}
+        <span className={`${phaseColor(t.phase)} rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white`}>
+          {t.phaseLabel || t.phase?.replace(/_/g, ' ')}
         </span>
       </div>
       <h3 className="font-black text-black text-base leading-snug mb-1 group-hover:text-[#1da156] transition-colors line-clamp-2">
@@ -105,7 +106,7 @@ export const Trainings = () => {
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedLevel)    params.append('level', selectedLevel);
       if (selectedLanguage) params.append('language', selectedLanguage);
-      if (selectedStatus)   params.append('status', selectedStatus);
+      if (selectedStatus)   params.append('phase', selectedStatus);
       if (selectedEvent || currentEvent?._id) params.append('event', selectedEvent || currentEvent._id);
       const res = await api.get(`/public/trainings?${params}`, { signal });
       if (res.success) setTrainings(res.data || []);
@@ -209,10 +210,11 @@ export const Trainings = () => {
               onChange={(e) => setSelectedStatus(e.target.value)}
               className="px-3 py-2 rounded-lg border border-black/10 text-sm bg-white text-black focus:outline-none focus:ring-2 focus:ring-[#1da156]/40"
             >
-              <option value="">All Statuses</option>
-              <option value="registration_open">Registration Open</option>
-              <option value="published">Published</option>
-              <option value="completed">Completed</option>
+              <option value="">All sessions</option>
+              <option value="registration_open">Registration open</option>
+              <option value="registration_closed">Registration closed</option>
+              <option value="live">Happening now</option>
+              <option value="ended">Finished</option>
             </select>
 
             <button

@@ -9,57 +9,34 @@ import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { formatTimeRange12, toTimeInputValue } from '../../utils/timeFormat';
 
-const TRAINING_STATUSES = [
-  ['draft', 'Draft'],
-  ['published', 'Published'],
-  ['registration_open', 'Registration Open'],
-  ['registration_closed', 'Registration Closed'],
-  ['ongoing', 'Ongoing / Live'],
-  ['completed', 'Completed'],
+// What an administrator decides about a session. All four can be chosen at any time, because none
+// of them depends on the clock. Whether registration is open, whether the session is running and
+// whether it is over are decided by the server and arrive as `phase` on every session.
+const SESSION_STATUSES = [
+  ['draft', 'Draft — nobody can see it'],
+  ['published', 'Published — people can see it'],
   ['cancelled', 'Cancelled'],
+  ['completed', 'Finished'],
 ];
 
 const statusControlClass = (status) => {
-  if (status === 'published' || status === 'registration_open' || status === 'ongoing') {
-    return 'border-emerald-200 bg-emerald-50 text-[#1a6b3c]';
-  }
+  if (status === 'published') return 'border-emerald-200 bg-emerald-50 text-[#1a6b3c]';
   if (status === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-700';
   if (status === 'completed') return 'border-slate-300 bg-slate-100 text-slate-700';
   return 'border-amber-200 bg-amber-50 text-amber-800';
 };
 
-const registrationWindowIsOpen = (event) => {
-  if (!event?.registrationStart || !event?.registrationDeadline) return false;
-  const now = Date.now();
-  return now >= new Date(event.registrationStart).getTime()
-    && now < new Date(event.registrationDeadline).getTime();
+const phaseChipClass = (phase) => {
+  if (phase === 'registration_open') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (phase === 'live') return 'border-purple-200 bg-purple-50 text-purple-700';
+  if (phase === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-700';
+  if (phase === 'ended') return 'border-slate-200 bg-slate-100 text-slate-600';
+  return 'border-amber-200 bg-amber-50 text-amber-800';
 };
 
-const trainingTime = (training, field) => {
-  const time = toTimeInputValue(training?.[field]);
-  if (!training?.date || !time) return Number.NaN;
-  return new Date(`${training.date.slice(0, 10)}T${time}:00+03:00`).getTime();
-};
-
-const statusIsAvailable = (training, status) => {
-  if (training.status === status) return true;
-  const now = Date.now();
-  if (status === 'registration_open') return registrationWindowIsOpen(training.event);
-  if (status === 'registration_closed') {
-    const registrationStart = new Date(training.event?.registrationStart).getTime();
-    return Number.isFinite(registrationStart) && now >= registrationStart;
-  }
-  if (status === 'ongoing') {
-    const startsAt = trainingTime(training, 'startTime');
-    const endsAt = trainingTime(training, 'endTime');
-    return Number.isFinite(startsAt) && Number.isFinite(endsAt) && now >= startsAt && now < endsAt;
-  }
-  if (status === 'completed') {
-    const endsAt = trainingTime(training, 'endTime');
-    return Number.isFinite(endsAt) && now >= endsAt;
-  }
-  return true;
-};
+// The button only makes sense while the session is still ahead of its own day.
+const canChangeRegistration = (training) => training.status === 'published'
+  && ['registration_open', 'registration_closed', 'scheduled'].includes(training.phase);
 
 const assetUrl = (value) => value ? (value.startsWith('http') ? value : `/${value.replace(/^\//, '')}`) : '';
 
@@ -221,7 +198,7 @@ export const TrainingsManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.eventDay) {
-      toast.error('Please select an Event Day for this session. If none exist, create an Event Day in Events & Days first.');
+      toast.error('Choose which day this session belongs to. Days are created automatically from the event dates.');
       return;
     }
 
@@ -258,15 +235,29 @@ export const TrainingsManagement = () => {
   };
 
   const handleStatusChange = async (trainingId, newStatus) => {
-    if (newStatus === 'completed' && !await confirmAction({ title: 'Complete this training?', message: 'Attendance will be locked. Participant certificates and the trainer Certificate of Appreciation will be queued for safe background delivery. This training cannot be reopened.', confirmLabel: 'Complete training', tone: 'warning' })) return;
+    if (newStatus === 'completed' && !await confirmAction({ title: 'Mark this session as finished?', message: 'Attendance will be locked. Participant certificates and the trainer Certificate of Appreciation will be queued for safe background delivery. This session cannot be reopened.', confirmLabel: 'Mark as finished', tone: 'warning' })) return;
     try {
       const res = await api.patch(`/admin/trainings/${trainingId}/status`, { status: newStatus });
       if (res.success) {
-        toast.success(res.message || `Status updated to ${newStatus}`);
+        toast.success(res.message || 'Session updated.');
         fetchData();
       }
     } catch (err) {
-      toast.error(err.message || 'Status transition failed.');
+      toast.error(err.message || 'Could not update this session.');
+    }
+  };
+
+  // Opening simply removes the manual stop, so the session goes back to following the event dates.
+  // Closing records "closed from now". The server decides whether either is possible and says why.
+  const handleRegistrationChange = async (trainingId, open) => {
+    try {
+      const res = await api.patch(`/admin/trainings/${trainingId}/registration`, { open });
+      if (res.success) {
+        toast.success(res.message || (open ? 'Registration opened.' : 'Registration closed.'));
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.message || 'Could not change registration.');
     }
   };
 
@@ -295,7 +286,7 @@ export const TrainingsManagement = () => {
         <div>
           <h1 className="text-2xl font-black text-slate-900">Trainings Management</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Create, update, upload 16:9 cover images, select Event Days, assign trainers/moderators, and manage status transitions.
+            Pick a day, set the time, assign the trainer and moderator, then publish. Registration opens and closes by itself: it starts when the event opens and stops when the session&rsquo;s own day begins.
           </p>
         </div>
 
@@ -320,7 +311,7 @@ export const TrainingsManagement = () => {
                 <th className="p-4">Day & Category</th>
                 <th className="p-4">Trainer & Moderator</th>
                 <th className="p-4">Date & Time</th>
-                <th className="p-4">Status</th>
+                <th className="p-4">Status &amp; registration</th>
                 <th className="p-4">Actions</th>
               </tr>
             </thead>
@@ -345,25 +336,38 @@ export const TrainingsManagement = () => {
                     <span className="text-[11px] text-slate-400">{formatTimeRange12(tr.startTime, tr.endTime)}</span>
                   </td>
                   <td className="p-4">
-                    <div className={`relative inline-flex min-w-44 items-center rounded-full border ${statusControlClass(tr.status)}`}>
-                      <span className="pointer-events-none ml-3 h-2 w-2 shrink-0 rounded-full bg-current" />
-                      <select
-                        value={tr.status}
-                        onChange={(e) => handleStatusChange(tr._id, e.target.value)}
-                        aria-label={`Change status for ${tr.title}`}
-                        className="admin-status-select w-full cursor-pointer appearance-none bg-transparent py-2 pl-2 pr-9 text-xs font-bold"
-                      >
-                        {TRAINING_STATUSES.map(([value, label]) => (
-                          <option
-                            key={value}
-                            value={value}
-                            disabled={!statusIsAvailable(tr, value)}
+                    <div className="space-y-2">
+                      <div className={`relative inline-flex min-w-52 items-center rounded-full border ${statusControlClass(tr.status)}`}>
+                        <span className="pointer-events-none ml-3 h-2 w-2 shrink-0 rounded-full bg-current" />
+                        <select
+                          value={tr.status}
+                          onChange={(e) => handleStatusChange(tr._id, e.target.value)}
+                          aria-label={`Change status for ${tr.title}`}
+                          className="admin-status-select w-full cursor-pointer appearance-none bg-transparent py-2 pl-2 pr-9 text-xs font-bold"
+                        >
+                          {SESSION_STATUSES.map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                        </select>
+                        <ChevronDownIcon className="pointer-events-none absolute right-3 h-4 w-4" />
+                      </div>
+
+                      {/* Worked out by the server from the dates. Read-only on purpose: this screen
+                          never repeats a date rule, so it can never disagree with the server. */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold ${phaseChipClass(tr.phase)}`}>
+                          {tr.phaseLabel || 'Draft'}
+                        </span>
+                        {canChangeRegistration(tr) && (
+                          <button
+                            type="button"
+                            onClick={() => handleRegistrationChange(tr._id, !tr.registration?.open)}
+                            className="rounded-full border border-slate-300 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:border-[#1a6b3c] hover:text-[#1a6b3c]"
                           >
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDownIcon className="pointer-events-none absolute right-3 h-4 w-4" />
+                            {tr.registration?.open ? 'Close registration' : 'Open registration'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="p-4 flex items-center gap-1">

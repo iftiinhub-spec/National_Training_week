@@ -7,10 +7,10 @@ import { validate } from '../middleware/validate.js';
 import { assignmentValidation, attendanceValidation, categoryValidation, eventDayValidation, eventValidation, idParam, invitationValidation, manualAttendanceValidation, meetingValidation, moderatorCreateValidation, moderatorUpdateValidation, optionalObjectIdQueries, paginationValidation, recordingValidation, registrationStatusValidation, trainerValidation, trainingValidation, validateObjectIdParam } from '../middleware/validationRules.js';
 
 // Controllers
-import { getEvents, getEvent, createEvent, updateEvent, deleteEvent, getEventDays, createEventDay, updateEventDay, deleteEventDay } from '../controllers/admin/event.controller.js';
+import { getEvents, getEvent, createEvent, updateEvent, deleteEvent, getEventDays, updateEventDay, regenerateEventDays } from '../controllers/admin/event.controller.js';
 import { getCategories, getCategory, createCategory, updateCategory, deleteCategory } from '../controllers/admin/category.controller.js';
 import { getTrainers, getTrainer, createTrainer, updateTrainer, deleteTrainer, deleteTrainers, reviewTrainer } from '../controllers/admin/trainer.controller.js';
-import { getTrainings, getTraining, createTraining, updateTraining, updateTrainingStatus, completeTraining, assignTrainingStaff, deleteTraining } from '../controllers/admin/training.controller.js';
+import { getTrainings, getTraining, createTraining, updateTraining, updateTrainingStatus, setTrainingRegistration, completeTraining, assignTrainingStaff, deleteTraining } from '../controllers/admin/training.controller.js';
 import { getParticipants, getParticipant, toggleParticipantStatus, resetParticipantPassword, deleteParticipant, deleteParticipants, getModerators, getModerator, createModerator, updateModerator, toggleModeratorStatus, resetModeratorPassword, deleteModerator, deleteModerators } from '../controllers/admin/user.controller.js';
 import { getRegistrations, getRegistration, updateRegistrationStatus, approveFilteredRegistrations, emailFilteredRegistrations, assignParticipants, deleteRegistration, deleteRegistrations } from '../controllers/admin/registration.controller.js';
 import { getMeeting, createMeeting, updateMeeting, deleteMeeting, releaseMeeting, sendTrainerInvitation, sendParticipantInvitations, getCommunications } from '../controllers/admin/meeting.controller.js';
@@ -32,8 +32,10 @@ router.use(protect, adminOnly);
 // Events & Days
 router.route('/events').get(paginationValidation, validate, getEvents).post(eventValidation, validate, createEvent);
 router.route('/events/:id').get(idParam(), validate, getEvent).put(idParam(), eventValidation, validate, updateEvent).delete(idParam(), validate, deleteEvent);
-router.route('/events/:eventId/days').get(idParam('eventId', 'event ID'), validate, getEventDays).post(idParam('eventId', 'event ID'), eventDayValidation, validate, createEventDay);
-router.route('/events/:eventId/days/:dayId').put(idParam('eventId', 'event ID'), idParam('dayId', 'event-day ID'), eventDayValidation, validate, updateEventDay).delete(idParam('eventId', 'event ID'), idParam('dayId', 'event-day ID'), validate, deleteEventDay);
+// Days are generated from the event's date range, so there is no create/delete route for them.
+router.route('/events/:eventId/days').get(idParam('eventId', 'event ID'), validate, getEventDays);
+router.post('/events/:eventId/days/regenerate', idParam('eventId', 'event ID'), validate, regenerateEventDays);
+router.route('/events/:eventId/days/:dayId').put(idParam('eventId', 'event ID'), idParam('dayId', 'event-day ID'), eventDayValidation, validate, updateEventDay);
 
 // Categories
 router.route('/categories').get(paginationValidation, validate, getCategories).post(categoryValidation, validate, createCategory);
@@ -48,7 +50,8 @@ router.patch('/trainers/:id/access', body('status').isIn(['pending', 'approved',
 // Trainings
 router.route('/trainings').get(paginationValidation, ...optionalObjectIdQueries('event', 'eventDay', 'category'), validate, getTrainings).post(uploadImage.single('coverImage'), verifyUploadedImage, trainingValidation, validate, createTraining);
 router.route('/trainings/:id').get(idParam(), validate, getTraining).put(idParam(), uploadImage.single('coverImage'), verifyUploadedImage, trainingValidation, validate, updateTraining).delete(idParam(), validate, deleteTraining);
-router.patch('/trainings/:id/status', idParam(), body('status').isIn(['draft', 'published', 'registration_open', 'registration_closed', 'ongoing', 'completed', 'cancelled']), validate, updateTrainingStatus);
+router.patch('/trainings/:id/status', idParam(), body('status').isIn(['draft', 'published', 'cancelled', 'completed']), validate, updateTrainingStatus);
+router.patch('/trainings/:id/registration', idParam(), body('open').isBoolean(), validate, setTrainingRegistration);
 router.post('/trainings/:id/complete', idParam(), validate, completeTraining);
 router.patch('/trainings/:id/assign', idParam(), assignmentValidation, validate, assignTrainingStaff);
 

@@ -69,7 +69,7 @@ const work = async () => {
   if (running || stopped) return;
   running = true;
   try {
-    const trainings = await Training.find({ status: { $in: ['published', 'registration_open'] } }).populate('trainer', 'email').populate('trainers', 'email').populate('moderator', 'email').lean();
+    const trainings = await Training.find({ status: 'published' }).populate('trainer', 'email').populate('trainers', 'email').populate('moderator', 'email').lean();
     for (const training of trainings) await processTraining(training);
   } catch (error) { console.error('Reminder worker error:', error.message); }
   finally { running = false; }

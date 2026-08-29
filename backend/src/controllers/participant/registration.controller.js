@@ -5,7 +5,7 @@ import Meeting from '../../models/Meeting.js';
 import TrainingMaterial from '../../models/TrainingMaterial.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
-import { registrationState } from '../../utils/registrationWindow.js';
+import { sessionPhase, registrationClosedReason } from '../../utils/lifecycle.js';
 
 // POST /api/participant/registrations
 export const registerForTraining = async (req, res, next) => {
@@ -17,18 +17,10 @@ export const registerForTraining = async (req, res, next) => {
       .populate('eventDay', 'dayNumber theme date')
       .populate('event', 'registrationStart registrationDeadline startDate status');
     if (!training) return errorResponse(res, 'Training not found.', 404);
-    // Registration stays open until this session's own day begins, so a participant can still sign
-    // up for later days of an event that is already running.
-    const state = registrationState(training, training.event);
-    if (!state.open) {
-      if (state.reason === 'not_started') {
-        return errorResponse(res, `Registration opens on ${state.opensAt.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })}.`, 400);
-      }
-      if (state.reason === 'day_reached') {
-        return errorResponse(res, 'Registration for this session has closed because its scheduled day has started.', 400);
-      }
-      return errorResponse(res, 'This training is not currently open for registration.', 400);
-    }
+    // The same rule the admin screen and the public page use. Registration stays open until this
+    // session's own day begins, so a participant can still sign up for later days of a running event.
+    const { registration } = sessionPhase(training, training.event);
+    if (!registration.open) return errorResponse(res, registrationClosedReason(registration), 400);
 
     // const sameDayTrainings = await Training.find({
     //   _id: { $ne: training._id },
@@ -215,7 +207,7 @@ export const getParticipantDashboard = async (req, res, next) => {
         .sort({ registeredAt: -1 }).limit(5),
       Attendance.find({ participant: participantId }).countDocuments(),
       (await import('../../models/Certificate.js')).default.countDocuments({ participant: participantId, isRevoked: false }),
-      Training.find({ status: { $in: ['published', 'registration_open'] }, date: { $gte: new Date() } })
+      Training.find({ status: 'published', date: { $gte: new Date() } })
         .populate('trainer', 'name title photo')
         .populate('trainers', 'name title photo')
         .populate('category', 'name')

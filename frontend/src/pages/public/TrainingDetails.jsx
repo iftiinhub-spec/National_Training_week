@@ -26,6 +26,9 @@ export const TrainingDetails = () => {
   // The server decides whether registration is open; the page must not re-derive that rule.
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [displayStatus, setDisplayStatus] = useState(null);
+  // The server also says *why* registration is closed, in plain English, so this page never has to
+  // guess at a reason that might not match the rule the server actually applied.
+  const [registrationMessage, setRegistrationMessage] = useState('');
   const [userRegistration, setUserRegistration] = useState(null);
   // const [myRegistrations, setMyRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +45,7 @@ export const TrainingDetails = () => {
         setRegisteredCount(res.data.registeredCount || 0);
         setRegistrationOpen(Boolean(res.data.registrationOpen));
         setDisplayStatus(res.data.displayStatus || null);
+        setRegistrationMessage(res.data.registrationMessage || '');
       }
     } catch (err) {
       toast.error('Failed to load training details.');
@@ -299,7 +303,7 @@ export const TrainingDetails = () => {
                 </button>
               ) : (
                 <div className="bg-white text-black border border-black/20 rounded-xl p-4 text-xs font-medium text-center">
-                  Registration for this training is currently closed.
+                  {registrationMessage || 'Registration for this training is currently closed.'}
                 </div>
               )}
             </div>

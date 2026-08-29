@@ -63,19 +63,19 @@ const trainingSchema = new mongoose.Schema(
     capacity: { type: Number, default: null },
     filledSeats: { type: Number, default: 0 },
     registrationRequired: { type: Boolean, default: true },
+    // What an administrator decided about this session. Nothing here changes on its own: whether
+    // registration is open, whether the session is running and whether it is over are all worked
+    // out from the dates by utils/lifecycle.js. See that file for the full explanation.
     status: {
       type: String,
-      enum: [
-        'draft',
-        'published',
-        'registration_open',
-        'registration_closed',
-        'ongoing',
-        'completed',
-        'cancelled',
-      ],
+      enum: ['draft', 'published', 'cancelled', 'completed'],
       default: 'draft',
     },
+    // Optional overrides. Left empty, the session follows the event: registration opens when the
+    // event opens and closes when this session's own day begins. Setting registrationClosesAt is
+    // how an administrator closes one session early; clearing it re-opens the session.
+    registrationOpensAt: { type: Date, default: null },
+    registrationClosesAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
     completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     attendanceLockedAt: { type: Date, default: null },
