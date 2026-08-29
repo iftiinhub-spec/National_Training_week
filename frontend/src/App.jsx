@@ -36,6 +36,7 @@ import NotFound from './pages/public/NotFound';
 // Participant Pages
 const ParticipantDashboard = lazy(() => import('./pages/participant/ParticipantDashboard'));
 const MyRegistrations = lazy(() => import('./pages/participant/MyRegistrations'));
+const MyMaterials = lazy(() => import('./pages/participant/MyMaterials'));
 const MyAttendance = lazy(() => import('./pages/participant/MyAttendance'));
 const MyCertificates = lazy(() => import('./pages/participant/MyCertificates'));
 const MyFeedback = lazy(() => import('./pages/participant/MyFeedback'));
@@ -152,6 +153,7 @@ export const App = () => {
         >
           <Route index element={<ParticipantDashboard />} />
           <Route path="trainings" element={<MyRegistrations />} />
+          <Route path="materials" element={<MyMaterials />} />
           <Route path="attendance" element={<MyAttendance />} />
           <Route path="certificates" element={<MyCertificates />} />
           <Route path="feedback" element={<MyFeedback />} />

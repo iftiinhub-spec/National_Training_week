@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import Trainer from '../models/Trainer.js';
 import Training from '../models/Training.js';
 import TrainingMaterial from '../models/TrainingMaterial.js';
+import { discardUpload, removeMaterialFile, resolveMaterialPath } from '../utils/materialFile.js';
 import Registration from '../models/Registration.js';
 import Attendance from '../models/Attendance.js';
 import Feedback from '../models/Feedback.js';
@@ -131,11 +132,15 @@ const assignedTraining = async (user, trainingId) => {
   return training ? { trainer, training } : null;
 };
 
+// Learning materials stay editable after a session completes, because trainers normally share
+// their slides once they have presented. Only a cancelled session is closed to changes.
+const materialsLocked = (training) => training.status === 'cancelled';
+
 export const createMaterial = async (req, res, next) => {
   try {
     const assigned = await assignedTraining(req.user, req.params.trainingId);
     if (!assigned) return errorResponse(res, 'Assigned training not found.', 404);
-    if (assigned.training.status === 'completed') return errorResponse(res, 'Materials cannot be changed after completion.', 400);
+    if (materialsLocked(assigned.training)) return errorResponse(res, 'Materials cannot be added to a cancelled session.', 400);
     const material = await TrainingMaterial.create({ ...materialPayload(req.body), training: assigned.training._id, trainer: assigned.trainer._id });
     return successResponse(res, { material }, 'Material added.', 201);
   } catch (error) { next(error); }
@@ -144,9 +149,14 @@ export const createMaterial = async (req, res, next) => {
 export const updateMaterial = async (req, res, next) => {
   try {
     const assigned = await assignedTraining(req.user, req.params.trainingId);
-    if (!assigned || assigned.training.status === 'completed') return errorResponse(res, 'Material cannot be changed.', 400);
-    const material = await TrainingMaterial.findOneAndUpdate({ _id: req.params.materialId, training: assigned.training._id, trainer: assigned.trainer._id }, materialPayload(req.body), { new: true, runValidators: true });
-    if (!material) return errorResponse(res, 'Material not found.', 404);
+    if (!assigned) return errorResponse(res, 'Assigned training not found.', 404);
+    if (materialsLocked(assigned.training)) return errorResponse(res, 'Materials cannot be changed for a cancelled session.', 400);
+    const existing = await TrainingMaterial.findOne({ _id: req.params.materialId, training: assigned.training._id, trainer: assigned.trainer._id });
+    if (!existing) return errorResponse(res, 'Material not found.', 404);
+    // An uploaded file keeps its file; only the label and description are editable.
+    const payload = materialPayload(req.body);
+    if (existing.file?.path) delete payload.url;
+    const material = await TrainingMaterial.findByIdAndUpdate(existing._id, payload, { new: true, runValidators: true });
     return successResponse(res, { material }, 'Material updated.');
   } catch (error) { next(error); }
 };
@@ -154,9 +164,55 @@ export const updateMaterial = async (req, res, next) => {
 export const deleteMaterial = async (req, res, next) => {
   try {
     const assigned = await assignedTraining(req.user, req.params.trainingId);
-    if (!assigned || assigned.training.status === 'completed') return errorResponse(res, 'Material cannot be deleted.', 400);
+    if (!assigned) return errorResponse(res, 'Assigned training not found.', 404);
+    if (materialsLocked(assigned.training)) return errorResponse(res, 'Materials cannot be deleted from a cancelled session.', 400);
     const material = await TrainingMaterial.findOneAndDelete({ _id: req.params.materialId, training: assigned.training._id, trainer: assigned.trainer._id });
     if (!material) return errorResponse(res, 'Material not found.', 404);
+    removeMaterialFile(material); // Otherwise the uploaded file is orphaned on disk forever.
     return successResponse(res, null, 'Material deleted.');
+  } catch (error) { next(error); }
+};
+
+// POST /api/trainer/trainings/:trainingId/materials/upload — attach a document directly
+export const uploadMaterialFile = async (req, res, next) => {
+  try {
+    if (!req.file) return errorResponse(res, 'Select a file to upload.', 400);
+    const assigned = await assignedTraining(req.user, req.params.trainingId);
+    // multer has already written the file, so anything rejected from here must clean up after itself.
+    if (!assigned) { discardUpload(req.file); return errorResponse(res, 'Assigned training not found.', 404); }
+    if (materialsLocked(assigned.training)) {
+      discardUpload(req.file);
+      return errorResponse(res, 'Materials cannot be added to a cancelled session.', 400);
+    }
+
+    const material = await TrainingMaterial.create({
+      training: assigned.training._id,
+      trainer: assigned.trainer._id,
+      title: String(req.body.title || '').trim().slice(0, 150) || req.file.originalname,
+      description: String(req.body.description || '').trim().slice(0, 500),
+      file: {
+        path: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+      },
+    });
+    return successResponse(res, { material }, 'File uploaded.', 201);
+  } catch (error) {
+    discardUpload(req.file);
+    next(error);
+  }
+};
+
+// GET /api/trainer/materials/:materialId/download — a trainer downloading their own upload
+export const downloadOwnMaterial = async (req, res, next) => {
+  try {
+    const trainer = await ownTrainer(req.user);
+    if (!trainer) return errorResponse(res, 'Approved trainer profile not found.', 403);
+    const material = await TrainingMaterial.findOne({ _id: req.params.materialId, trainer: trainer._id });
+    if (!material?.file?.path) return errorResponse(res, 'Material file not found.', 404);
+    const absolutePath = resolveMaterialPath(material);
+    if (!absolutePath) return errorResponse(res, 'This material file is no longer available.', 404);
+    return res.download(absolutePath, material.file.originalName || 'material');
   } catch (error) { next(error); }
 };

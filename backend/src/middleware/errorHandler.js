@@ -24,6 +24,14 @@ const errorHandler = (err, req, res, next) => {
     message = `Invalid ${err.path}: ${err.value}`;
   }
 
+  // Upload failures are things the user can correct, not server faults.
+  if (err.name === 'MulterError') {
+    statusCode = 400;
+    message = err.code === 'LIMIT_FILE_SIZE'
+      ? 'The file is too large.'
+      : err.code === 'LIMIT_FILE_COUNT' ? 'Only one file can be uploaded at a time.' : 'File upload failed.';
+  }
+
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;

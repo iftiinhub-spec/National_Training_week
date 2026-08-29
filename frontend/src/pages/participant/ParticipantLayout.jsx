@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import {
   Squares2X2Icon, AcademicCapIcon, CheckBadgeIcon, ClipboardDocumentCheckIcon,
-  ChatBubbleLeftEllipsisIcon, UserCircleIcon, ArrowLeftOnRectangleIcon,
+  ChatBubbleLeftEllipsisIcon, UserCircleIcon, ArrowLeftOnRectangleIcon, DocumentTextIcon,
 } from '@heroicons/react/24/solid';
 
 const ParticipantLayout = () => {
@@ -16,6 +16,7 @@ const ParticipantLayout = () => {
   const items = [
     { name: 'Home', desktopName: 'Portal Home', path: '/portal', icon: Squares2X2Icon },
     { name: 'Trainings', desktopName: 'My Trainings', path: '/portal/trainings', icon: AcademicCapIcon },
+    { name: 'Materials', desktopName: 'Learning Materials', path: '/portal/materials', icon: DocumentTextIcon },
     { name: 'Attendance', desktopName: 'Attendance Records', path: '/portal/attendance', icon: ClipboardDocumentCheckIcon },
     { name: 'Certificates', desktopName: 'My Certificates', path: '/portal/certificates', icon: CheckBadgeIcon },
     { name: 'Feedback', desktopName: 'Training Evaluations', path: '/portal/feedback', icon: ChatBubbleLeftEllipsisIcon },
