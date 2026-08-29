@@ -5,6 +5,7 @@ import Meeting from '../../models/Meeting.js';
 import TrainingMaterial from '../../models/TrainingMaterial.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
+import { registrationState } from '../../utils/registrationWindow.js';
 
 // POST /api/participant/registrations
 export const registerForTraining = async (req, res, next) => {
@@ -16,18 +17,17 @@ export const registerForTraining = async (req, res, next) => {
       .populate('eventDay', 'dayNumber theme date')
       .populate('event', 'registrationStart registrationDeadline startDate status');
     if (!training) return errorResponse(res, 'Training not found.', 404);
-    if (training.status !== 'registration_open') {
+    // Registration stays open until this session's own day begins, so a participant can still sign
+    // up for later days of an event that is already running.
+    const state = registrationState(training, training.event);
+    if (!state.open) {
+      if (state.reason === 'not_started') {
+        return errorResponse(res, `Registration opens on ${state.opensAt.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })}.`, 400);
+      }
+      if (state.reason === 'day_reached') {
+        return errorResponse(res, 'Registration for this session has closed because its scheduled day has started.', 400);
+      }
       return errorResponse(res, 'This training is not currently open for registration.', 400);
-    }
-    const now = new Date();
-    if (!training.event?.registrationStart || !training.event?.registrationDeadline) {
-      return errorResponse(res, 'The registration window has not been configured for this event.', 400);
-    }
-    if (now < training.event.registrationStart) {
-      return errorResponse(res, `Registration opens on ${training.event.registrationStart.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })}.`, 400);
-    }
-    if (now >= training.event.registrationDeadline) {
-      return errorResponse(res, 'Registration for this event has closed.', 400);
     }
 
     // const sameDayTrainings = await Training.find({

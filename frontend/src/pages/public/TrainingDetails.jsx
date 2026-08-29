@@ -23,6 +23,9 @@ export const TrainingDetails = () => {
 
   const [training, setTraining] = useState(null);
   const [registeredCount, setRegisteredCount] = useState(0);
+  // The server decides whether registration is open; the page must not re-derive that rule.
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+  const [displayStatus, setDisplayStatus] = useState(null);
   const [userRegistration, setUserRegistration] = useState(null);
   // const [myRegistrations, setMyRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +40,8 @@ export const TrainingDetails = () => {
       if (res.success && res.data) {
         setTraining(res.data.training);
         setRegisteredCount(res.data.registeredCount || 0);
+        setRegistrationOpen(Boolean(res.data.registrationOpen));
+        setDisplayStatus(res.data.displayStatus || null);
       }
     } catch (err) {
       toast.error('Failed to load training details.');
@@ -119,11 +124,7 @@ export const TrainingDetails = () => {
   const assignedTrainers = trainers?.length ? trainers : trainer ? [trainer] : [];
 
   const imageUrl = coverImage ? `/${coverImage}` : null;
-  const registrationNow = Date.now();
-  const eventRegistrationOpen = event?.registrationStart && event?.registrationDeadline
-    ? registrationNow >= new Date(event.registrationStart).getTime() && registrationNow < new Date(event.registrationDeadline).getTime()
-    : false;
-  const isOpen = ['published', 'registration_open'].includes(status) && eventRegistrationOpen;
+  const isOpen = registrationOpen;
   // const dayConflict = myRegistrations.find((registration) =>
   //   ['pending', 'approved'].includes(registration.status)
   //   && registration.training?._id !== id
@@ -156,7 +157,7 @@ export const TrainingDetails = () => {
               </div>
             )}
             <div className="absolute top-4 right-4">
-              <StatusBadge status={status} />
+              <StatusBadge status={displayStatus || status} />
             </div>
             {eventDay && (
               <div className="absolute top-4 left-4 bg-black text-white text-xs font-bold px-3 py-1.5 rounded-md border border-[#1da156]">

@@ -6,6 +6,7 @@ import EventDay from '../../models/EventDay.js';
 import Registration from '../../models/Registration.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { syncEventStatus } from '../../utils/eventLifecycle.js';
+import { publicDisplayStatus, registrationState } from '../../utils/registrationWindow.js';
 
 const publicEventFilter = { status: { $ne: 'draft' }, isActive: { $ne: false } };
 
@@ -76,7 +77,15 @@ export const getPublicTraining = async (req, res, next) => {
     // Count approved registrations (for capacity display)
     const registeredCount = await Registration.countDocuments({ training: training._id, status: 'approved' });
 
-    return successResponse(res, { training, registeredCount });
+    // Computed here so the page never has to re-derive the rule and disagree with the server.
+    const state = registrationState(training, training.event);
+    return successResponse(res, {
+      training,
+      registeredCount,
+      registrationOpen: state.open,
+      registrationClosesAt: state.closesAt || null,
+      displayStatus: publicDisplayStatus(training, training.event),
+    });
   } catch (err) { next(err); }
 };
 
