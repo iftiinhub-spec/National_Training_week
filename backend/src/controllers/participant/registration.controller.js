@@ -103,8 +103,17 @@ export const getMyRegistrations = async (req, res, next) => {
       grouped[key].push(material);
       return grouped;
     }, {});
+    // Tells the page which sessions the participant already attended, so it can hide a Cancel
+    // button that the server would refuse anyway.
+    const attendedIds = new Set((await Attendance.find({
+      participant: req.user._id,
+      training: { $in: registrations.filter((r) => r.training).map((r) => r.training._id) },
+      status: { $in: ['present', 'late'] },
+    }).select('training').lean()).map((record) => String(record.training)));
+
     const securedRegistrations = registrations.map((registration) => ({
       ...registration,
+      attended: registration.training ? attendedIds.has(String(registration.training._id)) : false,
       training: registration.training ? {
         ...registration.training,
         materials: registration.status === 'approved' ? (materialsByTraining[String(registration.training._id)] || []) : [],
@@ -152,9 +161,30 @@ export const cancelRegistration = async (req, res, next) => {
     if (['cancelled', 'rejected'].includes(reg.status)) {
       return errorResponse(res, 'This registration is already cancelled or rejected.', 400);
     }
+
+    // Cancelling after attending would leave the participant marked present with no approved
+    // registration, which silently excludes them from certificate issuance.
+    const attended = await Attendance.exists({
+      participant: req.user._id, training: reg.training, status: { $in: ['present', 'late'] },
+    });
+    if (attended) {
+      return errorResponse(res, 'You have already been marked as attending this session, so it can no longer be cancelled. Contact the organisers if this is not correct.', 400);
+    }
+
+    const wasApproved = reg.status === 'approved';
     reg.status = 'cancelled';
     reg.updatedBy = req.user._id;
     await reg.save();
+
+    // Give the seat back, as the admin status path already does. Without this every self-cancel
+    // permanently shrinks the session's usable capacity.
+    if (wasApproved) {
+      await Training.findOneAndUpdate(
+        { _id: reg.training, capacity: { $ne: null }, filledSeats: { $gt: 0 } },
+        { $inc: { filledSeats: -1 } },
+      );
+    }
+
     return successResponse(res, { registration: reg }, 'Registration cancelled.');
   } catch (err) { next(err); }
 };
