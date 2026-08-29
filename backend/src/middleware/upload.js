@@ -85,3 +85,53 @@ export const deleteFile = (filePath) => {
     fs.unlinkSync(filePath);
   }
 };
+
+// --- Training materials (documents) ---
+// Stored OUTSIDE the statically served uploads/ directory, so a document can only be reached
+// through the authenticated download route that checks for an approved registration.
+const ALLOWED_DOCUMENT_TYPES = {
+  'application/pdf': ['.pdf'],
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+  'application/vnd.ms-powerpoint': ['.ppt'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/msword': ['.doc'],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+  'application/vnd.ms-excel': ['.xls'],
+  'text/plain': ['.txt'],
+  'application/zip': ['.zip'],
+};
+const MAX_DOCUMENT_SIZE = parseInt(process.env.MAX_DOCUMENT_SIZE) || 25 * 1024 * 1024; // 25MB default
+
+export const MATERIALS_DIR = path.join(process.cwd(), process.env.MATERIALS_DIR || 'private_uploads/materials');
+
+const documentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    ensureUploadDir(MATERIALS_DIR);
+    cb(null, MATERIALS_DIR);
+  },
+  filename: (req, file, cb) => {
+    // Never trust the original filename on disk; the real name is kept in the database.
+    cb(null, `${randomUUID()}${path.extname(file.originalname).toLowerCase()}`);
+  },
+});
+
+// Rejections carry a 400 so the error handler reports them as user-correctable, not as a crash.
+const rejectUpload = (message) => Object.assign(new Error(message), { statusCode: 400 });
+
+const documentFilter = (req, file, cb) => {
+  if (file.fieldname !== 'file') return cb(rejectUpload('Unexpected upload field.'), false);
+  const extensions = ALLOWED_DOCUMENT_TYPES[file.mimetype];
+  if (!extensions) {
+    return cb(rejectUpload('Invalid file type. Allowed: PDF, PowerPoint, Word, Excel, text and zip files.'), false);
+  }
+  if (!extensions.includes(path.extname(file.originalname).toLowerCase())) {
+    return cb(rejectUpload('The file extension does not match its content type.'), false);
+  }
+  cb(null, true);
+};
+
+export const uploadMaterial = multer({
+  storage: documentStorage,
+  fileFilter: documentFilter,
+  limits: { fileSize: MAX_DOCUMENT_SIZE, files: 1 },
+});

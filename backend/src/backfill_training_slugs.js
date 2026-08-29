@@ -2,37 +2,38 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import { randomBytes } from 'node:crypto';
 import connectDB from './config/db.js';
-import Training from './models/Training.js';
+import Training, { slugifyTitle } from './models/Training.js';
 
-const slugify = (title) => (title || '')
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, '-')
-  .slice(0, 60)
-  .replace(/^-+|-+$/g, '');
-
+// Rewrites every training slug into its clean, readable form. Slugs are assigned in creation order
+// and a counter is appended only on a real title collision, so the result is stable and repeatable.
+// Re-running this is safe: a training whose slug is already correct is left untouched.
 const backfillTrainingSlugs = async () => {
   await connectDB();
 
-  const trainings = await Training.find({ $or: [{ slug: { $exists: false } }, { slug: null }] })
-    .select('_id title');
+  const trainings = await Training.find({}).select('_id title slug').sort({ createdAt: 1 }).lean();
+  const taken = new Set();
   let updated = 0;
 
   for (const training of trainings) {
-    const base = slugify(training.title);
-    let slug = base ? `${base}-${randomBytes(3).toString('hex')}` : randomBytes(6).toString('hex');
-
-    // Extremely unlikely, but keep retrying rather than aborting the whole run on a collision.
-    while (await Training.exists({ slug })) {
-      slug = base ? `${base}-${randomBytes(3).toString('hex')}` : randomBytes(6).toString('hex');
+    const base = slugifyTitle(training.title) || randomBytes(6).toString('hex');
+    let slug = base;
+    let counter = 1;
+    while (taken.has(slug)) {
+      counter += 1;
+      slug = `${base}-${counter}`;
     }
+    taken.add(slug);
 
-    await Training.updateOne({ _id: training._id }, { $set: { slug } });
-    updated += 1;
+    if (training.slug !== slug) {
+      await Training.updateOne({ _id: training._id }, { $set: { slug } });
+      console.log(`  ${training.slug || '(none)'} -> ${slug}`);
+      updated += 1;
+    }
   }
 
   await Training.syncIndexes();
 
-  console.log(`Backfill complete. ${updated} of ${trainings.length} trainings updated.`);
+  console.log(`\nBackfill complete. ${updated} of ${trainings.length} training slugs rewritten.`);
 };
 
 backfillTrainingSlugs()

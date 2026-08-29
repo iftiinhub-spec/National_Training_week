@@ -89,15 +89,26 @@ trainingSchema.index({ status: 1 });
 trainingSchema.index({ trainer: 1 });
 trainingSchema.index({ trainers: 1 });
 
-// Slugs are generated once and never regenerated: a changed slug would break links already emailed out.
-trainingSchema.pre('validate', function generateSlug() {
+export const slugifyTitle = (title) => (title || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .slice(0, 60)
+  .replace(/^-+|-+$/g, '');
+
+// Slugs are generated once and never regenerated: a changed slug would break links already shared.
+// The readable slug is used as-is, and a counter is appended only when it is genuinely taken.
+// This runs on save rather than validate, because checking for a collision needs a database round
+// trip and a document must stay validatable without one.
+trainingSchema.pre('save', async function generateSlug() {
   if (this.slug || !this.title) return;
-  const base = this.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .slice(0, 60)
-    .replace(/^-+|-+$/g, '');
-  this.slug = base ? `${base}-${randomBytes(3).toString('hex')}` : randomBytes(6).toString('hex');
+  const base = slugifyTitle(this.title) || randomBytes(6).toString('hex');
+  let candidate = base;
+  let counter = 1;
+  while (await this.constructor.exists({ slug: candidate, _id: { $ne: this._id } })) {
+    counter += 1;
+    candidate = `${base}-${counter}`;
+  }
+  this.slug = candidate;
 });
 
 trainingSchema.pre('validate', function syncTrainerAssignments() {

@@ -9,6 +9,7 @@ import { query } from 'express-validator';
 import { registerForTraining, getMyRegistrations, getMyRegistration, cancelRegistration, getMyAttendance, getParticipantDashboard } from '../controllers/participant/registration.controller.js';
 import { submitFeedback, getMyFeedback } from '../controllers/admin/feedback.controller.js';
 import { getMyCertificates, downloadCertificate } from '../controllers/admin/certificate.controller.js';
+import { getMyMaterials, downloadMaterial } from '../controllers/participant/material.controller.js';
 import { qrCheckIn } from '../controllers/admin/attendance.controller.js';
 
 const router = express.Router();
@@ -31,6 +32,10 @@ router.post('/qr-checkin', qrRateLimiter, qrCheckinValidation, validate, qrCheck
 // Feedback
 router.post('/trainings/:trainingId/feedback', idParam('trainingId', 'training ID'), feedbackValidation, validate, submitFeedback);
 router.get('/feedback', getMyFeedback);
+
+// Learning materials from every session the participant joined
+router.get('/materials', getMyMaterials);
+router.get('/materials/:id/download', idParam(), validate, downloadMaterial);
 
 // Certificates
 router.get('/certificates', getMyCertificates);
