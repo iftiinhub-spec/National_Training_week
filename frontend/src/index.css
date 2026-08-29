@@ -412,14 +412,25 @@ html {
   padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
 }
 
+/* A single scrollable row. A fixed column count wraps onto a second line as soon as a nav item is
+   added, so the items keep a tappable minimum width and the bar scrolls sideways instead. */
 .participant-bottom-nav-grid {
-  display: grid;
+  display: flex;
   width: 100%;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
+.participant-bottom-nav-grid::-webkit-scrollbar {
+  display: none;
+}
+
+/* Grows to fill the bar when everything fits, holds its width and scrolls when it does not. */
 .participant-bottom-nav-grid > a {
-  min-width: 0;
+  flex: 1 0 auto;
+  min-width: 4.5rem;
   font-size: 11px;
   line-height: 1.2;
 }
