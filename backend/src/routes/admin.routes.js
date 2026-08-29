@@ -66,6 +66,7 @@ router.get('/trainings/:trainingId/attendance', getAttendance);
 router.patch('/trainings/:trainingId/attendance/:attendanceId', idParam('trainingId', 'training ID'), idParam('attendanceId', 'attendance ID'), attendanceValidation, validate, updateAttendance);
 router.post('/trainings/:trainingId/attendance/manual', idParam('trainingId', 'training ID'), manualAttendanceValidation, validate, createManualAttendance);
 
+
 // Feedback
 router.get('/trainings/:trainingId/feedback', getTrainingFeedback);
 
