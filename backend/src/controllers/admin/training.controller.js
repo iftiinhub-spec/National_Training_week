@@ -6,7 +6,7 @@ import User from '../../models/User.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { completeTrainingSession } from '../../services/completeTrainingSession.js';
 import { getTrainingDateTime, normalizeTrainingTime } from '../../utils/trainingDateTime.js';
-import { getRegistrationWindowState } from '../../utils/registrationWindow.js';
+import { getRegistrationWindowState, registrationClosesAt } from '../../utils/registrationWindow.js';
 import { escapeRegex } from '../../utils/search.js';
 import { pick } from '../../utils/pick.js';
 import { deleteTrainingCascade } from '../../utils/cascadeDelete.js';
@@ -227,8 +227,11 @@ export const updateTrainingStatus = async (req, res, next) => {
       if (windowState === 'scheduled') {
         return errorResponse(res, `Registration cannot open before ${training.event.registrationStart.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })}.`, 400);
       }
-      if (windowState === 'closed') {
-        return errorResponse(res, 'Registration cannot open because the event registration deadline has passed.', 400);
+      // Registration now closes per session, so the event-wide deadline no longer blocks opening
+      // one. Only a session whose own day has already started cannot be reopened.
+      const closesAt = registrationClosesAt(training);
+      if (closesAt && new Date() >= closesAt) {
+        return errorResponse(res, 'Registration cannot open because the scheduled day of this session has already started.', 400);
       }
     }
 
