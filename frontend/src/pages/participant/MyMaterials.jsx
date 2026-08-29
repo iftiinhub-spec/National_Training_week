@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
@@ -14,6 +15,9 @@ const formatSize = (bytes) => {
 };
 
 export const MyMaterials = () => {
+  // Arriving from a session card on My Trainings scopes the page to that one session.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sessionFilter = searchParams.get('session');
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -34,14 +38,17 @@ export const MyMaterials = () => {
   }, []);
 
   const visible = useMemo(() => {
+    const scoped = sessionFilter
+      ? materials.filter((item) => String(item.training?._id) === sessionFilter)
+      : materials;
     const term = search.trim().toLowerCase();
-    if (!term) return materials;
-    return materials.filter((item) => (
+    if (!term) return scoped;
+    return scoped.filter((item) => (
       (item.title || '').toLowerCase().includes(term)
       || (item.description || '').toLowerCase().includes(term)
       || (item.training?.title || '').toLowerCase().includes(term)
     ));
-  }, [materials, search]);
+  }, [materials, search, sessionFilter]);
 
   // Grouped by session so a participant reads down their sessions, not a flat pile of files.
   const grouped = useMemo(() => {
@@ -53,6 +60,11 @@ export const MyMaterials = () => {
     });
     return [...map.values()];
   }, [visible]);
+
+  const sessionTitle = useMemo(
+    () => materials.find((item) => String(item.training?._id) === sessionFilter)?.training?.title,
+    [materials, sessionFilter],
+  );
 
   // The file is not publicly served, so the download must carry the auth header.
   const handleDownload = async (material) => {
@@ -102,6 +114,21 @@ export const MyMaterials = () => {
         </div>
       )}
 
+      {sessionFilter && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <p className="text-xs font-bold text-[#1a6b3c]">
+            Showing materials for {sessionTitle || 'this session'} only.
+          </p>
+          <button
+            type="button"
+            onClick={() => setSearchParams({})}
+            className="rounded-lg border border-[#1a6b3c]/40 bg-white px-3 py-1.5 text-xs font-bold text-[#1a6b3c] hover:bg-emerald-100"
+          >
+            Show all materials
+          </button>
+        </div>
+      )}
+
       {!materials.length ? (
         <EmptyState
           icon={DocumentTextIcon}
@@ -110,7 +137,7 @@ export const MyMaterials = () => {
         />
       ) : !grouped.length ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-500">
-          No material matches "{search}".
+          {search ? `No material matches "${search}".` : 'No materials have been shared for this session.'}
         </div>
       ) : (
         <div className="space-y-5">
