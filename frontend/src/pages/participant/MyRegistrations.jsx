@@ -175,7 +175,7 @@ export const MyRegistrations = () => {
                     </button>
                   )}
 
-                  {['pending', 'approved'].includes(reg.status) && (
+                  {['pending', 'approved'].includes(reg.status) && !reg.attended && (
                     <button
                       onClick={() => handleCancel(reg._id)}
                       className="px-3.5 py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 font-semibold rounded-xl text-xs transition-colors"

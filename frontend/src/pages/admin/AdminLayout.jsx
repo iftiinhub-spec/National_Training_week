@@ -13,6 +13,7 @@ import {
   CheckBadgeIcon,
   VideoCameraIcon,
   ChartBarIcon,
+  ChatBubbleLeftRightIcon,
   EnvelopeIcon,
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
@@ -64,6 +65,7 @@ export const AdminLayout = () => {
       items: [
         { name: 'Attendance', path: '/admin/attendance', icon: ClipboardDocumentCheckIcon },
         { name: 'Certificates', path: '/admin/certificates', icon: CheckBadgeIcon },
+        { name: 'Feedback', path: '/admin/feedback', icon: ChatBubbleLeftRightIcon },
         { name: 'Reports & Analytics', path: '/admin/reports', icon: ChartBarIcon },
         { name: 'Contact Messages', path: '/admin/contact-messages', icon: EnvelopeIcon },
         { name: 'FAQ Management', path: '/admin/faqs', icon: QuestionMarkCircleIcon },
