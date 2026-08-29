@@ -7,6 +7,7 @@ import {
   CalendarDaysIcon,
   TagIcon,
   UserGroupIcon,
+  UserPlusIcon,
   AcademicCapIcon,
   ClipboardDocumentCheckIcon,
   CheckBadgeIcon,
@@ -55,6 +56,7 @@ export const AdminLayout = () => {
         { name: 'Moderator Accounts', path: '/admin/moderators', icon: UserGroupIcon },
         { name: 'Participants', path: '/admin/participants', icon: UserGroupIcon },
         { name: 'Registrations', path: '/admin/registrations', icon: ClipboardDocumentCheckIcon },
+        { name: 'Assign Participants', path: '/admin/assign-participants', icon: UserPlusIcon },
       ],
     },
     {

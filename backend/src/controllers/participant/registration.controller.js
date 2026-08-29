@@ -72,6 +72,8 @@ export const getMyRegistrations = async (req, res, next) => {
     const { page, limit, skip } = getPagination(req.query);
     const filter = { participant: req.user._id };
     if (req.query.status) filter.status = req.query.status;
+    // Lets a caller ask about one session directly instead of paging through every registration.
+    if (req.query.training) filter.training = req.query.training;
 
     const [registrations, total] = await Promise.all([
       Registration.find(filter)

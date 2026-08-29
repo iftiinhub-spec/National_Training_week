@@ -48,11 +48,11 @@ export const TrainingDetails = () => {
   const checkUserRegistration = useCallback(async () => {
     if (trainingId && isAuthenticated && isParticipant) {
       try {
-        const res = await api.get('/participant/registrations');
+        // Ask about this one session rather than scanning the registration list, which is paginated
+        // and would miss a registration that falls beyond the first page.
+        const res = await api.get(`/participant/registrations?training=${trainingId}&limit=1`);
         if (res.success && res.data) {
-          const records = res.data || [];
-          // setMyRegistrations(records);
-          const found = records.find((r) => r.training?._id === trainingId || r.training === trainingId);
+          const found = (res.data || [])[0];
           if (found) setUserRegistration(found);
         }
       } catch (err) {

@@ -12,7 +12,7 @@ import { getCategories, getCategory, createCategory, updateCategory, deleteCateg
 import { getTrainers, getTrainer, createTrainer, updateTrainer, deleteTrainer, deleteTrainers, reviewTrainer } from '../controllers/admin/trainer.controller.js';
 import { getTrainings, getTraining, createTraining, updateTraining, updateTrainingStatus, completeTraining, assignTrainingStaff, deleteTraining } from '../controllers/admin/training.controller.js';
 import { getParticipants, getParticipant, toggleParticipantStatus, resetParticipantPassword, deleteParticipant, deleteParticipants, getModerators, getModerator, createModerator, updateModerator, toggleModeratorStatus, resetModeratorPassword, deleteModerator, deleteModerators } from '../controllers/admin/user.controller.js';
-import { getRegistrations, getRegistration, updateRegistrationStatus, approveFilteredRegistrations, emailFilteredRegistrations, deleteRegistration, deleteRegistrations } from '../controllers/admin/registration.controller.js';
+import { getRegistrations, getRegistration, updateRegistrationStatus, approveFilteredRegistrations, emailFilteredRegistrations, assignParticipants, deleteRegistration, deleteRegistrations } from '../controllers/admin/registration.controller.js';
 import { getMeeting, createMeeting, updateMeeting, deleteMeeting, releaseMeeting, sendTrainerInvitation, sendParticipantInvitations, getCommunications } from '../controllers/admin/meeting.controller.js';
 import { openQRSession, closeQRSession, getAttendance, updateAttendance, createManualAttendance } from '../controllers/admin/attendance.controller.js';
 import { getTrainingFeedback } from '../controllers/admin/feedback.controller.js';
@@ -71,7 +71,14 @@ router.post('/trainings/:trainingId/attendance/manual', idParam('trainingId', 't
 router.get('/trainings/:trainingId/feedback', getTrainingFeedback);
 
 // Registrations
-router.route('/registrations').get(paginationValidation, ...optionalObjectIdQueries('event', 'eventDay', 'training', 'participant'), query('status').optional({ checkFalsy: true }).isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getRegistrations);
+router.route('/registrations')
+  .get(paginationValidation, ...optionalObjectIdQueries('event', 'eventDay', 'training', 'participant'), query('status').optional({ checkFalsy: true }).isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getRegistrations)
+  .post(
+    body('trainingId').isMongoId().withMessage('Valid training ID is required.'),
+    body('participantIds').isArray({ min: 1, max: 200 }).withMessage('Select between 1 and 200 participants.'),
+    body('participantIds.*').isMongoId().withMessage('Valid participant IDs are required.'),
+    validate, assignParticipants,
+  );
 router.patch('/registrations/approve-filtered', ...optionalObjectIdQueries('event', 'eventDay', 'training', 'participant'), validate, approveFilteredRegistrations);
 router.post('/registrations/email-filtered', query('training').isMongoId().withMessage('Select a training session before sending.'), body('subject').trim().isLength({ min: 5, max: 150 }).withMessage('Subject must be between 5 and 150 characters.'), body('message').trim().isLength({ min: 10, max: 2000 }).withMessage('Message must be between 10 and 2000 characters.'), validate, emailFilteredRegistrations);
 router.delete('/registrations', body('ids').isArray({ min: 1 }).withMessage('Select at least one registration.'), body('ids.*').isMongoId().withMessage('Valid registration IDs are required.'), validate, deleteRegistrations);

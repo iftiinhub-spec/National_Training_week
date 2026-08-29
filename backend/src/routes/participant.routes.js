@@ -3,7 +3,7 @@ import { protect } from '../middleware/auth.js';
 import { participantOnly } from '../middleware/role.js';
 import { qrRateLimiter } from '../middleware/rateLimiter.js';
 import { validate } from '../middleware/validate.js';
-import { feedbackValidation, idParam, paginationValidation, qrCheckinValidation, registrationCreateValidation, validateObjectIdParam } from '../middleware/validationRules.js';
+import { feedbackValidation, idParam, optionalObjectIdQueries, paginationValidation, qrCheckinValidation, registrationCreateValidation, validateObjectIdParam } from '../middleware/validationRules.js';
 import { query } from 'express-validator';
 
 import { registerForTraining, getMyRegistrations, getMyRegistration, cancelRegistration, getMyAttendance, getParticipantDashboard } from '../controllers/participant/registration.controller.js';
@@ -20,7 +20,7 @@ router.get('/dashboard', getParticipantDashboard);
 
 // Registrations
 router.post('/registrations', registrationCreateValidation, validate, registerForTraining);
-router.get('/registrations', paginationValidation, query('status').optional({ checkFalsy: true }).isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getMyRegistrations);
+router.get('/registrations', paginationValidation, ...optionalObjectIdQueries('training'), query('status').optional({ checkFalsy: true }).isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getMyRegistrations);
 router.get('/registrations/:id', idParam(), validate, getMyRegistration);
 router.patch('/registrations/:id/cancel', idParam(), validate, cancelRegistration);
 
