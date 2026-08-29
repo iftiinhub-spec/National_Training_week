@@ -11,7 +11,7 @@ import { getEvents, getEvent, createEvent, updateEvent, deleteEvent, getEventDay
 import { getCategories, getCategory, createCategory, updateCategory, deleteCategory } from '../controllers/admin/category.controller.js';
 import { getTrainers, getTrainer, createTrainer, updateTrainer, deleteTrainer, deleteTrainers, reviewTrainer } from '../controllers/admin/trainer.controller.js';
 import { getTrainings, getTraining, createTraining, updateTraining, updateTrainingStatus, completeTraining, assignTrainingStaff, deleteTraining } from '../controllers/admin/training.controller.js';
-import { getParticipants, getParticipant, toggleParticipantStatus, deleteParticipant, deleteParticipants, getModerators, getModerator, createModerator, updateModerator, toggleModeratorStatus, resetModeratorPassword, deleteModerator, deleteModerators } from '../controllers/admin/user.controller.js';
+import { getParticipants, getParticipant, toggleParticipantStatus, resetParticipantPassword, deleteParticipant, deleteParticipants, getModerators, getModerator, createModerator, updateModerator, toggleModeratorStatus, resetModeratorPassword, deleteModerator, deleteModerators } from '../controllers/admin/user.controller.js';
 import { getRegistrations, getRegistration, updateRegistrationStatus, approveFilteredRegistrations, emailFilteredRegistrations, deleteRegistration, deleteRegistrations } from '../controllers/admin/registration.controller.js';
 import { getMeeting, createMeeting, updateMeeting, deleteMeeting, releaseMeeting, sendTrainerInvitation, sendParticipantInvitations, getCommunications } from '../controllers/admin/meeting.controller.js';
 import { openQRSession, closeQRSession, getAttendance, updateAttendance, createManualAttendance } from '../controllers/admin/attendance.controller.js';
@@ -112,6 +112,7 @@ router.delete('/participants', body('ids').isArray({ min: 1 }).withMessage('Sele
 router.route('/participants').get(paginationValidation, validate, getParticipants);
 router.route('/participants/:id').get(idParam(), validate, getParticipant).delete(idParam(), validate, deleteParticipant);
 router.patch('/participants/:id/toggle-status', idParam(), validate, toggleParticipantStatus);
+router.patch('/participants/:id/reset-password', idParam(), body('newPassword').isLength({ min: 8, max: 128 }).withMessage('Password must be between 8 and 128 characters.'), validate, resetParticipantPassword);
 router.delete('/moderators', body('ids').isArray({ min: 1 }).withMessage('Select at least one moderator.'), body('ids.*').isMongoId().withMessage('Valid moderator IDs are required.'), validate, deleteModerators);
 router.route('/moderators').get(paginationValidation, validate, getModerators).post(moderatorCreateValidation, validate, createModerator);
 router.route('/moderators/:id').get(idParam(), validate, getModerator).put(idParam(), moderatorUpdateValidation, validate, updateModerator).delete(idParam(), validate, deleteModerator);

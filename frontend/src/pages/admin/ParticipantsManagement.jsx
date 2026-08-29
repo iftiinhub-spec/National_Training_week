@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { TrashIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, KeyIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
 export const ParticipantsManagement = () => {
@@ -12,6 +13,10 @@ export const ParticipantsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [resetTarget, setResetTarget] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   const fetchParticipants = useCallback(async () => {
     try {
@@ -41,6 +46,30 @@ export const ParticipantsManagement = () => {
       }
     } catch (err) {
       toast.error(err.message || 'Status update failed');
+    }
+  };
+
+  const openPasswordReset = (participant) => {
+    setResetTarget(participant);
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
+    setShowPassword(false);
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('The two passwords do not match.');
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const res = await api.patch(`/admin/participants/${resetTarget._id}/reset-password`, { newPassword: passwordForm.newPassword });
+      toast.success(res.message || 'Participant password reset successfully.');
+      setResetTarget(null);
+    } catch (err) {
+      toast.error(err.message || 'Password reset failed');
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -135,6 +164,7 @@ export const ParticipantsManagement = () => {
                       >
                         {p.isActive ? 'Deactivate' : 'Activate'}
                       </button>
+                      <button onClick={() => openPasswordReset(p)} aria-label={`Reset password for ${p.fullName}`} title="Reset password" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><KeyIcon className="h-4 w-4" /></button>
                       <button onClick={() => deleteParticipants([p._id])} aria-label={`Delete ${p.fullName}`} title="Delete participant" className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-4 w-4" /></button>
                       </div>
                     </td>
@@ -145,6 +175,75 @@ export const ParticipantsManagement = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {resetTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onMouseDown={() => setResetTarget(null)}>
+          <div className="relative bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-4" onMouseDown={(e) => e.stopPropagation()}>
+            <AdminModalClose onClick={() => setResetTarget(null)} />
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Reset Participant Password</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Set a new password for <span className="font-bold text-slate-700">{resetTarget.fullName}</span> ({resetTarget.email}).
+                They are signed out of any active session and must sign in again with the new password.
+              </p>
+            </div>
+
+            <form onSubmit={handleResetPassword} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold uppercase text-slate-700 mb-1">New Password *</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="e.g. StrongPass123"
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={128}
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 p-2.5 pr-11"
+                    required
+                  />
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-slate-700" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                    {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                  </button>
+                </div>
+                <p className="mt-1 text-[11px] font-normal normal-case text-slate-500">Use at least 8 characters.</p>
+              </div>
+
+              <div>
+                <label className="block font-bold uppercase text-slate-700 mb-1">Confirm Password *</label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  minLength={8}
+                  maxLength={128}
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 p-2.5"
+                  required
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setResetTarget(null)}
+                  className="px-4 py-2 text-slate-600 rounded-lg hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPassword}
+                  className="px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs disabled:opacity-50"
+                >
+                  {savingPassword ? 'Saving...' : 'Reset Password'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

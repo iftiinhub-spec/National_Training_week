@@ -81,6 +81,18 @@ export const toggleParticipantStatus = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const resetParticipantPassword = async (req, res, next) => {
+  try {
+    const { newPassword } = req.body;
+    const user = await User.findOne({ _id: req.params.id, role: 'participant' });
+    if (!user) return errorResponse(res, 'Participant not found.', 404);
+    user.passwordHash = newPassword;
+    user.tokenVersion += 1;
+    await user.save();
+    return successResponse(res, null, 'Participant password reset successfully.');
+  } catch (err) { next(err); }
+};
+
 export const deleteParticipant = async (req, res, next) => {
   try {
     const summary = await deleteParticipantIds(idsFromRequest(req));
