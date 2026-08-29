@@ -30,9 +30,14 @@ const formatCountdown = (milliseconds) => {
   return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
 };
 
+const PAGE_SIZE = 100;
+
 export const MyRegistrations = () => {
   const confirmAction = useConfirmDialog();
   const [registrations, setRegistrations] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -44,16 +49,23 @@ export const MyRegistrations = () => {
     return () => window.clearInterval(timer);
   }, [modalOpen]);
 
-  const fetchRegistrations = async () => {
+  // The endpoint is paginated, so an explicit page size plus a Load more control is what keeps a
+  // participant with many registrations from silently seeing only the first page.
+  const fetchRegistrations = async (nextPage = 1) => {
+    if (nextPage > 1) setLoadingMore(true);
     try {
-      const res = await api.get('/participant/registrations');
+      const res = await api.get(`/participant/registrations?page=${nextPage}&limit=${PAGE_SIZE}`);
       if (res.success) {
-        setRegistrations(res.data || []);
+        const batch = res.data || [];
+        setRegistrations((current) => (nextPage === 1 ? batch : [...current, ...batch]));
+        setTotal(res.pagination?.total ?? batch.length);
+        setPage(nextPage);
       }
     } catch (err) {
       toast.error('Failed to load registrations.');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -178,6 +190,20 @@ export const MyRegistrations = () => {
               </div>
             );
           })}
+
+          {registrations.length < total && (
+            <div className="pt-2 text-center">
+              <p className="text-xs text-slate-500">Showing {registrations.length} of {total} registrations.</p>
+              <button
+                type="button"
+                onClick={() => fetchRegistrations(page + 1)}
+                disabled={loadingMore}
+                className="mt-2 rounded-lg border border-slate-300 bg-white px-5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                {loadingMore ? 'Loading...' : 'Load more'}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <EmptyState

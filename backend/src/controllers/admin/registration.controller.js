@@ -273,3 +273,95 @@ export const deleteRegistrations = async (req, res, next) => {
     return successResponse(res, { summary }, `Deleted ${summary.registrations} registration(s) and ${summary.attendance} attendance record(s).`);
   } catch (err) { next(err); }
 };
+
+// POST /api/admin/registrations — assign participants to a session directly
+// Admin assignment is deliberate, so registrations are created already approved. That means this
+// must do everything approval does: reserve a seat, open an attendance row, and notify.
+export const assignParticipants = async (req, res, next) => {
+  try {
+    const { trainingId, participantIds } = req.body;
+    const uniqueIds = [...new Set(participantIds.map(String))];
+
+    const training = await Training.findById(trainingId);
+    if (!training) return errorResponse(res, 'Training not found.', 404);
+    if (['draft', 'cancelled', 'completed'].includes(training.status)) {
+      return errorResponse(res, `A ${training.status} session cannot have participants assigned to it.`, 400);
+    }
+
+    const participants = await User.find({ _id: { $in: uniqueIds }, role: 'participant', isActive: true })
+      .select('fullName email');
+    if (!participants.length) return errorResponse(res, 'Select at least one active participant.', 400);
+
+    const existing = await Registration.find({ training: trainingId, participant: { $in: uniqueIds } })
+      .select('participant');
+    const alreadyRegisteredIds = new Set(existing.map((registration) => String(registration.participant)));
+
+    const assigned = [];
+    const capacityFull = [];
+    const alreadyRegistered = [];
+
+    for (const participant of participants) {
+      if (alreadyRegisteredIds.has(String(participant._id))) {
+        alreadyRegistered.push(participant.fullName);
+        continue;
+      }
+
+      // Reserve the seat before creating the registration, using the same atomic guard as approval
+      // so two admins assigning at once cannot both pass a stale capacity check.
+      if (training.capacity) {
+        const reserved = await Training.findOneAndUpdate(
+          { _id: training._id, $expr: { $lt: ['$filledSeats', '$capacity'] } },
+          { $inc: { filledSeats: 1 } },
+        );
+        if (!reserved) {
+          capacityFull.push(participant.fullName);
+          continue;
+        }
+      }
+
+      try {
+        await Registration.create({
+          participant: participant._id,
+          training: training._id,
+          status: 'approved',
+          updatedBy: req.user._id,
+        });
+      } catch (error) {
+        // Lost a race against another assignment: hand the seat back rather than leaking it.
+        if (training.capacity) await Training.findByIdAndUpdate(training._id, { $inc: { filledSeats: -1 } });
+        if (error.code === 11000) { alreadyRegistered.push(participant.fullName); continue; }
+        throw error;
+      }
+
+      await Attendance.findOneAndUpdate(
+        { participant: participant._id, training: training._id },
+        { $setOnInsert: { participant: participant._id, training: training._id, status: 'not_marked' } },
+        { upsert: true, new: true },
+      );
+
+      assigned.push(participant);
+    }
+
+    // Sent after the writes so a mail failure can never roll back a completed assignment.
+    await Promise.all(assigned.map((participant) => sendRegistrationStatusEmail({
+      to: participant.email,
+      participantName: participant.fullName,
+      trainingTitle: training.title,
+      status: 'approved',
+      date: training.date,
+      startTime: training.startTime,
+    }).catch(() => null)));
+
+    const summary = {
+      assigned: assigned.length,
+      alreadyRegistered: alreadyRegistered.length,
+      capacityFull: capacityFull.length,
+      capacityFullNames: capacityFull,
+    };
+    const parts = [`${summary.assigned} participant${summary.assigned === 1 ? '' : 's'} assigned`];
+    if (summary.alreadyRegistered) parts.push(`${summary.alreadyRegistered} already registered`);
+    if (summary.capacityFull) parts.push(`${summary.capacityFull} skipped — session full`);
+
+    return successResponse(res, { summary }, `${parts.join(', ')}.`, 201);
+  } catch (err) { next(err); }
+};
