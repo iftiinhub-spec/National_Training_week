@@ -1,6 +1,7 @@
 import { dayKey, endOfDay, startOfDay } from './lifecycle.js';
 
 const validDate = (value) => {
+  if (value === null || value === undefined || value === '') return null;
   const date = value instanceof Date ? value : new Date(value);
   return Number.isFinite(date.getTime()) ? date : null;
 };

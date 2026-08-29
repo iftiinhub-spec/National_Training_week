@@ -8,6 +8,7 @@ import {
   registrationClosesAt,
   sessionPhase,
 } from '../src/utils/lifecycle.js';
+import { eventTimelineError } from '../src/utils/eventTimeline.js';
 
 // A six-day edition that is already running: it started on 29 August and ends on 3 September.
 // Registration opened on 28 August and the organisers set no event-wide cut-off.
@@ -78,6 +79,11 @@ test('an event-wide cut-off only ever brings the closing time forward', () => {
     registrationClosesAt(session('2026-09-03'), lateCutOff).toISOString(),
     new Date('2026-09-03T00:00:00+03:00').toISOString()
   );
+});
+
+test('an empty event-wide cut-off is treated as absent, not as the Unix epoch', () => {
+  assert.equal(eventTimelineError(runningEvent), null);
+  assert.equal(eventTimelineError({ ...runningEvent, registrationDeadline: '' }), null);
 });
 
 test('a full session reports itself closed', () => {

@@ -26,14 +26,6 @@ const statusControlClass = (status) => {
   return 'border-amber-200 bg-amber-50 text-amber-800';
 };
 
-const phaseChipClass = (phase) => {
-  if (phase === 'registration_open') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (phase === 'live') return 'border-purple-200 bg-purple-50 text-purple-700';
-  if (phase === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-700';
-  if (phase === 'ended') return 'border-slate-200 bg-slate-100 text-slate-600';
-  return 'border-amber-200 bg-amber-50 text-amber-800';
-};
-
 // The button only makes sense while the session is still ahead of its own day.
 const canChangeRegistration = (training) => training.status === 'published'
   && ['registration_open', 'registration_closed', 'scheduled'].includes(training.phase);
@@ -336,7 +328,7 @@ export const TrainingsManagement = () => {
                     <span className="text-[11px] text-slate-400">{formatTimeRange12(tr.startTime, tr.endTime)}</span>
                   </td>
                   <td className="p-4">
-                    <div className="space-y-2">
+                    <div className="flex min-w-52 flex-col items-start gap-2">
                       <div className={`relative inline-flex min-w-52 items-center rounded-full border ${statusControlClass(tr.status)}`}>
                         <span className="pointer-events-none ml-3 h-2 w-2 shrink-0 rounded-full bg-current" />
                         <select
@@ -352,34 +344,29 @@ export const TrainingsManagement = () => {
                         <ChevronDownIcon className="pointer-events-none absolute right-3 h-4 w-4" />
                       </div>
 
-                      {/* Worked out by the server from the dates. Read-only on purpose: this screen
-                          never repeats a date rule, so it can never disagree with the server. */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold ${phaseChipClass(tr.phase)}`}>
-                          {tr.phaseLabel || 'Draft'}
-                        </span>
-                        {canChangeRegistration(tr) && (
-                          <button
-                            type="button"
-                            onClick={() => handleRegistrationChange(tr._id, !tr.registration?.open)}
-                            className="rounded-full border border-slate-300 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:border-[#1a6b3c] hover:text-[#1a6b3c]"
-                          >
-                            {tr.registration?.open ? 'Close registration' : 'Open registration'}
-                          </button>
-                        )}
-                      </div>
+                      {canChangeRegistration(tr) && (
+                        <button
+                          type="button"
+                          onClick={() => handleRegistrationChange(tr._id, !tr.registration?.open)}
+                          className="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-[#1a6b3c] hover:bg-emerald-50 hover:text-[#1a6b3c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a6b3c]"
+                        >
+                          {tr.registration?.open ? 'Close registration' : 'Open registration'}
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td className="p-4 flex items-center gap-1">
                     <button
                       onClick={() => handleOpenEditModal(tr)}
-                      className="p-1.5 text-slate-600 hover:text-blue-600 rounded-lg hover:bg-slate-50"
+                      aria-label={`Edit ${tr.title}`}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                     >
                       <PencilIcon className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(tr._id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50"
+                      aria-label={`Delete ${tr.title}`}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
                     >
                       <TrashIcon className="w-4 h-4" />
                     </button>
