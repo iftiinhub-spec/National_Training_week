@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -13,6 +13,7 @@ import {
   ClockIcon,
   AcademicCapIcon,
   DocumentTextIcon,
+  FunnelIcon,
 } from '@heroicons/react/24/outline';
 import { formatTimeRange12 } from '../../utils/timeFormat';
 
@@ -39,6 +40,9 @@ export const MyRegistrations = () => {
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState('');
+  const [selectedDay, setSelectedDay] = useState('');
+  const [filterOptions, setFilterOptions] = useState({ events: [], days: [] });
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -51,10 +55,16 @@ export const MyRegistrations = () => {
 
   // The endpoint is paginated, so an explicit page size plus a Load more control is what keeps a
   // participant with many registrations from silently seeing only the first page.
-  const fetchRegistrations = async (nextPage = 1) => {
+  const fetchRegistrations = useCallback(async (nextPage = 1) => {
     if (nextPage > 1) setLoadingMore(true);
     try {
-      const res = await api.get(`/participant/registrations?page=${nextPage}&limit=${PAGE_SIZE}`);
+      // The filters are applied by the server, not to the rows already on screen. With a paginated
+      // list those are two different answers: filtering here would only ever search the pages that
+      // happen to be loaded, and the "Showing x of y" count would be wrong.
+      const params = new URLSearchParams({ page: String(nextPage), limit: String(PAGE_SIZE) });
+      if (selectedEvent) params.append('event', selectedEvent);
+      if (selectedDay) params.append('eventDay', selectedDay);
+      const res = await api.get(`/participant/registrations?${params}`);
       if (res.success) {
         const batch = res.data || [];
         setRegistrations((current) => (nextPage === 1 ? batch : [...current, ...batch]));
@@ -67,11 +77,39 @@ export const MyRegistrations = () => {
       setLoading(false);
       setLoadingMore(false);
     }
+  }, [selectedEvent, selectedDay]);
+
+  // Changing a filter re-runs this from page 1, which replaces the rows instead of appending them.
+  // Appending would leave the previous filter's results sitting above the new ones.
+  useEffect(() => {
+    fetchRegistrations(1);
+  }, [fetchRegistrations]);
+
+  // The options come from the participant's own registrations, so every edition and day offered
+  // here is one that actually has results.
+  useEffect(() => {
+    api.get('/participant/registrations/filters')
+      .then((res) => { if (res.success) setFilterOptions({ events: res.data?.events || [], days: res.data?.days || [] }); })
+      .catch(() => {});
+  }, []);
+
+  // A day belongs to one edition, so offering days from other editions would only produce empty
+  // results. Once an edition is chosen the day list narrows to it.
+  const dayOptions = useMemo(() => (
+    selectedEvent
+      ? filterOptions.days.filter((day) => String(day.event) === selectedEvent)
+      : filterOptions.days
+  ), [filterOptions.days, selectedEvent]);
+
+  const handleEventChange = (value) => {
+    setSelectedEvent(value);
+    // A day held over from the previous edition would contradict the new edition and return nothing.
+    if (value && !filterOptions.days.some((day) => String(day._id) === selectedDay && String(day.event) === value)) {
+      setSelectedDay('');
+    }
   };
 
-  useEffect(() => {
-    fetchRegistrations();
-  }, []);
+  const filtersActive = Boolean(selectedEvent || selectedDay);
 
   const handleViewMeeting = async (regId) => {
     try {
@@ -116,6 +154,57 @@ export const MyRegistrations = () => {
           View your training enrollment statuses, access released meeting links, or manage registrations.
         </p>
       </div>
+
+      {(filterOptions.events.length > 1 || filterOptions.days.length > 1) && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500">
+            <FunnelIcon className="h-4 w-4 text-[#1a6b3c]" />
+            Filter
+          </span>
+
+          <select
+            value={selectedEvent}
+            onChange={(e) => handleEventChange(e.target.value)}
+            aria-label="Filter by event"
+            className="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40"
+          >
+            <option value="">All events</option>
+            {filterOptions.events.map((event) => (
+              <option key={event._id} value={event._id}>
+                {event.name}{event.year ? ` (${event.year})` : ''}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedDay}
+            onChange={(e) => setSelectedDay(e.target.value)}
+            aria-label="Filter by day"
+            className="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40"
+          >
+            <option value="">All days</option>
+            {dayOptions.map((day) => (
+              <option key={day._id} value={day._id}>
+                Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}
+              </option>
+            ))}
+          </select>
+
+          {filtersActive && (
+            <button
+              type="button"
+              onClick={() => { setSelectedEvent(''); setSelectedDay(''); }}
+              className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+            >
+              Clear filters
+            </button>
+          )}
+
+          <span className="ml-auto text-xs font-medium text-slate-500">
+            {total} {total === 1 ? 'registration' : 'registrations'}{filtersActive ? ' matched' : ''}
+          </span>
+        </div>
+      )}
 
       {registrations.length > 0 ? (
         <div className="space-y-4">
@@ -205,8 +294,10 @@ export const MyRegistrations = () => {
       ) : (
         <EmptyState
           icon={AcademicCapIcon}
-          title="No registered training sessions"
-          message="Browse the published trainings and click register to participate."
+          title={filtersActive ? 'No trainings match these filters' : 'No registered training sessions'}
+          message={filtersActive
+            ? 'No registration of yours falls in the selected event or day. Clear the filters to see them all.'
+            : 'Browse the published trainings and click register to participate.'}
         />
       )}
 

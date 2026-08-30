@@ -13,8 +13,14 @@ export const getMyMaterials = async (req, res, next) => {
     const materials = await TrainingMaterial.find({ training: { $in: trainingIds } })
       .populate({
         path: 'training',
-        select: 'title slug date startTime status eventDay',
-        populate: { path: 'eventDay', select: 'dayNumber theme' },
+        select: 'title slug date startTime status event eventDay',
+        // The edition and the day are carried on every material so the page can filter by them.
+        // The whole set is returned in one response, so that filtering is exact on the client and
+        // does not need a round trip per change.
+        populate: [
+          { path: 'event', select: 'name year' },
+          { path: 'eventDay', select: 'dayNumber theme date' },
+        ],
       })
       .populate('trainer', 'name title')
       .sort({ createdAt: -1 })
