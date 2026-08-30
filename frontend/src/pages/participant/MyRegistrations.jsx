@@ -157,16 +157,22 @@ export const MyRegistrations = () => {
 
       {(filterOptions.events.length > 1 || filterOptions.days.length > 1) && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500">
+          {/* Hidden on phones: the two controls already read "All events" and "All days", and the
+              label is the one item that can be dropped to keep the bar within two rows there. */}
+          <span className="hidden shrink-0 items-center gap-1.5 text-xs font-bold text-slate-500 sm:inline-flex">
             <FunnelIcon className="h-4 w-4 text-[#1a6b3c]" />
             Filter
           </span>
 
+          {/* A select is as wide as its longest option, so a long event name would stretch this to
+              the full row and push the day control onto a second line. The width is fixed and the
+              label truncates instead. On phones it takes the whole row, because event names are the
+              long ones and half a row clips them to a few characters. */}
           <select
             value={selectedEvent}
             onChange={(e) => handleEventChange(e.target.value)}
             aria-label="Filter by event"
-            className="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40"
+            className="min-h-10 w-full min-w-0 basis-full truncate rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40 sm:w-52 sm:flex-none sm:basis-auto lg:w-60"
           >
             <option value="">All events</option>
             {filterOptions.events.map((event) => (
@@ -180,7 +186,7 @@ export const MyRegistrations = () => {
             value={selectedDay}
             onChange={(e) => setSelectedDay(e.target.value)}
             aria-label="Filter by day"
-            className="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40"
+            className="min-h-10 min-w-0 flex-1 basis-40 truncate rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40 sm:w-48 sm:flex-none sm:basis-auto lg:w-56"
           >
             <option value="">All days</option>
             {dayOptions.map((day) => (
@@ -194,13 +200,13 @@ export const MyRegistrations = () => {
             <button
               type="button"
               onClick={() => { setSelectedEvent(''); setSelectedDay(''); }}
-              className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+              className="min-h-10 shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
             >
               Clear filters
             </button>
           )}
 
-          <span className="ml-auto text-xs font-medium text-slate-500">
+          <span className="ml-auto hidden shrink-0 text-xs font-medium text-slate-500 sm:inline">
             {total} {total === 1 ? 'registration' : 'registrations'}{filtersActive ? ' matched' : ''}
           </span>
         </div>
