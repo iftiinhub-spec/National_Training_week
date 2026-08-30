@@ -6,7 +6,7 @@ import { validate } from '../middleware/validate.js';
 import { feedbackValidation, idParam, optionalObjectIdQueries, paginationValidation, qrCheckinValidation, registrationCreateValidation, validateObjectIdParam } from '../middleware/validationRules.js';
 import { query } from 'express-validator';
 
-import { registerForTraining, getMyRegistrations, getMyRegistration, cancelRegistration, getMyAttendance, getParticipantDashboard } from '../controllers/participant/registration.controller.js';
+import { registerForTraining, getMyRegistrations, getMyRegistrationFilters, getMyRegistration, cancelRegistration, getMyAttendance, getParticipantDashboard } from '../controllers/participant/registration.controller.js';
 import { submitFeedback, getMyFeedback } from '../controllers/admin/feedback.controller.js';
 import { getMyCertificates, downloadCertificate } from '../controllers/admin/certificate.controller.js';
 import { getMyMaterials, downloadMaterial } from '../controllers/participant/material.controller.js';
@@ -21,7 +21,10 @@ router.get('/dashboard', getParticipantDashboard);
 
 // Registrations
 router.post('/registrations', registrationCreateValidation, validate, registerForTraining);
-router.get('/registrations', paginationValidation, ...optionalObjectIdQueries('training'), query('status').optional({ checkFalsy: true }).isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getMyRegistrations);
+router.get('/registrations', paginationValidation, ...optionalObjectIdQueries('training', 'event', 'eventDay'), query('status').optional({ checkFalsy: true }).isIn(['pending', 'approved', 'rejected', 'cancelled']), validate, getMyRegistrations);
+// Declared before /registrations/:id, otherwise "filters" is read as an id and rejected by the
+// router.param ObjectId check before this handler is ever reached.
+router.get('/registrations/filters', getMyRegistrationFilters);
 router.get('/registrations/:id', idParam(), validate, getMyRegistration);
 router.patch('/registrations/:id/cancel', idParam(), validate, cancelRegistration);
 

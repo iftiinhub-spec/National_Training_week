@@ -67,6 +67,20 @@ export const getMyRegistrations = async (req, res, next) => {
     // Lets a caller ask about one session directly instead of paging through every registration.
     if (req.query.training) filter.training = req.query.training;
 
+    // The edition and the day live on Training, not on Registration, and Mongoose cannot match a
+    // populated path — `{ 'training.event': id }` would silently match nothing. So the sessions are
+    // resolved to ids first and the registration query is narrowed to those. This happens before the
+    // count below, which is what keeps the pagination total honest while a filter is applied.
+    if (req.query.event || req.query.eventDay) {
+      const sessionScope = {};
+      if (req.query.event) sessionScope.event = req.query.event;
+      if (req.query.eventDay) sessionScope.eventDay = req.query.eventDay;
+      const scopedIds = await Training.find(sessionScope).distinct('_id');
+      filter.training = filter.training
+        ? { $in: scopedIds.filter((id) => String(id) === String(filter.training)) }
+        : { $in: scopedIds };
+    }
+
     const [registrations, total] = await Promise.all([
       Registration.find(filter)
         .populate({
@@ -112,6 +126,50 @@ export const getMyRegistrations = async (req, res, next) => {
       } : null,
     }));
     return paginatedResponse(res, securedRegistrations, total, page, limit);
+  } catch (err) { next(err); }
+};
+
+// GET /api/participant/registrations/filters — the editions and days this participant actually has
+// Building the dropdowns from this rather than from the page currently on screen is what makes the
+// filters accurate: the list endpoint is paginated, so options derived from the loaded rows would be
+// missing every edition and day that happens to fall on a later page. It also guarantees that no
+// option can be chosen that returns nothing, because every option came from a real registration.
+export const getMyRegistrationFilters = async (req, res, next) => {
+  try {
+    const trainingIds = await Registration.find({ participant: req.user._id }).distinct('training');
+    if (!trainingIds.length) return successResponse(res, { events: [], days: [] });
+
+    const sessions = await Training.find({ _id: { $in: trainingIds } })
+      .populate('event', 'name year')
+      .populate('eventDay', 'dayNumber theme date')
+      .select('event eventDay')
+      .lean();
+
+    const events = new Map();
+    const days = new Map();
+    sessions.forEach((session) => {
+      if (session.event) {
+        events.set(String(session.event._id), {
+          _id: session.event._id, name: session.event.name, year: session.event.year,
+        });
+      }
+      if (session.eventDay) {
+        days.set(String(session.eventDay._id), {
+          _id: session.eventDay._id,
+          dayNumber: session.eventDay.dayNumber,
+          theme: session.eventDay.theme,
+          date: session.eventDay.date,
+          // Carried so the page can narrow the day list to the chosen edition. Without it, picking
+          // an edition and a day from two different editions would return an empty, confusing list.
+          event: session.event?._id || null,
+        });
+      }
+    });
+
+    return successResponse(res, {
+      events: [...events.values()].sort((a, b) => (b.year || 0) - (a.year || 0)),
+      days: [...days.values()].sort((a, b) => (a.dayNumber || 0) - (b.dayNumber || 0)),
+    });
   } catch (err) { next(err); }
 };
 

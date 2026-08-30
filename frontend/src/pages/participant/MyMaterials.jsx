@@ -5,7 +5,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import toast from 'react-hot-toast';
 import {
-  DocumentTextIcon, ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon,
+  DocumentTextIcon, ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon, FunnelIcon,
 } from '@heroicons/react/24/outline';
 
 const formatSize = (bytes) => {
@@ -21,6 +21,8 @@ export const MyMaterials = () => {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState('');
+  const [selectedDay, setSelectedDay] = useState('');
   const [downloading, setDownloading] = useState(null);
 
   useEffect(() => {
@@ -37,10 +39,48 @@ export const MyMaterials = () => {
     fetchMaterials();
   }, []);
 
+  // The endpoint returns every material at once, so the options are read straight off the loaded
+  // set. That is what keeps them accurate here: an option exists only because a material has it,
+  // so no choice can produce an empty page.
+  const filterOptions = useMemo(() => {
+    const events = new Map();
+    const days = new Map();
+    materials.forEach((item) => {
+      const event = item.training?.event;
+      const day = item.training?.eventDay;
+      if (event?._id) events.set(String(event._id), event);
+      // The day is keyed with the edition it belongs to, so the day list can narrow to the chosen
+      // event and never offer a day from a different edition.
+      if (day?._id) days.set(String(day._id), { ...day, event: event?._id || null });
+    });
+    return {
+      events: [...events.values()].sort((a, b) => (b.year || 0) - (a.year || 0)),
+      days: [...days.values()].sort((a, b) => (a.dayNumber || 0) - (b.dayNumber || 0)),
+    };
+  }, [materials]);
+
+  const dayOptions = useMemo(() => (
+    selectedEvent
+      ? filterOptions.days.filter((day) => String(day.event) === selectedEvent)
+      : filterOptions.days
+  ), [filterOptions.days, selectedEvent]);
+
+  const handleEventChange = (value) => {
+    setSelectedEvent(value);
+    // A day carried over from the previous edition would contradict the new one and match nothing.
+    if (value && !filterOptions.days.some((day) => String(day._id) === selectedDay && String(day.event) === value)) {
+      setSelectedDay('');
+    }
+  };
+
+  const filtersActive = Boolean(selectedEvent || selectedDay);
+
   const visible = useMemo(() => {
-    const scoped = sessionFilter
+    let scoped = sessionFilter
       ? materials.filter((item) => String(item.training?._id) === sessionFilter)
       : materials;
+    if (selectedEvent) scoped = scoped.filter((item) => String(item.training?.event?._id) === selectedEvent);
+    if (selectedDay) scoped = scoped.filter((item) => String(item.training?.eventDay?._id) === selectedDay);
     const term = search.trim().toLowerCase();
     if (!term) return scoped;
     return scoped.filter((item) => (
@@ -48,7 +88,7 @@ export const MyMaterials = () => {
       || (item.description || '').toLowerCase().includes(term)
       || (item.training?.title || '').toLowerCase().includes(term)
     ));
-  }, [materials, search, sessionFilter]);
+  }, [materials, search, sessionFilter, selectedEvent, selectedDay]);
 
   // Grouped by session so a participant reads down their sessions, not a flat pile of files.
   const grouped = useMemo(() => {
@@ -102,15 +142,63 @@ export const MyMaterials = () => {
       </div>
 
       {materials.length > 0 && (
-        <div className="relative max-w-md">
-          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search materials or sessions..."
-            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs font-medium"
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[220px] flex-1 sm:max-w-md">
+            <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search materials or sessions..."
+              className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs font-medium"
+            />
+          </div>
+
+          {filterOptions.events.length > 1 && (
+            <select
+              value={selectedEvent}
+              onChange={(e) => handleEventChange(e.target.value)}
+              aria-label="Filter by event"
+              className="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40"
+            >
+              <option value="">All events</option>
+              {filterOptions.events.map((event) => (
+                <option key={event._id} value={event._id}>
+                  {event.name}{event.year ? ` (${event.year})` : ''}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {filterOptions.days.length > 1 && (
+            <select
+              value={selectedDay}
+              onChange={(e) => setSelectedDay(e.target.value)}
+              aria-label="Filter by day"
+              className="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40"
+            >
+              <option value="">All days</option>
+              {dayOptions.map((day) => (
+                <option key={day._id} value={day._id}>
+                  Day {day.dayNumber}{day.theme ? ` — ${day.theme}` : ''}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {(filtersActive || search) && (
+            <button
+              type="button"
+              onClick={() => { setSelectedEvent(''); setSelectedDay(''); setSearch(''); }}
+              className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+            >
+              Clear
+            </button>
+          )}
+
+          <span className="ml-auto text-xs font-medium text-slate-500">
+            {visible.length} of {materials.length} materials
+          </span>
         </div>
       )}
 
@@ -137,7 +225,11 @@ export const MyMaterials = () => {
         />
       ) : !grouped.length ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-500">
-          {search ? `No material matches "${search}".` : 'No materials have been shared for this session.'}
+          {search
+            ? `No material matches "${search}".`
+            : filtersActive
+              ? 'No material was shared for the selected event or day. Clear the filters to see them all.'
+              : 'No materials have been shared for this session.'}
         </div>
       ) : (
         <div className="space-y-5">
