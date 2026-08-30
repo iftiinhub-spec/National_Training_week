@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -6,31 +7,126 @@ import AdminModalClose from '../../components/common/AdminModalClose';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon, EllipsisVerticalIcon, LockClosedIcon, LockOpenIcon } from '@heroicons/react/24/outline';
 import { formatTimeRange12, toTimeInputValue } from '../../utils/timeFormat';
+import { statusControlClass } from '../../utils/statusPresentation';
 
 // What an administrator decides about a session. All four can be chosen at any time, because none
 // of them depends on the clock. Whether registration is open, whether the session is running and
 // whether it is over are decided by the server and arrive as `phase` on every session.
 const SESSION_STATUSES = [
-  ['draft', 'Draft — nobody can see it'],
-  ['published', 'Published — people can see it'],
+  ['draft', 'Draft'],
+  ['published', 'Published'],
   ['cancelled', 'Cancelled'],
   ['completed', 'Finished'],
 ];
 
-const statusControlClass = (status) => {
-  if (status === 'published') return 'border-emerald-200 bg-emerald-50 text-[#1a6b3c]';
-  if (status === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-700';
-  if (status === 'completed') return 'border-slate-300 bg-slate-100 text-slate-700';
-  return 'border-amber-200 bg-amber-50 text-amber-800';
-};
-
 // The button only makes sense while the session is still ahead of its own day.
 const canChangeRegistration = (training) => training.status === 'published'
-  && ['registration_open', 'registration_closed', 'scheduled'].includes(training.phase);
+  && ['registration_open', 'registration_closed', 'scheduled'].includes(training.phase)
+  && new Date() < new Date(`${String(training.date).slice(0, 10)}T00:00:00+03:00`);
 
 const assetUrl = (value) => value ? (value.startsWith('http') ? value : `/${value.replace(/^\//, '')}`) : '';
+
+const SessionActionsMenu = ({ training, canChangeRegistration: canChange, onRegistration, onEdit, onDelete }) => {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const close = () => setOpen(false);
+  const run = (action) => {
+    close();
+    action();
+  };
+
+  const toggle = () => {
+    if (open) return close();
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (rect) {
+      const menuWidth = 208;
+      const menuHeight = canChange ? 138 : 96;
+      const roomBelow = window.innerHeight - rect.bottom;
+      setPosition({
+        left: Math.max(12, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 12)),
+        top: roomBelow >= menuHeight + 12 ? rect.bottom + 8 : Math.max(12, rect.top - menuHeight - 8),
+      });
+    }
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const focusFrame = requestAnimationFrame(() => menuRef.current?.querySelector('[role="menuitem"]')?.focus());
+    const handlePointerDown = (event) => {
+      if (!triggerRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) close();
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        close();
+        triggerRef.current?.focus();
+      }
+    };
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [open]);
+
+  const itemClass = 'flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-left text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-[-2px]';
+
+  return <>
+    <button
+      ref={triggerRef}
+      type="button"
+      onClick={toggle}
+      aria-label={`Manage ${training.title}`}
+      aria-haspopup="menu"
+      aria-expanded={open}
+      className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a6b3c]"
+    >
+      <EllipsisVerticalIcon className="h-5 w-5" />
+    </button>
+    {open && createPortal(
+      <div
+        ref={menuRef}
+        role="menu"
+        aria-label={`Actions for ${training.title}`}
+        onKeyDown={(event) => {
+          if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+          event.preventDefault();
+          const items = [...event.currentTarget.querySelectorAll('[role="menuitem"]')];
+          const current = items.indexOf(document.activeElement);
+          const direction = event.key === 'ArrowDown' ? 1 : -1;
+          items[(current + direction + items.length) % items.length]?.focus();
+        }}
+        style={{ top: position.top, left: position.left }}
+        className="fixed z-[100] w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
+      >
+        {canChange && (
+          <button type="button" role="menuitem" onClick={() => run(onRegistration)} className={`${itemClass} text-slate-700 hover:bg-emerald-50 hover:text-[#1a6b3c] focus-visible:outline-[#1a6b3c]`}>
+            {training.registration?.open ? <LockClosedIcon className="h-4 w-4" /> : <LockOpenIcon className="h-4 w-4" />}
+            {training.registration?.open ? 'Close registration' : 'Open registration'}
+          </button>
+        )}
+        <button type="button" role="menuitem" onClick={() => run(onEdit)} className={`${itemClass} text-slate-700 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-blue-600`}>
+          <PencilIcon className="h-4 w-4" /> Edit session
+        </button>
+        <button type="button" role="menuitem" onClick={() => run(onDelete)} className={`${itemClass} text-rose-700 hover:bg-rose-50 focus-visible:outline-rose-600`}>
+          <TrashIcon className="h-4 w-4" /> Delete session
+        </button>
+      </div>,
+      document.body
+    )}
+  </>;
+};
 
 export const TrainingsManagement = () => {
   const confirmAction = useConfirmDialog();
@@ -303,7 +399,7 @@ export const TrainingsManagement = () => {
                 <th className="p-4">Day & Category</th>
                 <th className="p-4">Trainer & Moderator</th>
                 <th className="p-4">Date & Time</th>
-                <th className="p-4">Status &amp; registration</th>
+                <th className="p-4">Status</th>
                 <th className="p-4">Actions</th>
               </tr>
             </thead>
@@ -328,8 +424,7 @@ export const TrainingsManagement = () => {
                     <span className="text-[11px] text-slate-400">{formatTimeRange12(tr.startTime, tr.endTime)}</span>
                   </td>
                   <td className="p-4">
-                    <div className="flex min-w-52 flex-col items-start gap-2">
-                      <div className={`relative inline-flex min-w-52 items-center rounded-full border ${statusControlClass(tr.status)}`}>
+                    <div className={`relative inline-flex min-w-40 items-center rounded-xl border ${statusControlClass(tr.status)}`}>
                         <span className="pointer-events-none ml-3 h-2 w-2 shrink-0 rounded-full bg-current" />
                         <select
                           value={tr.status}
@@ -342,34 +437,16 @@ export const TrainingsManagement = () => {
                           ))}
                         </select>
                         <ChevronDownIcon className="pointer-events-none absolute right-3 h-4 w-4" />
-                      </div>
-
-                      {canChangeRegistration(tr) && (
-                        <button
-                          type="button"
-                          onClick={() => handleRegistrationChange(tr._id, !tr.registration?.open)}
-                          className="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-[#1a6b3c] hover:bg-emerald-50 hover:text-[#1a6b3c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a6b3c]"
-                        >
-                          {tr.registration?.open ? 'Close registration' : 'Open registration'}
-                        </button>
-                      )}
                     </div>
                   </td>
-                  <td className="p-4 flex items-center gap-1">
-                    <button
-                      onClick={() => handleOpenEditModal(tr)}
-                      aria-label={`Edit ${tr.title}`}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                    >
-                      <PencilIcon className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(tr._id)}
-                      aria-label={`Delete ${tr.title}`}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
+                  <td className="p-4">
+                    <SessionActionsMenu
+                      training={tr}
+                      canChangeRegistration={canChangeRegistration(tr)}
+                      onRegistration={() => handleRegistrationChange(tr._id, !tr.registration?.open)}
+                      onEdit={() => handleOpenEditModal(tr)}
+                      onDelete={() => handleDelete(tr._id)}
+                    />
                   </td>
                 </tr>
               ))}

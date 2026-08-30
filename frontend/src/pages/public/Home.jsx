@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { intervalToDuration } from 'date-fns';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import StatusBadge from '../../components/common/StatusBadge';
 import { useCurrentEvent } from '../../context/EventContext';
 import {
   AcademicCapIcon,
@@ -133,23 +134,42 @@ export const Home = () => {
   const registrationOpensAt = event?.registrationStart ? new Date(event.registrationStart).getTime() : null;
   const registrationClosesAt = event?.registrationDeadline ? new Date(event.registrationDeadline).getTime() : null;
   const eventStartsAt = event?.startDate ? new Date(`${event.startDate.slice(0, 10)}T00:00:00+03:00`).getTime() : null;
-  const eventEndsAt = event?.endDate ? new Date(`${event.endDate.slice(0, 10)}T23:59:59+03:00`).getTime() : null;
   const formatStageDate = (timestamp) => timestamp ? new Date(timestamp).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) : '';
   const todayKey = new Date(now).toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
   const currentProgramDay = days.find((day) => day.date && new Date(day.date).toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }) === todayKey);
   // The edition's `phase` is decided by the server from the same dates every other screen uses.
   // A registration cut-off is optional: without one, registration stays open and each session
   // simply stops taking sign-ups when its own day begins.
-  const liveStage = eventEndsAt && now <= eventEndsAt
-    ? { key: 'live', message: 'National Training Week is underway', detail: currentProgramDay ? `Day ${currentProgramDay.dayNumber} — ${currentProgramDay.theme}` : 'View the current program and join your approved sessions.' }
-    : { key: 'completed', message: `${event?.name || `National Training Week ${event?.year}`} has concluded`, detail: 'Published sessions remain freely available in the permanent recording library.' };
-
-  const lifecycleStage = !event ? null
-    : registrationOpensAt && now < registrationOpensAt ? { key: 'scheduled', label: 'Registration opens in', target: registrationOpensAt, detail: `Registration opens on ${formatStageDate(registrationOpensAt)}.`, accent: 'text-sky-300' }
-      : registrationClosesAt && now >= registrationClosesAt && eventStartsAt && now < eventStartsAt ? { key: 'awaiting', label: 'Training Week begins in', target: eventStartsAt, detail: 'Registration is closed. Approved participants can review their selected sessions in the portal.', accent: 'text-amber-300' }
-        : registrationClosesAt && now < registrationClosesAt ? { key: 'open', label: 'Registration closes in', target: registrationClosesAt, detail: `Register before ${formatStageDate(registrationClosesAt)} to select your session.`, accent: 'text-emerald-300' }
-          : eventStartsAt && now < eventStartsAt ? { key: 'open', label: 'Training Week begins in', target: eventStartsAt, detail: 'Registration is open. Each session takes sign-ups until its own day begins.', accent: 'text-emerald-300' }
-            : liveStage;
+  const lifecycleStage = (() => {
+    if (!event) return null;
+    switch (event.phase) {
+      case 'draft':
+        return { key: 'draft', message: 'The next program is being prepared', detail: 'Dates and sessions will be announced when the edition is published.' };
+      case 'cancelled':
+        return { key: 'cancelled', message: `${event.name} has been cancelled`, detail: 'Please check official announcements or contact the organisers for further information.' };
+      case 'scheduled':
+        return { key: 'scheduled', label: 'Registration opens in', target: registrationOpensAt, detail: `Registration opens on ${formatStageDate(registrationOpensAt)}.`, accent: 'text-sky-300' };
+      case 'registration_closed':
+        return { key: 'awaiting', label: 'Training Week begins in', target: eventStartsAt, detail: 'Registration is closed. Approved participants can review their selected sessions in the portal.', accent: 'text-amber-300' };
+      case 'registration_open': {
+        const fixedCutOffIsNext = registrationClosesAt && registrationClosesAt < eventStartsAt;
+        return fixedCutOffIsNext
+          ? { key: 'open', label: 'Registration closes in', target: registrationClosesAt, detail: `Register before ${formatStageDate(registrationClosesAt)} to select your sessions.`, accent: 'text-emerald-300' }
+          : { key: 'open', label: 'Training Week begins in', target: eventStartsAt, detail: 'Registration is open. Each session accepts sign-ups until its own day begins.', accent: 'text-emerald-300' };
+      }
+      case 'running':
+        return {
+          key: 'live',
+          message: 'National Training Week is underway',
+          detail: currentProgramDay
+            ? `Day ${currentProgramDay.dayNumber} of ${days.length} — ${currentProgramDay.theme}`
+            : 'View the current program and join your approved sessions.',
+        };
+      case 'finished':
+      default:
+        return { key: 'completed', message: `${event.name || `National Training Week ${event.year}`} has concluded`, detail: 'Published sessions remain freely available in the permanent recording library.' };
+    }
+  })();
   useEffect(() => {
     const nextBoundary = lifecycleStage?.target;
     if (!nextBoundary) return undefined;
@@ -160,7 +180,6 @@ export const Home = () => {
   const eventDates = event?.startDate && event?.endDate
     ? `${new Date(event.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
     : 'Dates to be announced';
-  const eventStatus = event?.phaseLabel || 'Program announced';
   const heroImage = '/training-week-default-hero.png';
   const formatDayChoiceDate = (date) => (
     date ? new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBA'
@@ -205,7 +224,7 @@ export const Home = () => {
             <h1 className="text-5xl font-black leading-[.98] tracking-[-.04em] sm:text-6xl lg:text-7xl">National<br /><span className="text-[#1da156]">Training Week</span></h1>
             <p className="mt-6 max-w-2xl text-lg font-bold leading-snug text-white sm:text-xl">{event ? <><span className="text-white/65">Theme {event.year}:</span> {event.theme}</> : 'Skills, knowledge, and opportunity—accessible nationwide.'}</p>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75 sm:text-base">{event?.description || 'An annual virtual learning platform connecting students, graduates, and professionals with expert-led training across technology, education, health, business, and community development.'}</p>
-            {event && <div className="mt-6 flex flex-wrap justify-start gap-x-6 gap-y-2 text-xs font-bold text-white/80"><span>{eventDates}</span><span>{days.length} day{days.length === 1 ? '' : 's'} · {sessionCount} session{sessionCount === 1 ? '' : 's'}</span><span className="capitalize text-[#1da156]">{eventStatus}</span></div>}
+            {event && <div className="mt-6 flex flex-wrap items-center justify-start gap-x-6 gap-y-2 text-xs font-bold text-white/80"><span>{eventDates}</span><span>{days.length} day{days.length === 1 ? '' : 's'} · {sessionCount} session{sessionCount === 1 ? '' : 's'}</span><StatusBadge status={event.phase} /></div>}
             {event && <div className="mt-7 max-w-2xl" aria-live="polite">
               <CountdownDisplay stage={lifecycleStage} />
               <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">{lifecycleStage.detail}</p>
