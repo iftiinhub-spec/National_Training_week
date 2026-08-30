@@ -5,21 +5,14 @@ import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { ArrowPathIcon, CalendarDaysIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import StatusBadge from '../../components/common/StatusBadge';
 
 // The server sends `phase` with every event: what is happening right now, worked out from the
 // dates. This screen only colours it — it never works out a date rule of its own, so it cannot
 // end up telling the administrator something different from what the server will accept.
-const phaseChipClass = (phase) => {
-  if (phase === 'registration_open') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (phase === 'running') return 'border-purple-200 bg-purple-50 text-purple-700';
-  if (phase === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-700';
-  if (phase === 'finished') return 'border-slate-200 bg-slate-100 text-slate-600';
-  return 'border-amber-200 bg-amber-50 text-amber-800';
-};
-
 const EVENT_STATUSES = [
-  ['draft', 'Draft — nobody can see it'],
-  ['published', 'Published — visible to everyone'],
+  ['draft', 'Draft'],
+  ['published', 'Published'],
   ['cancelled', 'Cancelled'],
 ];
 
@@ -225,9 +218,7 @@ export const EventsManagement = () => {
                     <span className="text-xs font-bold font-mono px-2.5 py-0.5 bg-emerald-100 text-[#1a6b3c] rounded-md">
                       Year {ev.year}
                     </span>
-                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${phaseChipClass(ev.phase)}`}>
-                      {ev.phaseLabel || 'Draft'}
-                    </span>
+                    <StatusBadge status={ev.phase || 'draft'} />
                     {ev.isCurrent && <span className="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-[#1a6b3c] text-white">Current public edition</span>}
                   </div>
                   <h3 className="text-xl font-bold text-slate-900">{ev.name}</h3>
