@@ -143,7 +143,7 @@ export const MyMaterials = () => {
 
       {materials.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[220px] flex-1 sm:max-w-md">
+          <div className="relative w-full sm:min-w-[220px] sm:max-w-xs sm:flex-1">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -154,12 +154,15 @@ export const MyMaterials = () => {
             />
           </div>
 
+          {/* On phones this keeps the two controls and Clear together on one line under the search
+              box, so the bar is two rows. From sm up it dissolves into the parent flex row. */}
+          <div className="flex w-full flex-wrap items-center gap-3 sm:contents">
           {filterOptions.events.length > 1 && (
             <select
               value={selectedEvent}
               onChange={(e) => handleEventChange(e.target.value)}
               aria-label="Filter by event"
-              className="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40"
+              className="min-h-10 min-w-0 flex-[3] basis-32 truncate rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40 sm:w-48 sm:flex-none sm:basis-auto lg:w-56"
             >
               <option value="">All events</option>
               {filterOptions.events.map((event) => (
@@ -175,7 +178,7 @@ export const MyMaterials = () => {
               value={selectedDay}
               onChange={(e) => setSelectedDay(e.target.value)}
               aria-label="Filter by day"
-              className="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40"
+              className="min-h-10 min-w-0 flex-[2] basis-28 truncate rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/40 sm:w-44 sm:flex-none sm:basis-auto lg:w-52"
             >
               <option value="">All days</option>
               {dayOptions.map((day) => (
@@ -190,15 +193,16 @@ export const MyMaterials = () => {
             <button
               type="button"
               onClick={() => { setSelectedEvent(''); setSelectedDay(''); setSearch(''); }}
-              className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+              className="min-h-10 shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
             >
               Clear
             </button>
           )}
 
-          <span className="ml-auto text-xs font-medium text-slate-500">
+          <span className="ml-auto hidden shrink-0 text-xs font-medium text-slate-500 sm:inline">
             {visible.length} of {materials.length} materials
           </span>
+          </div>
         </div>
       )}
 
