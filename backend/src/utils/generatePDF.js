@@ -77,7 +77,7 @@ export const generateCertificatePDF = async ({
       .lineWidth(1.2).stroke(brightGreen);
 
     doc.fillColor(black).font('Helvetica').fontSize(11.5)
-      .text('has successfully completed the following training session and fulfilled its participation requirements.', 130, 274, { width: width - 260, align: 'center', lineGap: 3 });
+      .text('who has successfully completed the following training session and fulfilled its participation requirements.', 130, 274, { width: width - 260, align: 'center', lineGap: 3 });
 
     // The completed session is the central achievement record.
     const panelX = 145;
