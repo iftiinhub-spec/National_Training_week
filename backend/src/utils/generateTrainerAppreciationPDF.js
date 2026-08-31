@@ -58,25 +58,20 @@ export const generateTrainerAppreciationPDF = async ({ trainerName, trainingTitl
     doc.moveTo(244, 106).lineTo(width - 244, 106).lineWidth(1).stroke(green);
 
     doc.fillColor(green).font('Helvetica-Bold').fontSize(8.5)
-      .text('WITH GRATITUDE, WE PRESENT THIS', 145, 137, { width: width - 200, align: 'center', characterSpacing: 1.7 });
-    doc.fillColor(black).font('Times-Bold').fontSize(31)
-      .text('Certificate of Appreciation', 145, 157, { width: width - 200, align: 'center' });
-
-    doc.fillColor(muted).font('Helvetica').fontSize(11)
-      .text('to', 145, 208, { width: width - 200, align: 'center' });
+      .text('WITH GRATITUDE, THIS CERTIFICATE IS PROUDLY PRESENTED TO', 145, 151, { width: width - 200, align: 'center', characterSpacing: 1.45 });
 
     const safeName = trainerName || 'Trainer Name';
-    const nameSize = safeName.length > 34 ? 25 : 30;
+    const nameSize = safeName.length > 38 ? 28 : safeName.length > 26 ? 34 : 42;
     const nameX = 150;
     const nameWidth = width - 210;
     doc.fillColor(green).font('Times-Bold').fontSize(nameSize)
-      .text(safeName, nameX, 228, { width: nameWidth, align: 'center' });
-    const measuredName = Math.min(doc.widthOfString(safeName), width - 340);
+      .text(safeName, nameX, 184, { width: nameWidth, align: 'center' });
+    const measuredName = Math.min(doc.widthOfString(safeName), width - 300);
     const nameCenter = nameX + (nameWidth / 2);
-    doc.moveTo(nameCenter - (measuredName / 2), 270).lineTo(nameCenter + (measuredName / 2), 270).lineWidth(1.3).stroke(brightGreen);
+    doc.moveTo(nameCenter - (measuredName / 2), 250).lineTo(nameCenter + (measuredName / 2), 250).lineWidth(1.3).stroke(brightGreen);
 
     doc.fillColor(black).font('Helvetica').fontSize(12)
-      .text('In recognition of your exceptional contribution as a Trainer, and in appreciation of the expertise, dedication, and inspiration you shared with our learning community.', 170, 289, { width: width - 240, align: 'center', lineGap: 4 });
+      .text('In recognition of your exceptional contribution as a Trainer, and in appreciation of the expertise, dedication, and inspiration you shared with our learning community.', 170, 274, { width: width - 240, align: 'center', lineGap: 4 });
 
     // Session recognition panel with a strong editorial hierarchy.
     doc.roundedRect(166, 354, width - 236, 74, 10).fillAndStroke(pale, '#c9e3d3');

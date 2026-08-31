@@ -3,9 +3,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createHash } from 'node:crypto';
 import SiteSettings from '../models/SiteSettings.js';
-import EmailSuppression from '../models/EmailSuppression.js';
 import { decryptSetting } from './settingsEncryption.js';
-import { isPermanentRecipientFailure } from './emailFailure.js';
 
 export const escapeHtml = (value = '') => String(value)
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -67,23 +65,6 @@ export const sendEmail = async ({ to, subject, html, text }) => {
   if (process.env.EMAIL_DELIVERY_MODE === 'disabled') {
     return { success: true, messageId: `disabled-${Date.now()}` };
   }
-  const recipients = [...new Set((Array.isArray(to) ? to : [to])
-    .filter(Boolean)
-    .map((email) => String(email).trim().toLowerCase()))];
-  if (!recipients.length) return { success: false, permanent: true, error: 'No valid email recipient was provided.' };
-
-  let suppressed = [];
-  try {
-    suppressed = await EmailSuppression.find({ email: { $in: recipients } }).select('email reason').lean();
-  } catch (error) {
-    console.error('Email suppression lookup error:', error.message);
-  }
-  const suppressedEmails = new Set(suppressed.map(({ email }) => email));
-  const allowedRecipients = recipients.filter((email) => !suppressedEmails.has(email));
-  if (!allowedRecipients.length) {
-    return { success: false, permanent: true, suppressed: true, error: 'Recipient is suppressed after a permanent delivery failure.' };
-  }
-
   try {
     const settings = await getEmailSettings();
     const relayTransport = isRelayTransport();
@@ -110,22 +91,11 @@ export const sendEmail = async ({ to, subject, html, text }) => {
       ? `"${settings.emailSenderName.replaceAll('"', '')}" <${senderAddress}>`
       : process.env.EMAIL_FROM;
     const attachments = fs.existsSync(emailLogoPath) ? [{ filename: 'hormuud-ntw-logo.png', path: emailLogoPath, cid: 'ntw-logo' }] : [];
-    const info = await pooledTransporter.sendMail({ from, replyTo: settings?.replyToEmail || undefined, to: allowedRecipients.join(', '), subject, html, text: text || html.replace(/<[^>]*>/g, ''), attachments });
-    return { success: true, messageId: info.messageId, suppressedRecipients: [...suppressedEmails] };
+    const info = await pooledTransporter.sendMail({ from, replyTo: settings?.replyToEmail || undefined, to: Array.isArray(to) ? to.join(', ') : to, subject, html, text: text || html.replace(/<[^>]*>/g, ''), attachments });
+    return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Email send error:', error.message);
-    const permanent = isPermanentRecipientFailure(error);
-    if (permanent) {
-      const rejected = Array.isArray(error.rejected)
-        ? error.rejected.map((email) => String(email).trim().toLowerCase())
-        : allowedRecipients;
-      await Promise.all(rejected.map((email) => EmailSuppression.updateOne(
-        { email },
-        { $set: { reason: String(error.response || error.message || 'Permanent recipient rejection').slice(0, 500), smtpCode: Number(error.responseCode) || null, source: 'smtp', suppressedAt: new Date() } },
-        { upsert: true },
-      ).catch((suppressionError) => console.error('Email suppression write error:', suppressionError.message))));
-    }
-    return { success: false, permanent, error: error.message };
+    return { success: false, error: error.message };
   }
 };
 

@@ -62,24 +62,22 @@ export const generateCertificatePDF = async ({
     doc.moveTo(252, 107).lineTo(width - 252, 107).lineWidth(1).stroke(green);
 
     doc.fillColor(green).font('Helvetica-Bold').fontSize(8.5)
-      .text('THIS OFFICIAL CERTIFICATE IS PRESENTED TO', 100, 137, { width: width - 200, align: 'center', characterSpacing: 1.45 });
-    doc.fillColor(black).font('Times-Bold').fontSize(33)
-      .text('Certificate of Participation', 100, 158, { width: width - 200, align: 'center' });
+      .text('THIS OFFICIAL CERTIFICATE IS PROUDLY PRESENTED TO', 100, 151, { width: width - 200, align: 'center', characterSpacing: 1.45 });
 
     const safeName = participantName || 'Participant Name';
-    const nameSize = safeName.length > 38 ? 25 : 30;
+    const nameSize = safeName.length > 38 ? 28 : safeName.length > 26 ? 34 : 42;
     const nameX = 120;
     const nameWidth = width - 240;
     doc.fillColor(green).font('Times-Bold').fontSize(nameSize)
-      .text(safeName, nameX, 220, { width: nameWidth, align: 'center' });
-    const measuredName = Math.min(doc.widthOfString(safeName), width - 360);
+      .text(safeName, nameX, 184, { width: nameWidth, align: 'center' });
+    const measuredName = Math.min(doc.widthOfString(safeName), width - 300);
     const nameCenter = nameX + (nameWidth / 2);
-    doc.moveTo(nameCenter - (measuredName / 2), 261)
-      .lineTo(nameCenter + (measuredName / 2), 261)
+    doc.moveTo(nameCenter - (measuredName / 2), 250)
+      .lineTo(nameCenter + (measuredName / 2), 250)
       .lineWidth(1.2).stroke(brightGreen);
 
     doc.fillColor(black).font('Helvetica').fontSize(11.5)
-      .text('has successfully completed the following training session and fulfilled its participation requirements.', 130, 280, { width: width - 260, align: 'center', lineGap: 3 });
+      .text('has successfully completed the following training session and fulfilled its participation requirements.', 130, 274, { width: width - 260, align: 'center', lineGap: 3 });
 
     // The completed session is the central achievement record.
     const panelX = 145;

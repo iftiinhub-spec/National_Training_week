@@ -6,35 +6,15 @@ import { sendReminderEmail } from '../utils/email.js';
 import { getTrainingDateTime } from '../utils/trainingDateTime.js';
 
 const pollInterval = Math.max(60_000, Number(process.env.REMINDER_WORKER_POLL_MS) || 5 * 60_000);
-const maxAttempts = Math.max(1, Number(process.env.REMINDER_EMAIL_MAX_ATTEMPTS) || 3);
-const retryDelay = Math.max(60_000, Number(process.env.REMINDER_RETRY_DELAY_MS) || 30 * 60_000);
-const processingStaleAfter = Math.max(5 * 60_000, Number(process.env.REMINDER_PROCESSING_STALE_MS) || 30 * 60_000);
 const reminderWindows = [{ type: '1h', milliseconds: 60 * 60 * 1000 }, { type: '24h', milliseconds: 24 * 60 * 60 * 1000 }];
 let timer = null;
 let running = false;
 let stopped = false;
 
 const claimReminder = async (trainingId, type) => {
-  const now = new Date();
-  const staleBefore = new Date(now.getTime() - processingStaleAfter);
-  const claimed = await ReminderDelivery.findOneAndUpdate(
-    {
-      training: trainingId,
-      type,
-      attempts: { $lt: maxAttempts },
-      $or: [
-        { status: 'failed', nextAttemptAt: { $lte: now } },
-        { status: 'failed', nextAttemptAt: null },
-        { status: 'processing', updatedAt: { $lte: staleBefore } },
-      ],
-    },
-    { $set: { status: 'processing', lastError: '', nextAttemptAt: null }, $inc: { attempts: 1 } },
-    { new: true },
-  );
-  if (claimed) return claimed;
-
-  const existing = await ReminderDelivery.exists({ training: trainingId, type });
-  if (existing) return null;
+  const existing = await ReminderDelivery.findOne({ training: trainingId, type });
+  if (existing?.status === 'sent' || existing?.status === 'processing') return null;
+  if (existing) return ReminderDelivery.findOneAndUpdate({ _id: existing._id }, { $set: { status: 'processing', lastError: '' }, $inc: { attempts: 1 } }, { new: true });
   try {
     return await ReminderDelivery.create({ training: trainingId, type, status: 'processing', attempts: 1 });
   } catch (error) {
@@ -59,24 +39,14 @@ const processTraining = async (training) => {
       ...(training.trainers || []).map((trainer) => trainer?.email),
       training.trainer?.email,
       training.moderator?.email,
-    ].filter(Boolean).map((email) => String(email).trim().toLowerCase()))];
+    ].filter(Boolean))];
     if (!emails.length) throw new Error('No eligible email recipients found.');
     const failed = [];
-    const permanentlyFailed = [];
     for (const email of emails) {
       const result = await sendReminderEmail({ to: email, trainingTitle: training.title, startTime: startsAt, type: 'reminder' });
-      if (!result.success) {
-        failed.push(email);
-        if (result.permanent) permanentlyFailed.push(email);
-      }
+      if (!result.success) failed.push(email);
     }
-    const allFailed = failed.length === emails.length;
-    const allFailuresPermanent = allFailed && permanentlyFailed.length === failed.length;
-    const nextAttemptAt = allFailed && !allFailuresPermanent && delivery.attempts < maxAttempts
-      ? new Date(Date.now() + retryDelay * (2 ** (delivery.attempts - 1)))
-      : null;
-    const status = allFailuresPermanent ? 'permanent_failed' : (allFailed ? 'failed' : 'sent');
-    await ReminderDelivery.updateOne({ _id: delivery._id }, { $set: { status, sentAt: allFailed ? null : new Date(), nextAttemptAt, lastError: failed.length ? `${failed.length} email(s) failed; ${permanentlyFailed.length} permanently suppressed.` : '' } });
+    await ReminderDelivery.updateOne({ _id: delivery._id }, { $set: { status: failed.length === emails.length ? 'failed' : 'sent', sentAt: failed.length === emails.length ? null : new Date(), lastError: failed.length ? `${failed.length} email(s) failed.` : '' } });
     if (failed.length < emails.length) {
       await Communication.create({
         training: training._id,
@@ -90,12 +60,7 @@ const processTraining = async (training) => {
       });
     }
   } catch (error) {
-    if (delivery) {
-      const nextAttemptAt = delivery.attempts < maxAttempts
-        ? new Date(Date.now() + retryDelay * (2 ** (delivery.attempts - 1)))
-        : null;
-      await ReminderDelivery.updateOne({ _id: delivery._id }, { $set: { status: 'failed', nextAttemptAt, lastError: String(error.message || error).slice(0, 500) } });
-    }
+    if (delivery) await ReminderDelivery.updateOne({ _id: delivery._id }, { $set: { status: 'failed', lastError: String(error.message || error).slice(0, 500) } });
     console.error(`Automatic ${reminder.type} reminder failed for ${training._id}:`, error.message);
   }
 };
