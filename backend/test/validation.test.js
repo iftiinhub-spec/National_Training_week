@@ -18,12 +18,21 @@ import User from '../src/models/User.js';
 import Training from '../src/models/Training.js';
 import { formatValidationField } from '../src/middleware/validate.js';
 import { eventDayTimelineError } from '../src/utils/eventTimeline.js';
+import { isPermanentRecipientFailure } from '../src/utils/emailFailure.js';
 
 const runRules = async (rules, body = {}, params = {}, query = {}) => {
   const req = { body, params, query };
   for (const rule of rules) await rule.run(req);
   return validationResult(req).array();
 };
+
+test('email suppression only classifies permanent recipient failures', () => {
+  assert.equal(isPermanentRecipientFailure({ command: 'RCPT TO', responseCode: 550, response: '550 5.1.1 User unknown' }), true);
+  assert.equal(isPermanentRecipientFailure({ code: 'EENVELOPE', responseCode: 553, rejected: ['bad@example.com'] }), true);
+  assert.equal(isPermanentRecipientFailure({ command: 'RCPT TO', responseCode: 450, response: 'Mailbox temporarily unavailable' }), false);
+  assert.equal(isPermanentRecipientFailure({ command: 'AUTH LOGIN', responseCode: 535, response: 'Authentication failed' }), false);
+  assert.equal(isPermanentRecipientFailure({ code: 'ETIMEDOUT', message: 'Connection timed out' }), false);
+});
 
 test('regex search input is treated as literal text', () => {
   assert.equal(escapeRegex('john.*(admin)'), 'john\\.\\*\\(admin\\)');

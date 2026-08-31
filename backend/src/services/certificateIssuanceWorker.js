@@ -25,7 +25,11 @@ const emailUpdate = async (Model, certificate, result) => {
   await Model.updateOne({ _id: certificate._id }, result.success ? {
     $set: { emailStatus: 'sent', emailSentAt: new Date(), emailLastError: '' },
   } : {
-    $set: { emailStatus: 'failed', emailLastError: String(result.error || 'Email delivery failed.').slice(0, 500) },
+    $set: {
+      emailStatus: 'failed',
+      emailAttempts: result.permanent ? maxEmailAttempts : certificate.emailAttempts + 1,
+      emailLastError: String(result.error || 'Email delivery failed.').slice(0, 500),
+    },
   });
 };
 
