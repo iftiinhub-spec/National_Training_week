@@ -1,0 +1,31 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { ArrowRightIcon, ChatBubbleLeftRightIcon, StarIcon } from '@heroicons/react/24/outline';
+import api from '../../api/axios';
+import { formatTimeRange12 } from '../../utils/timeFormat';
+
+const entityId = (entity) => String(entity?._id || entity || '');
+const uniqueById = (items) => [...new Map(items.map((item) => [String(item._id), item])).values()];
+
+export default function TrainerFeedback() {
+  const [sessions, setSessions] = useState(null);
+  const [eventId, setEventId] = useState('');
+  const [dayId, setDayId] = useState('');
+  useEffect(() => { api.get('/trainer/dashboard').then((response) => setSessions(response.data.sessions || [])).catch((error) => toast.error(error.message || 'Unable to load feedback.')); }, []);
+  const events = useMemo(() => uniqueById((sessions || []).map((session) => session.event).filter(Boolean)), [sessions]);
+  const days = useMemo(() => uniqueById((sessions || []).filter((session) => entityId(session.event) === eventId).map((session) => session.eventDay).filter(Boolean)).sort((a, b) => a.dayNumber - b.dayNumber), [sessions, eventId]);
+  const filtered = useMemo(() => (sessions || []).filter((session) => entityId(session.event) === eventId && entityId(session.eventDay) === dayId), [sessions, eventId, dayId]);
+  const total = filtered.reduce((sum, session) => sum + session.feedback.length, 0);
+  useEffect(() => { if (events.length && !events.some((event) => event._id === eventId)) setEventId(events[0]._id); }, [events, eventId]);
+  useEffect(() => { if (days.length && !days.some((day) => day._id === dayId)) setDayId(days[0]._id); }, [days, dayId]);
+  if (!sessions) return <Skeleton />;
+  return <div className="space-y-6"><PageHeader total={total} /><FeedbackFilters events={events} days={days} eventId={eventId} dayId={dayId} onEvent={(value) => { setEventId(value); setDayId(''); }} onDay={setDayId} />{filtered.length ? <div className="grid gap-4 lg:grid-cols-2">{filtered.map((session) => <SessionCard key={session._id} session={session} />)}</div> : <Empty text="No sessions are available for the selected event day." />}</div>;
+}
+
+function PageHeader({ total }) { return <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-[#1a6b3c]">Participant responses</p><h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">Feedback messages</h1><p className="mt-2 text-sm text-slate-500">Choose an event and day, then open a session to read every response.</p></div><span className="w-fit rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-[#1a6b3c]">{total} {total === 1 ? 'response' : 'responses'}</span></header>; }
+function FeedbackFilters({ events, days, eventId, dayId, onEvent, onDay }) { return <section aria-labelledby="feedback-filter-heading" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="mb-4"><h2 id="feedback-filter-heading" className="font-bold text-slate-950">Filter sessions</h2><p className="mt-1 text-xs text-slate-500">Select the event and event day you want to review.</p></div><div className="grid gap-3 sm:grid-cols-2"><Select label="Event" value={eventId} onChange={onEvent} options={events.map((event) => ({ value: event._id, label: `${event.name}${event.year ? ` · ${event.year}` : ''}` }))} placeholder="Select event" /><Select label="Day" value={dayId} onChange={onDay} disabled={!eventId} options={days.map((day) => ({ value: day._id, label: `Day ${day.dayNumber} · ${day.theme}` }))} placeholder="Select day" /></div></section>; }
+function Select({ label, value, onChange, options, placeholder, disabled }) { return <label className="block text-xs font-bold text-slate-700">{label}<select value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100"><option value="">{placeholder}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>; }
+function SessionCard({ session }) { const ratings = session.feedback.map((item) => item.trainerRating).filter(Number.isFinite); const average = ratings.length ? (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1) : '—'; return <article className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><span className="text-xs text-slate-500">{new Date(session.date).toLocaleDateString()} · {formatTimeRange12(session.startTime, session.endTime)}</span><h2 className="mt-1 font-bold text-slate-950">{session.title}</h2></div><span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{session.feedback.length} responses</span></div><div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-sm"><StarIcon className="h-5 w-5 text-[#1a6b3c]" /><span className="font-bold text-slate-900">{average}/5</span><span className="text-slate-500">average trainer rating</span></div><Link to={`/trainer/feedback/${session._id}`} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-4 text-sm font-bold text-white hover:bg-[#124d2a] focus:outline-none focus:ring-2 focus:ring-[#1a6b3c] focus:ring-offset-2">View all feedback <ArrowRightIcon className="h-4 w-4" /></Link></article>; }
+function Empty({ text }) { return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><ChatBubbleLeftRightIcon className="mx-auto h-10 w-10 text-slate-300" /><p className="mt-3 text-sm text-slate-500">{text}</p></div>; }
+function Skeleton() { return <div className="animate-pulse space-y-5"><div className="h-20 rounded-xl bg-slate-200" /><div className="h-36 rounded-2xl bg-slate-200" /><div className="h-48 rounded-2xl bg-slate-200" /></div>; }

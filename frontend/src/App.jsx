@@ -50,6 +50,9 @@ const ModeratorProfile = lazy(() => import('./pages/moderator/ModeratorProfile')
 const TrainerDashboard = lazy(() => import('./pages/trainer/TrainerDashboard'));
 const TrainerProfile = lazy(() => import('./pages/trainer/TrainerProfile'));
 const TrainerCertificates = lazy(() => import('./pages/trainer/TrainerCertificates'));
+const TrainerMaterials = lazy(() => import('./pages/trainer/TrainerMaterials'));
+const TrainerFeedback = lazy(() => import('./pages/trainer/TrainerFeedback'));
+const TrainerFeedbackDetails = lazy(() => import('./pages/trainer/TrainerFeedbackDetails'));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
@@ -180,6 +183,9 @@ export const App = () => {
         <Route path="/trainer/*" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerLayout /></ProtectedRoute>}>
           <Route index element={<TrainerDashboard />} />
           <Route path="sessions" element={<TrainerDashboard sessionsOnly />} />
+          <Route path="materials" element={<TrainerMaterials />} />
+          <Route path="feedback" element={<TrainerFeedback />} />
+          <Route path="feedback/:trainingId" element={<TrainerFeedbackDetails />} />
           <Route path="certificates" element={<TrainerCertificates />} />
           <Route path="profile" element={<TrainerProfile />} />
         </Route>
