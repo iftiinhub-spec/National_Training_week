@@ -22,6 +22,7 @@ export const generateCertificate = async (req, res, next) => {
     if (training.status !== 'completed') {
       return errorResponse(res, 'Certificate can only be issued for completed trainings.', 400);
     }
+    if (training.attendanceReviewEndsAt && !training.attendanceFinalizedAt) return errorResponse(res, 'Certificates are available after the six-hour attendance review closes.', 400);
 
     // 2. Verify approved registration
     const registration = await Registration.findOne({ participant: participantId, training: trainingId, status: 'approved' });
@@ -81,6 +82,7 @@ export const bulkGenerateCertificates = async (req, res, next) => {
     if (training.status !== 'completed') {
       return errorResponse(res, 'Training must be completed before bulk generating certificates.', 400);
     }
+    if (training.attendanceReviewEndsAt && !training.attendanceFinalizedAt) return errorResponse(res, 'Certificates are available after the six-hour attendance review closes.', 400);
 
     const job = await enqueueCertificateIssuance({ trainingId, requestedBy: req.user._id, restart: true });
     return successResponse(res, { job: { id: job._id, status: job.status } }, 'Certificate issuance has been queued. Emails will be delivered safely in the background.');

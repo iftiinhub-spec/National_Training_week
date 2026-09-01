@@ -230,7 +230,7 @@ export const updateTrainingStatus = async (req, res, next) => {
 
     if (status === 'completed') {
       const result = await completeTrainingSession({ trainingId: training._id, completedBy: req.user._id });
-      return successResponse(res, result, `Session finished. Certificates for ${result.summary.eligible} eligible participant${result.summary.eligible === 1 ? '' : 's'} have been queued.`);
+      return successResponse(res, result, 'Session finished. A six-hour attendance review is now open; certificates will be processed after it closes.');
     }
     if (training.status === 'completed') {
       return errorResponse(res, 'A finished session cannot be reopened because attendance is locked and certificates may already be issued.', 400);
@@ -299,7 +299,7 @@ export const completeTraining = async (req, res, next) => {
     const timedStatusError = validateTimedStatus(training, 'completed');
     if (timedStatusError) return errorResponse(res, timedStatusError, 400);
     const result = await completeTrainingSession({ trainingId: training._id, completedBy: req.user._id });
-    return successResponse(res, result, `Training completed. Certificates for ${result.summary.eligible} eligible participant${result.summary.eligible === 1 ? '' : 's'} have been queued for delivery.`);
+    return successResponse(res, result, 'Training completed. A six-hour attendance review is now open; certificates will be processed after it closes.');
   } catch (err) { next(err); }
 };
 

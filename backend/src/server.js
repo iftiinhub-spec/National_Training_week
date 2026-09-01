@@ -6,6 +6,7 @@ import { startCertificateIssuanceWorker, stopCertificateIssuanceWorker } from '.
 import { closeEmailTransporter } from './utils/email.js';
 import { startReminderWorker, stopReminderWorker } from './services/reminderWorker.js';
 import { startEmailOutboxWorker, stopEmailOutboxWorker } from './services/emailOutboxWorker.js';
+import { startAttendanceReviewWorker, stopAttendanceReviewWorker } from './services/attendanceReviewWorker.js';
 
 const PORT = process.env.PORT || 5113;
 const PUBLIC_URL = process.env.BACKEND_URL || process.env.FRONTEND_URL || `http://localhost:${PORT}`;
@@ -28,6 +29,7 @@ const startServer = async () => {
       startCertificateIssuanceWorker();
       startReminderWorker();
       startEmailOutboxWorker();
+      startAttendanceReviewWorker();
     }
     const server = app.listen(PORT, () => {
       console.log(`\n🚀 National Training Week server running on port ${PORT}`);
@@ -46,6 +48,7 @@ const startServer = async () => {
       await stopCertificateIssuanceWorker();
       await stopReminderWorker();
       await stopEmailOutboxWorker();
+      await stopAttendanceReviewWorker();
       closeEmailTransporter();
       await mongoose.disconnect();
       clearTimeout(forcedExit);
