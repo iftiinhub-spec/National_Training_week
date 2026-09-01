@@ -146,9 +146,13 @@ export const createModerator = async (req, res, next) => {
 
 export const updateModerator = async (req, res, next) => {
   try {
-    const allowed = ['fullName', 'phone', 'isActive'];
+    const allowed = ['fullName', 'email', 'phone', 'isActive'];
     const updates = {};
     allowed.forEach((f) => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
+    if (updates.email) {
+      const duplicate = await User.exists({ email: updates.email, _id: { $ne: req.params.id } });
+      if (duplicate) return errorResponse(res, 'An account with this email already exists.', 409);
+    }
     const moderator = await User.findOneAndUpdate(
       { _id: req.params.id, role: 'moderator' },
       updates,

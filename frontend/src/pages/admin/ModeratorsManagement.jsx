@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { EyeIcon, EyeSlashIcon, MagnifyingGlassIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, KeyIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import PhoneInput from '../../components/common/PhoneInput';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
@@ -19,6 +19,11 @@ export const ModeratorsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [editingModerator, setEditingModerator] = useState(null);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [showResetPasswords, setShowResetPasswords] = useState({ newPassword: false, confirmPassword: false });
+  const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
     fullName: '',
@@ -72,16 +77,56 @@ export const ModeratorsManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
-      await api.post('/admin/moderators', form);
-      toast.success('Moderator account created!');
+      if (editingModerator) {
+        const res = await api.put(`/admin/moderators/${editingModerator._id}`, { fullName: form.fullName, email: form.email, phone: form.phone });
+        toast.success(res.message || 'Moderator updated successfully.');
+      } else {
+        await api.post('/admin/moderators', form);
+        toast.success('Moderator account created!');
+      }
       setShowModal(false);
+      setEditingModerator(null);
       setShowPassword(false);
       setForm({ fullName: '', email: '', password: '', phone: '' });
       fetchModerators();
     } catch (err) {
-      toast.error(err.message || 'Creation failed');
-    }
+      toast.error(err.message || (editingModerator ? 'Update failed' : 'Creation failed'));
+    } finally { setSaving(false); }
+  };
+
+  const openCreateModal = () => {
+    setEditingModerator(null);
+    setForm({ fullName: '', email: '', password: '', phone: '' });
+    setShowPassword(false);
+    setShowModal(true);
+  };
+
+  const openEditModal = (moderator) => {
+    setEditingModerator(moderator);
+    setForm({ fullName: moderator.fullName || '', email: moderator.email || '', password: '', phone: moderator.phone || '' });
+    setShowPassword(false);
+    setShowModal(true);
+  };
+
+  const openResetModal = (moderator) => {
+    setResetTarget(moderator);
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
+    setShowResetPasswords({ newPassword: false, confirmPassword: false });
+  };
+
+  const resetPassword = async (event) => {
+    event.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) return toast.error('Passwords do not match.');
+    if (passwordForm.newPassword.length < 8) return toast.error('Password must be at least 8 characters.');
+    setSaving(true);
+    try {
+      const res = await api.patch(`/admin/moderators/${resetTarget._id}/reset-password`, { newPassword: passwordForm.newPassword });
+      toast.success(res.message || 'Moderator password reset successfully.');
+      setResetTarget(null);
+    } catch (err) { toast.error(err.message || 'Password reset failed.'); }
+    finally { setSaving(false); }
   };
 
   const handleToggleStatus = async (id) => {
@@ -131,7 +176,7 @@ export const ModeratorsManagement = () => {
           </p>
         </div>
         <button
-          onClick={() => { setShowPassword(false); setShowModal(true); }}
+          onClick={openCreateModal}
           className="flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#1a6b3c] px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#124d2a] sm:w-auto"
         >
           <UserPlusIcon className="w-4 h-4" />
@@ -184,6 +229,8 @@ export const ModeratorsManagement = () => {
                     >
                       {mod.isActive ? 'Deactivate' : 'Activate'}
                     </button>
+                    <button onClick={() => openEditModal(mod)} className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-emerald-50 hover:text-[#1a6b3c]" title="Edit moderator"><PencilIcon className="h-4 w-4" />Edit</button>
+                    <button onClick={() => openResetModal(mod)} className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-amber-50 hover:text-amber-700" title="Reset moderator password"><KeyIcon className="h-4 w-4" />Reset password</button>
                     <button onClick={() => deleteModerators([mod._id])} aria-label={`Delete ${mod.fullName}`} title="Delete moderator" className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-4 w-4" /></button>
                     </div>
                   </td>
@@ -199,7 +246,7 @@ export const ModeratorsManagement = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onMouseDown={() => setShowModal(false)}>
           <div className="relative bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-4" onMouseDown={(e) => e.stopPropagation()}>
             <AdminModalClose onClick={() => setShowModal(false)} />
-            <h3 className="text-lg font-bold text-slate-900">Create Moderator Account</h3>
+            <h3 className="text-lg font-bold text-slate-900">{editingModerator ? 'Edit Moderator Account' : 'Create Moderator Account'}</h3>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
               <div>
@@ -228,7 +275,7 @@ export const ModeratorsManagement = () => {
                 />
               </div>
 
-              <div>
+              {!editingModerator && <div>
                 <label className="block font-bold uppercase text-slate-700 mb-1">Initial Password *</label>
                 <div className="relative">
                   <input
@@ -246,7 +293,7 @@ export const ModeratorsManagement = () => {
                   </button>
                 </div>
                 <p className="mt-1 text-[11px] font-normal normal-case text-slate-500">Use at least 8 characters.</p>
-              </div>
+              </div>}
 
               <div>
                 <label className="block font-bold uppercase text-slate-700 mb-1">Phone <span className="font-normal normal-case text-slate-400">(optional)</span></label>
@@ -256,18 +303,34 @@ export const ModeratorsManagement = () => {
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => { setShowModal(false); setEditingModerator(null); }}
                   className="px-4 py-2 text-slate-600 rounded-lg hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs"
+                  disabled={saving}
+                  className="px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs disabled:opacity-60"
                 >
-                  Create Account
+                  {saving ? 'Saving…' : editingModerator ? 'Save Changes' : 'Create Account'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {resetTarget && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onMouseDown={() => !saving && setResetTarget(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="reset-moderator-title" className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+            <AdminModalClose onClick={() => !saving && setResetTarget(null)} />
+            <h3 id="reset-moderator-title" className="pr-10 text-lg font-bold text-slate-900">Reset Moderator Password</h3>
+            <p className="mt-2 text-sm text-slate-500">Set a new password for <strong className="text-slate-700">{resetTarget.fullName}</strong>. Existing sessions will be signed out.</p>
+            <form onSubmit={resetPassword} className="mt-5 space-y-4">
+              {[['newPassword', 'New password'], ['confirmPassword', 'Confirm new password']].map(([key, label]) => <label key={key} className="block text-xs font-bold uppercase text-slate-700">{label}<span className="relative mt-1 block"><input type={showResetPasswords[key] ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={128} required value={passwordForm[key]} onChange={(e) => setPasswordForm({ ...passwordForm, [key]: e.target.value })} className="w-full rounded-lg border border-slate-300 p-2.5 pr-11 text-sm font-normal normal-case" /><button type="button" aria-label={`${showResetPasswords[key] ? 'Hide' : 'Show'} ${label.toLowerCase()}`} onClick={() => setShowResetPasswords({ ...showResetPasswords, [key]: !showResetPasswords[key] })} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400">{showResetPasswords[key] ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></span></label>)}
+              <p className="text-xs text-slate-500">Use between 8 and 128 characters.</p>
+              <div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setResetTarget(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Resetting…' : 'Reset Password'}</button></div>
             </form>
           </div>
         </div>

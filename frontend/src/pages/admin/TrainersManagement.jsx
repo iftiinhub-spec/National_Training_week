@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, EyeSlashIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, EyeSlashIcon, ArrowDownTrayIcon, KeyIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import PhoneInput from '../../components/common/PhoneInput';
 import PhotoCropModal from '../../components/common/PhotoCropModal';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
@@ -52,6 +52,9 @@ export const TrainersManagement = () => {
   const [rejectingTrainer, setRejectingTrainer] = useState(null);
   const [rejectionNote, setRejectionNote] = useState('');
   const [reviewing, setReviewing] = useState(false);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [showResetPasswords, setShowResetPasswords] = useState({ newPassword: false, confirmPassword: false });
   const fileRef = useRef();
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -236,6 +239,25 @@ export const TrainersManagement = () => {
     }
   };
 
+  const openResetModal = (trainer) => {
+    setResetTarget(trainer);
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
+    setShowResetPasswords({ newPassword: false, confirmPassword: false });
+  };
+
+  const resetPassword = async (event) => {
+    event.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) return toast.error('Passwords do not match.');
+    if (passwordForm.newPassword.length < 8) return toast.error('Password must be at least 8 characters.');
+    setSaving(true);
+    try {
+      const res = await api.patch(`/admin/trainers/${resetTarget._id}/reset-password`, { newPassword: passwordForm.newPassword });
+      toast.success(res.message || 'Trainer password reset successfully.');
+      setResetTarget(null);
+    } catch (err) { toast.error(err.message || 'Password reset failed.'); }
+    finally { setSaving(false); }
+  };
+
   if (loading) return <LoadingSpinner label="Loading trainer profiles..." />;
 
   return (
@@ -386,6 +408,7 @@ export const TrainersManagement = () => {
             <h3 className="text-lg font-bold text-slate-900">
               {editingTrainer ? 'Edit Trainer Profile' : 'Create Trainer Profile'}
             </h3>
+            {editingTrainer?.user && <button type="button" onClick={() => openResetModal(editingTrainer)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-amber-200 px-4 text-sm font-semibold text-amber-800 hover:bg-amber-50"><KeyIcon className="h-5 w-5" />Reset password</button>}
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
 
@@ -548,6 +571,20 @@ export const TrainersManagement = () => {
                 <button type="button" disabled={reviewing} onClick={() => { setRejectingTrainer(null); setRejectionNote(''); }} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-60">Cancel</button>
                 <button type="submit" disabled={reviewing || !rejectionNote.trim()} className="min-h-11 rounded-xl bg-rose-600 px-5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-50">{reviewing ? 'Rejecting...' : 'Reject and send email'}</button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {resetTarget && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onMouseDown={() => !saving && setResetTarget(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="reset-trainer-title" className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+            <AdminModalClose onClick={() => !saving && setResetTarget(null)} />
+            <h3 id="reset-trainer-title" className="pr-10 text-lg font-bold text-slate-900">Reset Trainer Password</h3>
+            <p className="mt-2 text-sm text-slate-500">Set a new password for <strong className="text-slate-700">{resetTarget.name}</strong>. Existing sessions will be signed out.</p>
+            <form onSubmit={resetPassword} className="mt-5 space-y-4">
+              {[['newPassword', 'New password'], ['confirmPassword', 'Confirm new password']].map(([key, label]) => <label key={key} className="block text-xs font-bold uppercase text-slate-700">{label}<span className="relative mt-1 block"><input type={showResetPasswords[key] ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={128} required value={passwordForm[key]} onChange={(e) => setPasswordForm({ ...passwordForm, [key]: e.target.value })} className="w-full rounded-lg border border-slate-300 p-2.5 pr-11 text-sm font-normal normal-case" /><button type="button" aria-label={`${showResetPasswords[key] ? 'Hide' : 'Show'} ${label.toLowerCase()}`} onClick={() => setShowResetPasswords({ ...showResetPasswords, [key]: !showResetPasswords[key] })} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400">{showResetPasswords[key] ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></span></label>)}
+              <p className="text-xs text-slate-500">Use between 8 and 128 characters.</p>
+              <div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setResetTarget(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Resetting…' : 'Reset Password'}</button></div>
             </form>
           </div>
         </div>

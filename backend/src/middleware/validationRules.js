@@ -88,6 +88,7 @@ export const moderatorCreateValidation = [
 
 export const moderatorUpdateValidation = [
   humanName(body, 'fullName', true),
+  body('email').optional().isEmail().withMessage('A valid email is required.').normalizeEmail(),
   body('phone').optional({ checkFalsy: true }).customSanitizer(normalizePhone).custom(isValidInternationalPhone),
   body('isActive').optional().isBoolean().toBoolean(),
 ];
