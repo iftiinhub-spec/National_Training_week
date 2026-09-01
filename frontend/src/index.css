@@ -429,8 +429,8 @@ html {
 
 /* Grows to fill the bar when everything fits, holds its width and scrolls when it does not. */
 .participant-bottom-nav-grid > a {
-  flex: 1 0 auto;
-  min-width: 4.5rem;
+  flex: 1 0 5rem;
+  min-width: 5rem;
   font-size: 11px;
   line-height: 1.2;
 }
