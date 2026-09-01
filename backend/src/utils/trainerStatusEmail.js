@@ -4,6 +4,7 @@ const portalUrl = () => `${process.env.FRONTEND_URL || ''}/signin`;
 
 export const sendTrainerApplicationReceivedEmail = ({ to, trainerName }) => sendEmail({
   to,
+  category: 'application_received',
   subject: 'Your National Training Week trainer application was received',
   html: emailLayout({
     eyebrow: 'Trainer application received',
@@ -18,6 +19,7 @@ export const sendAdminNewTrainerApplicationEmail = ({ trainerName, trainerEmail 
   if (!adminEmail) return Promise.resolve({ success: true, messageId: 'skipped-no-admin-email' });
   return sendEmail({
     to: adminEmail,
+    category: 'application_received',
     subject: 'New trainer application awaiting review',
     html: emailLayout({
       eyebrow: 'Admin notification',
@@ -30,6 +32,7 @@ export const sendAdminNewTrainerApplicationEmail = ({ trainerName, trainerEmail 
 
 export const sendTrainerApprovedEmail = ({ to, trainerName }) => sendEmail({
   to,
+  category: 'approval',
   subject: 'Your National Training Week trainer account is approved',
   html: emailLayout({
     eyebrow: 'Trainer access approved',
@@ -41,6 +44,7 @@ export const sendTrainerApprovedEmail = ({ to, trainerName }) => sendEmail({
 
 export const sendTrainerRejectedEmail = ({ to, trainerName, reason }) => sendEmail({
   to,
+  category: 'rejection',
   subject: 'National Training Week trainer application update',
   html: emailLayout({
     eyebrow: 'Trainer application update',

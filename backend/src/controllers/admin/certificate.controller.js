@@ -56,14 +56,19 @@ export const generateCertificate = async (req, res, next) => {
       certificateId: populated.certificateId,
       verifyUrl,
       portalUrl: `${process.env.FRONTEND_URL}/portal/certificates`,
+      relatedModel: 'Certificate',
+      relatedId: certificate._id,
+      dedupeKey: `certificate:${certificate._id}`,
     });
-    await Certificate.updateOne({ _id: certificate._id }, emailResult.success ? {
+    await Certificate.updateOne({ _id: certificate._id }, emailResult.queued ? {
+      $set: { emailStatus: 'pending', emailLastError: '' }, $inc: { emailAttempts: 1 },
+    } : emailResult.success ? {
       $set: { emailStatus: 'sent', emailSentAt: new Date(), emailLastError: '' }, $inc: { emailAttempts: 1 },
     } : {
       $set: { emailStatus: 'failed', emailLastError: String(emailResult.error || 'Email delivery failed.').slice(0, 500) }, $inc: { emailAttempts: 1 },
     });
 
-    return successResponse(res, { certificate: populated, emailDelivered: emailResult.success }, emailResult.success ? 'Certificate issued and participant notified.' : 'Certificate issued, but its notification email could not be delivered.', 201);
+    return successResponse(res, { certificate: populated, emailDelivered: !emailResult.queued && emailResult.success, emailQueued: emailResult.queued }, emailResult.queued ? 'Certificate issued and its email was safely queued.' : emailResult.success ? 'Certificate issued and participant notified.' : 'Certificate issued, but its notification email could not be delivered.', 201);
   } catch (err) { next(err); }
 };
 

@@ -202,7 +202,7 @@ export const reviewTrainer = async (req, res, next) => {
       const result = status === 'approved'
         ? await sendTrainerApprovedEmail({ to: trainer.email, trainerName: trainer.name })
         : await sendTrainerRejectedEmail({ to: trainer.email, trainerName: trainer.name, reason });
-      emailStatus = result.success ? 'sent' : 'failed';
+      emailStatus = result.queued ? 'queued' : result.success ? 'sent' : 'failed';
     }
     return successResponse(res, { trainer, emailStatus }, `Trainer access ${status}.`);
   } catch (error) { next(error); }

@@ -23,6 +23,7 @@ import { getContactMessages, markAsRead, deleteContactMessage } from '../control
 import { getSettings, updateSettings, sendTestEmail, uploadCertificateSignature, removeCertificateSignature } from '../controllers/admin/settings.controller.js';
 import { createFAQ, deleteFAQ, getFAQs, toggleFAQPublish, updateFAQ } from '../controllers/admin/faq.controller.js';
 import { createSponsor, deleteSponsor, getSponsors, toggleSponsorStatus, updateSponsor } from '../controllers/admin/sponsor.controller.js';
+import { getEmailMessages, getEmailOperations, pauseEmailDelivery, resumeEmailDelivery, retryEmailMessages, suppressEmailMessages } from '../controllers/admin/emailOperations.controller.js';
 import { HUMAN_NAME_MESSAGE, isValidHumanName, normalizeHumanName } from '../utils/humanName.js';
 
 const router = express.Router();
@@ -118,6 +119,14 @@ router.get('/reports/participants-by-gender', participantsByGender);
 router.get('/reports/certificates', certificateReport);
 router.get('/reports/feedback', feedbackReport);
 router.get('/reports/daily-attendance', dailyAttendanceSummary);
+
+// Email delivery queue
+router.get('/email-operations', getEmailOperations);
+router.get('/email-operations/messages', getEmailMessages);
+router.post('/email-operations/pause', body('reason').optional({ checkFalsy: true }).trim().isLength({ max: 200 }), validate, pauseEmailDelivery);
+router.post('/email-operations/resume', resumeEmailDelivery);
+router.post('/email-operations/retry', body('ids').optional().isArray({ max: 100 }), body('ids.*').optional().isMongoId(), validate, retryEmailMessages);
+router.post('/email-operations/suppress', body('ids').isArray({ min: 1, max: 100 }), body('ids.*').isMongoId(), validate, suppressEmailMessages);
 
 // Users
 router.delete('/participants', body('ids').isArray({ min: 1 }).withMessage('Select at least one participant.'), body('ids.*').isMongoId().withMessage('Valid participant IDs are required.'), validate, deleteParticipants);

@@ -28,7 +28,7 @@ const communicationSchema = new mongoose.Schema(
     sentAt: { type: Date, default: Date.now },
     deliveryStatus: {
       type: String,
-      enum: ['sent', 'failed', 'partial'],
+      enum: ['queued', 'sent', 'failed', 'partial'],
       default: 'sent',
     },
     failedRecipients: [{ type: String }],

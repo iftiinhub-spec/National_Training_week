@@ -1,7 +1,7 @@
 import SiteSettings from '../../models/SiteSettings.js';
 import { errorResponse, successResponse } from '../../utils/apiResponse.js';
 import { encryptSetting } from '../../utils/settingsEncryption.js';
-import { closeEmailTransporter, emailLayout, sendEmail } from '../../utils/email.js';
+import { closeEmailTransporter, deliverEmailNow, emailLayout } from '../../utils/email.js';
 
 const defaults = {
   key: 'global',
@@ -99,7 +99,7 @@ export const getPublicSettings = async (req, res, next) => {
 
 export const sendTestEmail = async (req, res, next) => {
   try {
-    const result = await sendEmail({
+    const result = await deliverEmailNow({
       to: req.body.email,
       subject: 'National Training Week email delivery test',
       html: emailLayout({
