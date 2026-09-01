@@ -10,17 +10,27 @@ export const getEmailOperations = async (_req, res) => {
   const oneHourAgo = new Date(Date.now() - 3600_000);
   const [byStatus, byCategory, sentLastHour, oldestQueued, approvalDigests] = await Promise.all([
     EmailOutbox.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
-    EmailOutbox.aggregate([{ $match: { status: { $in: ['queued', 'retrying', 'processing'] } } }, { $group: { _id: '$category', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+    EmailOutbox.aggregate([
+      { $group: {
+        _id: '$category',
+        total: { $sum: 1 },
+        waiting: { $sum: { $cond: [{ $in: ['$status', ['queued', 'retrying', 'processing']] }, 1, 0] } },
+        sent: { $sum: { $cond: [{ $eq: ['$status', 'sent'] }, 1, 0] } },
+        failed: { $sum: { $cond: [{ $eq: ['$status', 'dead'] }, 1, 0] } },
+        suppressed: { $sum: { $cond: [{ $eq: ['$status', 'suppressed'] }, 1, 0] } },
+      } },
+      { $sort: { waiting: -1, total: -1 } },
+    ]),
     EmailOutbox.countDocuments({ status: 'sent', sentAt: { $gte: oneHourAgo } }),
     EmailOutbox.findOne({ status: { $in: ['queued', 'retrying'] } }).sort({ priority: -1, createdAt: 1 }).select('createdAt').lean(),
     ApprovalEmailDigest.countDocuments({ 'items.0': { $exists: true } }),
   ]);
   const statuses = Object.fromEntries(byStatus.map(({ _id, count }) => [_id, count]));
   const waiting = (statuses.queued || 0) + (statuses.retrying || 0) + (statuses.processing || 0) + approvalDigests;
-  const categories = byCategory.map(({ _id, count }) => ({ category: _id, count }));
+  const categories = byCategory.map(({ _id, total, waiting: categoryWaiting, sent, failed, suppressed }) => ({ category: _id, total, waiting: categoryWaiting, sent, failed, suppressed }));
   const approvals = categories.find((item) => item.category === 'approval');
-  if (approvals) approvals.count += approvalDigests;
-  else if (approvalDigests) categories.push({ category: 'approval', count: approvalDigests });
+  if (approvals) { approvals.total += approvalDigests; approvals.waiting += approvalDigests; }
+  else if (approvalDigests) categories.push({ category: 'approval', total: approvalDigests, waiting: approvalDigests, sent: 0, failed: 0, suppressed: 0 });
   res.json({
     statuses,
     categories,
@@ -34,19 +44,6 @@ export const getEmailOperations = async (_req, res) => {
     circuit: getEmailCircuit(),
     deliveryDisabled: process.env.EMAIL_DELIVERY_MODE === 'disabled' || process.env.DISABLE_EMAIL_WORKER === 'true',
   });
-};
-
-export const getEmailMessages = async (req, res) => {
-  const page = Math.max(1, Number(req.query.page) || 1);
-  const limit = Math.min(100, Math.max(10, Number(req.query.limit) || 25));
-  const filter = {};
-  if (req.query.status) filter.status = req.query.status;
-  if (req.query.category) filter.category = req.query.category;
-  const [items, total] = await Promise.all([
-    EmailOutbox.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).select('-html -text').lean(),
-    EmailOutbox.countDocuments(filter),
-  ]);
-  res.json({ items, page, pages: Math.max(1, Math.ceil(total / limit)), total });
 };
 
 export const pauseEmailDelivery = async (req, res) => res.json({ circuit: pauseEmailCircuit(req.body.reason || 'Paused by an administrator.') });
