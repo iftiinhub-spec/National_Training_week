@@ -167,6 +167,20 @@ export const updateTrainer = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const resetTrainerPassword = async (req, res, next) => {
+  try {
+    const trainer = await Trainer.findById(req.params.id).select('user');
+    if (!trainer) return errorResponse(res, 'Trainer not found.', 404);
+    if (!trainer.user) return errorResponse(res, 'This trainer does not have a portal account.', 409);
+    const user = await User.findOne({ _id: trainer.user, role: 'trainer' });
+    if (!user) return errorResponse(res, 'Trainer portal account not found.', 404);
+    user.passwordHash = req.body.newPassword;
+    user.tokenVersion += 1;
+    await user.save();
+    return successResponse(res, null, 'Trainer password reset successfully.');
+  } catch (err) { next(err); }
+};
+
 export const reviewTrainer = async (req, res, next) => {
   try {
     const { status } = req.body;

@@ -9,7 +9,7 @@ import { assignmentValidation, attendanceValidation, categoryValidation, eventDa
 // Controllers
 import { getEvents, getEvent, createEvent, updateEvent, deleteEvent, getEventDays, updateEventDay, regenerateEventDays } from '../controllers/admin/event.controller.js';
 import { getCategories, getCategory, createCategory, updateCategory, deleteCategory } from '../controllers/admin/category.controller.js';
-import { getTrainers, getTrainer, createTrainer, updateTrainer, deleteTrainer, deleteTrainers, reviewTrainer } from '../controllers/admin/trainer.controller.js';
+import { getTrainers, getTrainer, createTrainer, updateTrainer, resetTrainerPassword, deleteTrainer, deleteTrainers, reviewTrainer } from '../controllers/admin/trainer.controller.js';
 import { getTrainings, getTraining, createTraining, updateTraining, updateTrainingStatus, setTrainingRegistration, completeTraining, assignTrainingStaff, deleteTraining } from '../controllers/admin/training.controller.js';
 import { getParticipants, getParticipant, toggleParticipantStatus, resetParticipantPassword, deleteParticipant, deleteParticipants, getModerators, getModerator, createModerator, updateModerator, toggleModeratorStatus, resetModeratorPassword, deleteModerator, deleteModerators } from '../controllers/admin/user.controller.js';
 import { getRegistrations, getRegistration, updateRegistrationStatus, approveFilteredRegistrations, emailFilteredRegistrations, assignParticipants, deleteRegistration, deleteRegistrations } from '../controllers/admin/registration.controller.js';
@@ -46,6 +46,7 @@ router.delete('/trainers', body('ids').isArray({ min: 1 }).withMessage('Select a
 router.route('/trainers').get(paginationValidation, validate, getTrainers).post(uploadImage.single('photo'), verifyUploadedImage, body('password').isLength({ min: 8, max: 128 }).withMessage('Password must be between 8 and 128 characters.'), trainerValidation, validate, createTrainer);
 router.route('/trainers/:id').get(getTrainer).put(uploadImage.single('photo'), verifyUploadedImage, trainerValidation, validate, updateTrainer).delete(deleteTrainer);
 router.patch('/trainers/:id/access', body('status').isIn(['pending', 'approved', 'rejected', 'suspended']), body('reason').optional({ checkFalsy: true }).trim().isLength({ max: 500 }), validate, reviewTrainer);
+router.patch('/trainers/:id/reset-password', idParam(), body('newPassword').isLength({ min: 8, max: 128 }).withMessage('Password must be between 8 and 128 characters.'), validate, resetTrainerPassword);
 
 // Trainings
 router.route('/trainings').get(paginationValidation, ...optionalObjectIdQueries('event', 'eventDay', 'category'), validate, getTrainings).post(uploadImage.single('coverImage'), verifyUploadedImage, trainingValidation, validate, createTraining);
@@ -128,7 +129,7 @@ router.delete('/moderators', body('ids').isArray({ min: 1 }).withMessage('Select
 router.route('/moderators').get(paginationValidation, validate, getModerators).post(moderatorCreateValidation, validate, createModerator);
 router.route('/moderators/:id').get(idParam(), validate, getModerator).put(idParam(), moderatorUpdateValidation, validate, updateModerator).delete(idParam(), validate, deleteModerator);
 router.patch('/moderators/:id/toggle-status', idParam(), validate, toggleModeratorStatus);
-router.patch('/moderators/:id/reset-password', idParam(), body('newPassword').isLength({ min: 8, max: 128 }), validate, resetModeratorPassword);
+router.patch('/moderators/:id/reset-password', idParam(), body('newPassword').isLength({ min: 8, max: 128 }).withMessage('Password must be between 8 and 128 characters.'), validate, resetModeratorPassword);
 
 // Contact messages
 router.route('/contact-messages').get(paginationValidation, validate, getContactMessages);
