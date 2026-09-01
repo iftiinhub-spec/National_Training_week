@@ -56,6 +56,7 @@ export const feedbackValidation = [
 
 export const attendanceValidation = [
   body('status').isIn(['present', 'absent', 'late', 'not_marked']).withMessage('Select a valid attendance status.'),
+  body('correctionReason').optional({ checkFalsy: true }).trim().isLength({ min: 5, max: 500 }).withMessage('Correction reason must be between 5 and 500 characters.'),
 ];
 
 export const manualAttendanceValidation = [

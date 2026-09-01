@@ -179,7 +179,13 @@ const reconcileCompletedTrainings = async () => {
     Certificate.updateMany({ emailStatus: { $exists: false } }, { $set: { emailStatus: 'sent', emailAttempts: 1 } }),
     TrainerCertificate.updateMany({ emailStatus: { $exists: false } }, { $set: { emailStatus: 'sent', emailAttempts: 1 } }),
   ]);
-  const completed = await Training.find({ status: 'completed', completedBy: { $ne: null } })
+  const completed = await Training.find({
+    status: 'completed', completedBy: { $ne: null },
+    $or: [
+      { attendanceFinalizedAt: { $ne: null } },
+      { attendanceReviewEndsAt: null, attendanceLockedAt: { $ne: null } },
+    ],
+  })
     .select('_id completedBy').limit(1_000).lean();
   if (!completed.length) return;
   const existingTrainingIds = new Set((await CertificateIssuanceJob.find({

@@ -7,7 +7,7 @@ import AdminModalClose from '../../components/common/AdminModalClose';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon, EllipsisVerticalIcon, LockClosedIcon, LockOpenIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon, EllipsisVerticalIcon, LockClosedIcon, LockOpenIcon } from '@heroicons/react/24/outline';
 import { formatTimeRange12, toTimeInputValue } from '../../utils/timeFormat';
 import { statusControlClass } from '../../utils/statusPresentation';
 
@@ -138,6 +138,7 @@ export const TrainingsManagement = () => {
   const [moderators, setModerators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ event: '', eventDay: '', training: '', level: '', language: '' });
+  const [page, setPage] = useState(1);
 
   const [showModal, setShowModal] = useState(false);
   const [editingTraining, setEditingTraining] = useState(null);
@@ -168,15 +169,20 @@ export const TrainingsManagement = () => {
 
   const fetchData = async () => {
     try {
-      const [trRes, evRes, catRes, trnerRes, modRes] = await Promise.all([
-        api.get('/admin/trainings?limit=100'),
+      const [firstTrainingPage, evRes, catRes, trnerRes, modRes] = await Promise.all([
+        api.get('/admin/trainings', { params: { page: 1, limit: 100 } }),
         api.get('/admin/events'),
         api.get('/admin/categories'),
         api.get('/admin/trainers?limit=100'),
         api.get('/admin/moderators?limit=100'),
       ]);
-
-      if (trRes.success) setTrainings(trRes.data || []);
+      let allTrainings = firstTrainingPage.success ? firstTrainingPage.data || [] : [];
+      const trainingPages = firstTrainingPage.pagination?.pages || 1;
+      if (trainingPages > 1) {
+        const remaining = await Promise.all(Array.from({ length: trainingPages - 1 }, (_, index) => api.get('/admin/trainings', { params: { page: index + 2, limit: 100 } })));
+        allTrainings = [...allTrainings, ...remaining.flatMap((response) => response.success ? response.data || [] : [])];
+      }
+      setTrainings(allTrainings);
       if (evRes.success && evRes.data?.length > 0) {
         setEvents(evRes.data);
         // Load days for the first event
@@ -200,6 +206,8 @@ export const TrainingsManagement = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => { setPage(1); }, [filters.event, filters.eventDay, filters.level, filters.language]);
 
   const handleEventChange = async (eventId) => {
     setForm((prev) => ({ ...prev, event: eventId, eventDay: '' }));
@@ -323,7 +331,7 @@ export const TrainingsManagement = () => {
   };
 
   const handleStatusChange = async (trainingId, newStatus) => {
-    if (newStatus === 'completed' && !await confirmAction({ title: 'Mark this session as finished?', message: 'Attendance will be locked. Participant certificates and the trainer Certificate of Appreciation will be queued for safe background delivery. This session cannot be reopened.', confirmLabel: 'Mark as finished', tone: 'warning' })) return;
+    if (newStatus === 'completed' && !await confirmAction({ title: 'Mark this session as finished?', message: 'Unmarked attendance will become absent and a six-hour administrator review will begin. Certificates will be processed after the review closes. This session cannot be reopened.', confirmLabel: 'Start attendance review', tone: 'warning' })) return;
     try {
       const res = await api.patch(`/admin/trainings/${trainingId}/status`, { status: newStatus });
       if (res.success) {
@@ -367,6 +375,10 @@ export const TrainingsManagement = () => {
 
   if (loading) return <LoadingSpinner label="Loading training sessions..." />;
   const filteredTrainings = trainings.filter((item) => (!filters.event || String(item.event?._id || item.event) === filters.event) && (!filters.eventDay || String(item.eventDay?._id || item.eventDay) === filters.eventDay) && (!filters.level || item.level === filters.level) && (!filters.language || item.language === filters.language));
+  const pageSize = 20;
+  const totalPages = Math.max(1, Math.ceil(filteredTrainings.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const visibleTrainings = filteredTrainings.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6">
@@ -404,7 +416,7 @@ export const TrainingsManagement = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {filteredTrainings.map((tr) => (
+              {visibleTrainings.map((tr) => (
                 <tr key={tr._id} className="hover:bg-slate-50">
                   <td className="p-4 font-bold text-slate-900 max-w-xs truncate">
                     {tr.title}
@@ -454,6 +466,7 @@ export const TrainingsManagement = () => {
             </tbody>
           </table>
         </div>
+        {filteredTrainings.length > pageSize && <nav aria-label="Training session pages" className="flex flex-col gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-medium text-slate-500">Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredTrainings.length)} of {filteredTrainings.length} sessions</p><div className="flex items-center gap-2"><button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-slate-300 px-3 text-xs font-bold text-slate-700 disabled:opacity-40"><ChevronLeftIcon className="h-4 w-4" />Previous</button><span className="min-w-20 text-center text-xs font-bold text-slate-600">Page {currentPage} of {totalPages}</span><button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={currentPage === totalPages} className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-slate-300 px-3 text-xs font-bold text-slate-700 disabled:opacity-40">Next<ChevronRightIcon className="h-4 w-4" /></button></div></nav>}
       </div>
 
       {/* Form Modal */}

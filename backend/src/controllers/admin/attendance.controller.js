@@ -5,7 +5,6 @@ import Training from '../../models/Training.js';
 import { randomUUID } from 'node:crypto';
 import { generateQRDataUrl } from '../../utils/qrGenerator.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
-import { enqueueCertificateIssuance } from '../../services/completeTrainingSession.js';
 
 const checkAccess = async (trainingId, userId, role) => {
   if (role === 'admin') return true;
@@ -118,7 +117,13 @@ export const getAttendance = async (req, res, next) => {
       not_marked: records.filter((r) => r.status === 'not_marked').length,
     };
 
-    return successResponse(res, { records, stats });
+    const training = await Training.findById(trainingId).select('status completedAt attendanceReviewEndsAt attendanceFinalizedAt attendanceLockedAt').lean();
+    const reviewOpen = training?.status === 'completed' && !training.attendanceFinalizedAt && training.attendanceReviewEndsAt && new Date(training.attendanceReviewEndsAt) > new Date();
+    return successResponse(res, { records, stats, review: {
+      open: Boolean(reviewOpen),
+      endsAt: training?.attendanceReviewEndsAt || null,
+      finalizedAt: training?.attendanceFinalizedAt || null,
+    } });
   } catch (err) { next(err); }
 };
 
@@ -129,41 +134,37 @@ export const updateAttendance = async (req, res, next) => {
     const hasAccess = await checkAccess(trainingId, req.user._id, req.user.role);
     if (!hasAccess) return errorResponse(res, 'Access denied.', 403);
     const { status } = req.body;
+    const correctionReason = String(req.body.correctionReason || '').trim();
     const allowed = ['present', 'absent', 'late', 'not_marked'];
     if (!allowed.includes(status)) return errorResponse(res, 'Invalid attendance status.', 400);
 
-    // Once a session is completed the sheet is closed, with one exception: an administrator may
-    // mark a participant present who was never marked at all. Present, absent and late records are
-    // decisions someone already made, and stay untouchable.
-    const locked = await attendanceIsLocked(trainingId);
-    const retroactive = locked && req.user.role === 'admin' && status === 'present';
-    if (locked && !retroactive) {
-      return errorResponse(res, 'Attendance is locked because this training is completed.', 400);
+    const training = await Training.findById(trainingId).select('status completedAt attendanceReviewEndsAt attendanceFinalizedAt');
+    if (!training) return errorResponse(res, 'Training not found.', 404);
+    const completed = training.status === 'completed';
+    const reviewOpen = completed && !training.attendanceFinalizedAt && training.attendanceReviewEndsAt && training.attendanceReviewEndsAt > new Date();
+    if (completed && (!reviewOpen || req.user.role !== 'admin')) return errorResponse(res, reviewOpen ? 'Only an administrator can correct attendance during review.' : 'The six-hour attendance review is closed.', 400);
+    if (completed && status === 'not_marked') return errorResponse(res, 'Completed-session attendance must be present, absent, or late.', 400);
+    if (completed && correctionReason.length < 5) return errorResponse(res, 'Enter a correction reason of at least 5 characters.', 400);
+
+    const current = await Attendance.findOne({ _id: attendanceId, training: trainingId });
+    if (!current) return errorResponse(res, 'Attendance record not found.', 404);
+    const changedAt = new Date();
+    const previousStatus = current.status;
+    current.status = status;
+    current.method = 'manual';
+    current.updatedBy = req.user._id;
+    if (['present', 'late'].includes(status) && !current.checkinTime) current.checkinTime = training.completedAt || changedAt;
+    if (status === 'absent' || status === 'not_marked') current.checkinTime = null;
+    if (completed) {
+      current.correctionReason = correctionReason;
+      current.correctedAt = changedAt;
+      current.correctedBy = req.user._id;
+      current.correctionHistory.push({ from: previousStatus, to: status, reason: correctionReason, changedBy: req.user._id, changedAt });
     }
+    const record = await current.save();
+    await record.populate('participant', 'fullName email');
 
-    const training = retroactive ? await Training.findById(trainingId).select('completedAt') : null;
-    const checkinTime = retroactive ? (training?.completedAt || new Date()) : new Date();
-
-    const record = await Attendance.findOneAndUpdate(
-      // The not_marked guard is part of the query, so a completed session cannot overwrite an
-      // existing decision even if two admins act at the same moment.
-      { _id: attendanceId, training: trainingId, ...(retroactive ? { status: 'not_marked' } : {}) },
-      { status, method: 'manual', updatedBy: req.user._id, ...(status === 'present' ? { checkinTime } : {}) },
-      { new: true }
-    ).populate('participant', 'fullName email');
-
-    if (!record) {
-      return retroactive
-        ? errorResponse(res, 'Only a participant with no attendance recorded can be marked present after completion.', 400)
-        : errorResponse(res, 'Attendance record not found.', 404);
-    }
-
-    if (retroactive) {
-      // The worker recomputes who is present and skips anyone already emailed, so this issues a
-      // certificate for exactly this participant.
-      await enqueueCertificateIssuance({ trainingId, requestedBy: req.user._id, restart: true });
-      return successResponse(res, { attendance: record }, `${record.participant?.fullName || 'Participant'} marked present. Their certificate has been queued for delivery.`);
-    }
+    if (completed) return successResponse(res, { attendance: record }, `${record.participant?.fullName || 'Participant'} attendance corrected. Certificates will be processed when the six-hour review closes.`);
 
     return successResponse(res, { attendance: record }, 'Attendance updated.');
   } catch (err) { next(err); }

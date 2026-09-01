@@ -1,205 +1,79 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import api from '../../api/axios';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
-import toast from 'react-hot-toast';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import AdminModalClose from '../../components/common/AdminModalClose';
 
-export const AttendanceManagement = () => {
-  const confirmAction = useConfirmDialog();
+export default function AttendanceManagement() {
   const [trainings, setTrainings] = useState([]);
   const [selectedTraining, setSelectedTraining] = useState('');
   const [records, setRecords] = useState([]);
   const [stats, setStats] = useState(null);
+  const [review, setReview] = useState({ open: false, endsAt: null, finalizedAt: null });
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ event: '', eventDay: '', training: '' });
   const [search, setSearch] = useState('');
+  const [pendingCorrection, setPendingCorrection] = useState(null);
+  const [correctionReason, setCorrectionReason] = useState('');
 
   useEffect(() => {
-    const fetchTrainings = async () => {
-      try {
-        const res = await api.get('/admin/trainings?limit=100');
-        if (res.success && res.data?.length > 0) {
-          setTrainings(res.data);
-          setSelectedTraining(res.data[0]._id);
-        }
-      } catch (err) {
-        toast.error('Failed to load trainings.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTrainings();
+    api.get('/admin/trainings?limit=100').then((res) => {
+      const items = res.success ? res.data || [] : [];
+      setTrainings(items); setSelectedTraining(items[0]?._id || '');
+    }).catch(() => toast.error('Failed to load trainings.')).finally(() => setLoading(false));
   }, []);
 
   const filteredTrainings = useMemo(() => trainings.filter((item) => (!filters.event || String(item.event?._id || item.event) === filters.event) && (!filters.eventDay || String(item.eventDay?._id || item.eventDay) === filters.eventDay)), [trainings, filters.event, filters.eventDay]);
-  useEffect(() => {
-    if (filters.training) setSelectedTraining(filters.training);
-    else setSelectedTraining(filteredTrainings[0]?._id || '');
-  }, [filters.training, filteredTrainings]);
+  useEffect(() => { setSelectedTraining(filters.training || filteredTrainings[0]?._id || ''); }, [filters.training, filteredTrainings]);
 
   const fetchAttendance = async (trainingId) => {
     if (!trainingId) return;
     try {
       const res = await api.get(`/admin/trainings/${trainingId}/attendance`);
-      if (res.success) {
-        setRecords(res.data.records || []);
-        setStats(res.data.stats);
-      }
-    } catch (err) {
-      toast.error('Failed to load attendance records.');
-    }
+      if (res.success) { setRecords(res.data.records || []); setStats(res.data.stats); setReview(res.data.review || { open: false, endsAt: null, finalizedAt: null }); }
+    } catch { toast.error('Failed to load attendance records.'); }
   };
+  useEffect(() => { if (selectedTraining) fetchAttendance(selectedTraining); else { setRecords([]); setStats(null); } }, [selectedTraining]);
 
-  useEffect(() => {
-    if (selectedTraining) {
-      fetchAttendance(selectedTraining);
-    } else {
-      setRecords([]);
-      setStats(null);
-    }
-  }, [selectedTraining]);
+  const activeTraining = useMemo(() => trainings.find((item) => item._id === selectedTraining), [trainings, selectedTraining]);
+  const completed = activeTraining?.status === 'completed';
+  const attendanceLocked = completed && !review.open;
 
-  const handleUpdateStatus = async (record, newStatus) => {
-    // On a completed session the only permitted change is an unmarked participant to present,
-    // and it cannot be undone afterwards — so confirm it explicitly.
-    if (attendanceLocked) {
-      if (newStatus !== 'present') return;
-      if (!await confirmAction({
-        title: `Mark ${record.participant?.fullName || 'this participant'} present?`,
-        message: 'This session is already completed, so the record locks once it is set and cannot be changed back here. Their certificate will be issued and emailed.',
-        confirmLabel: 'Mark present',
-      })) return;
-    }
-
+  const saveAttendance = async (record, status, reason = '') => {
     try {
-      const res = await api.patch(`/admin/trainings/${selectedTraining}/attendance/${record._id}`, {
-        status: newStatus,
-      });
-      if (res.success) {
-        toast.success(res.message || `Attendance updated to ${newStatus}`);
-        fetchAttendance(selectedTraining);
-      }
-    } catch (err) {
-      toast.error(err.message || 'Update failed');
-    }
+      const res = await api.patch(`/admin/trainings/${selectedTraining}/attendance/${record._id}`, { status, ...(reason ? { correctionReason: reason } : {}) });
+      toast.success(res.message || 'Attendance updated.'); await fetchAttendance(selectedTraining); return true;
+    } catch (error) { toast.error(error.message || 'Update failed.'); return false; }
+  };
+  const requestUpdate = async (record, status) => {
+    if (!completed) return saveAttendance(record, status);
+    if (!review.open) return toast.error('The six-hour attendance review is closed.');
+    setCorrectionReason(''); setPendingCorrection({ record, status });
+  };
+  const submitCorrection = async (event) => {
+    event.preventDefault();
+    if (!pendingCorrection || correctionReason.trim().length < 5) return;
+    if (await saveAttendance(pendingCorrection.record, pendingCorrection.status, correctionReason.trim())) { setPendingCorrection(null); setCorrectionReason(''); }
   };
 
   const visibleRecords = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return records;
-    return records.filter((rec) => (
-      (rec.participant?.fullName || '').toLowerCase().includes(term)
-      || (rec.participant?.email || '').toLowerCase().includes(term)
-    ));
+    return term ? records.filter((item) => `${item.participant?.fullName || ''} ${item.participant?.email || ''}`.toLowerCase().includes(term)) : records;
   }, [records, search]);
 
-  const activeTraining = useMemo(
-    () => trainings.find((item) => item._id === selectedTraining),
-    [trainings, selectedTraining],
-  );
-  const attendanceLocked = activeTraining?.status === 'completed';
-
   if (loading) return <LoadingSpinner label="Loading attendance management..." />;
+  const statCards = [['Total', stats?.total, 'text-slate-900'], ['Present', stats?.present, 'text-emerald-700'], ['Absent', stats?.absent, 'text-rose-700'], ['Late', stats?.late, 'text-amber-700'], ['Not Marked', stats?.not_marked, 'text-slate-500']];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">Attendance Management</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Admin attendance override & correction console across all training sessions.
-          </p>
-        </div>
-
-      </div>
-
-      <AdminProgramFilters value={filters} onChange={setFilters} />
-
-      {stats && (
-        <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-5">
-          <div className="bg-white p-4 rounded-xl border border-slate-200"><span className="text-xs font-bold text-slate-500 block">Total</span><span className="text-xl font-bold text-slate-900">{stats.total}</span></div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200"><span className="text-xs font-bold text-emerald-600 block">Present</span><span className="text-xl font-bold text-emerald-600">{stats.present}</span></div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200"><span className="text-xs font-bold text-rose-600 block">Absent</span><span className="text-xl font-bold text-rose-600">{stats.absent}</span></div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200"><span className="text-xs font-bold text-amber-600 block">Late</span><span className="text-xl font-bold text-amber-600">{stats.late}</span></div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200"><span className="text-xs font-bold text-slate-400 block">Not Marked</span><span className="text-xl font-bold text-slate-500">{stats.not_marked}</span></div>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search participants by name or email..."
-            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs font-medium"
-          />
-        </div>
-        {attendanceLocked && (
-          <p className="text-[11px] font-medium text-slate-500 sm:max-w-sm sm:text-right">
-            This session is completed. You can still mark a <span className="font-bold">Not Marked</span> participant present — everyone already marked stays locked.
-          </p>
-        )}
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 border-b border-slate-200 uppercase text-slate-500 font-bold">
-              <tr>
-                <th className="p-4">Participant</th>
-                <th className="p-4">Email</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Check-in Time</th>
-                <th className="p-4">Method</th>
-                <th className="p-4">{attendanceLocked ? 'Correction (locked)' : 'Correction'}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {visibleRecords.map((rec) => (
-                <tr key={rec._id} className="hover:bg-slate-50">
-                  <td className="p-4 font-bold text-slate-900">{rec.participant?.fullName}</td>
-                  <td className="p-4 text-slate-500">{rec.participant?.email}</td>
-                  <td className="p-4"><StatusBadge status={rec.status} type="attendance" /></td>
-                  <td className="p-4">{rec.checkinTime ? new Date(rec.checkinTime).toLocaleTimeString() : '—'}</td>
-                  <td className="p-4 uppercase text-[10px] font-bold text-slate-400">{rec.method}</td>
-                  <td className="p-4">
-                    <select
-                      value={rec.status}
-                      onChange={(e) => handleUpdateStatus(rec, e.target.value)}
-                      disabled={attendanceLocked && rec.status !== 'not_marked'}
-                      title={attendanceLocked
-                        ? (rec.status === 'not_marked'
-                          ? 'This session is completed. You can mark this participant present, but the record locks afterwards.'
-                          : 'This session is completed and this participant is already marked, so the record is locked.')
-                        : undefined}
-                      className="p-1 rounded border border-slate-300 text-xs font-semibold bg-white disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-                    >
-                      <option value="present">Present</option>
-                      {(!attendanceLocked || rec.status === 'absent') && <option value="absent">Absent</option>}
-                      {(!attendanceLocked || rec.status === 'late') && <option value="late">Late</option>}
-                      <option value="not_marked">Not Marked</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!selectedTraining && <p className="p-12 text-center text-sm text-slate-500">No training session matches these filters.</p>}
-          {selectedTraining && !visibleRecords.length && (
-            <p className="p-12 text-center text-sm text-slate-500">
-              {search ? `No participant matches "${search}".` : 'No attendance records for this session yet.'}
-            </p>
-          )}
-        </div>
-      </div>
-
-    </div>
-  );
-};
-
-export default AttendanceManagement;
+  return <div className="space-y-6">
+    <header><h1 className="text-2xl font-black text-slate-950">Attendance Management</h1><p className="mt-1 text-sm text-slate-500">Review attendance and make audited corrections before certificate processing.</p></header>
+    <AdminProgramFilters value={filters} onChange={setFilters} />
+    {stats && <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-5">{statCards.map(([label, value, color]) => <article key={label} className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs font-bold text-slate-500">{label}</p><p className={`mt-1 text-xl font-bold ${color}`}>{value || 0}</p></article>)}</div>}
+    {completed && <div className={`rounded-2xl border p-4 text-sm ${review.open ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-100 text-slate-700'}`}><strong>{review.open ? 'Six-hour attendance review is open.' : 'Attendance is finalized.'}</strong> {review.open ? <>Corrections are available until {new Date(review.endsAt).toLocaleString()}. Every change requires a reason.</> : 'Certificates are being processed and attendance can no longer be changed.'}</div>}
+    <div className="relative w-full sm:max-w-xs"><MagnifyingGlassIcon aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search participants..." className="min-h-11 w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15" /></div>
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="overflow-x-auto"><table className="min-w-[760px] w-full text-left text-xs"><thead className="border-b border-slate-200 bg-slate-50 font-bold uppercase text-slate-500"><tr><th className="p-4">Participant</th><th className="p-4">Email</th><th className="p-4">Status</th><th className="p-4">Check-in</th><th className="p-4">Method</th><th className="p-4">Correction</th></tr></thead><tbody className="divide-y divide-slate-100 text-slate-700">{visibleRecords.map((record) => <tr key={record._id} className="hover:bg-slate-50"><td className="p-4 font-bold text-slate-900">{record.participant?.fullName}</td><td className="p-4 text-slate-500">{record.participant?.email}</td><td className="p-4"><StatusBadge status={record.status} type="attendance" /></td><td className="p-4">{record.checkinTime ? new Date(record.checkinTime).toLocaleTimeString() : '—'}</td><td className="p-4 text-[10px] font-bold uppercase text-slate-400">{record.method}</td><td className="p-4"><select aria-label={`Attendance for ${record.participant?.fullName || 'participant'}`} value={record.status} disabled={attendanceLocked} onChange={(event) => requestUpdate(record, event.target.value)} className="min-h-11 rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option>{!completed && <option value="not_marked">Not Marked</option>}</select></td></tr>)}</tbody></table>{!selectedTraining && <p className="p-12 text-center text-sm text-slate-500">No training session matches these filters.</p>}{selectedTraining && !visibleRecords.length && <p className="p-12 text-center text-sm text-slate-500">{search ? `No participant matches "${search}".` : 'No attendance records for this session yet.'}</p>}</div></section>
+    {pendingCorrection && <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-6"><section role="dialog" aria-modal="true" aria-labelledby="attendance-correction-title" className="relative w-full max-w-lg rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl"><AdminModalClose onClick={() => setPendingCorrection(null)} /><p className="text-xs font-bold uppercase tracking-[.14em] text-[#1a6b3c]">Audited correction</p><h2 id="attendance-correction-title" className="mt-1 pr-10 text-xl font-black text-slate-950">Change attendance to {pendingCorrection.status}</h2><p className="mt-2 text-sm leading-6 text-slate-600">Explain why <strong>{pendingCorrection.record.participant?.fullName || 'this participant'}</strong> needs this correction. The reason, administrator, and time will be saved.</p><form onSubmit={submitCorrection} className="mt-5"><label className="block text-sm font-bold text-slate-700">Correction reason<textarea autoFocus required minLength={5} maxLength={500} rows={4} value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} placeholder="For example: QR check-in failed; attendance verified by the moderator." className="mt-2 w-full resize-y rounded-xl border border-slate-300 p-3 text-sm font-normal leading-6 outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15" /></label><div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={() => setPendingCorrection(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={correctionReason.trim().length < 5} className="min-h-11 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white disabled:opacity-50">Save correction</button></div></form></section></div>}
+  </div>;
+}
