@@ -108,8 +108,23 @@ export const Trainings = () => {
       if (selectedLanguage) params.append('language', selectedLanguage);
       if (selectedStatus)   params.append('phase', selectedStatus);
       if (selectedEvent || currentEvent?._id) params.append('event', selectedEvent || currentEvent._id);
-      const res = await api.get(`/public/trainings?${params}`, { signal });
-      if (res.success) setTrainings(res.data || []);
+      params.set('limit', '100');
+      params.set('page', '1');
+
+      const firstPage = await api.get(`/public/trainings?${params}`, { signal });
+      if (!firstPage.success) return;
+
+      const pageCount = firstPage.pagination?.pages || 1;
+      const remainingPages = await Promise.all(
+        Array.from({ length: Math.max(0, pageCount - 1) }, async (_, index) => {
+          const pageParams = new URLSearchParams(params);
+          pageParams.set('page', String(index + 2));
+          const page = await api.get(`/public/trainings?${pageParams}`, { signal });
+          return page.success ? page.data || [] : [];
+        })
+      );
+
+      setTrainings([...(firstPage.data || []), ...remainingPages.flat()]);
     } catch (error) {
       if (error.name !== 'CanceledError') return;
     } finally {
