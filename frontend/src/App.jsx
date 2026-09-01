@@ -75,6 +75,7 @@ const Settings = lazy(() => import('./pages/admin/Settings'));
 const FAQsManagement = lazy(() => import('./pages/admin/FAQsManagement'));
 const SponsorsManagement = lazy(() => import('./pages/admin/SponsorsManagement'));
 const MediaPartnersManagement = lazy(() => import('./pages/admin/MediaPartnersManagement'));
+const EmailOperations = lazy(() => import('./pages/admin/EmailOperations'));
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -214,6 +215,7 @@ export const App = () => {
           <Route path="categories" element={<CategoriesManagement />} />
           <Route path="reports" element={<Reports />} />
           <Route path="contact-messages" element={<ContactMessages />} />
+          <Route path="email-operations" element={<EmailOperations />} />
           <Route path="profile" element={<AdminProfile />} />
           <Route path="settings" element={<Settings />} />
           <Route path="faqs" element={<FAQsManagement />} />

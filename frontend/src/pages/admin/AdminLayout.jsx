@@ -68,6 +68,7 @@ export const AdminLayout = () => {
         { name: 'Feedback', path: '/admin/feedback', icon: ChatBubbleLeftRightIcon },
         { name: 'Reports & Analytics', path: '/admin/reports', icon: ChartBarIcon },
         { name: 'Contact Messages', path: '/admin/contact-messages', icon: EnvelopeIcon },
+        { name: 'Email Delivery', path: '/admin/email-operations', icon: EnvelopeIcon },
         { name: 'FAQ Management', path: '/admin/faqs', icon: QuestionMarkCircleIcon },
       ],
     },

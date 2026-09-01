@@ -33,7 +33,7 @@ const sendBulkApprovalEmails = async (messages) => {
     const result = await sendRegistrationStatusEmail(message);
     if (!result?.success) failed += 1;
   }
-  console.info(`Bulk approval email delivery finished: ${messages.length - failed} sent, ${failed} failed.`);
+  console.info(`Bulk approval digest collection finished: ${messages.length - failed} queued, ${failed} failed.`);
 };
 
 const sendFilteredAnnouncementEmails = async (recipients, announcement) => {
@@ -158,6 +158,7 @@ export const updateRegistrationStatus = async (req, res, next) => {
         await sendRegistrationStatusEmail({
           to: reg.participant.email,
           participantName: reg.participant.fullName,
+          trainingId: reg.training._id,
           trainingTitle: reg.training.title,
           status: 'approved',
           date: reg.training.date,
@@ -208,6 +209,7 @@ export const approveFilteredRegistrations = async (req, res, next) => {
       approvalEmails.push({
         to: participant.email,
         participantName: participant.fullName,
+        trainingId: training._id,
         trainingTitle: training.title,
         status: 'approved',
         date: training.date,
@@ -346,6 +348,7 @@ export const assignParticipants = async (req, res, next) => {
     await Promise.all(assigned.map((participant) => sendRegistrationStatusEmail({
       to: participant.email,
       participantName: participant.fullName,
+      trainingId: training._id,
       trainingTitle: training.title,
       status: 'approved',
       date: training.date,

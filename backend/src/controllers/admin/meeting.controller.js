@@ -140,14 +140,14 @@ export const sendTrainerInvitation = async (req, res, next) => {
       recipientType: 'trainer',
       recipients,
       subject: `Invitation: ${training.title}`,
-      body: `Meeting invitation sent to ${recipients.length} assigned trainer${recipients.length === 1 ? '' : 's'}.`,
+      body: `Meeting invitation queued for ${recipients.length} assigned trainer${recipients.length === 1 ? '' : 's'}.`,
       sentBy: req.user._id,
-      deliveryStatus: failedEmails.length === recipients.length ? 'failed' : failedEmails.length ? 'partial' : 'sent',
+      deliveryStatus: failedEmails.length === recipients.length ? 'failed' : failedEmails.length ? 'partial' : 'queued',
       failedRecipients: failedEmails,
     });
 
     if (failedEmails.length === recipients.length) return errorResponse(res, 'Trainer invitations could not be sent.', 502);
-    return successResponse(res, { sent: recipients.length - failedEmails.length, failed: failedEmails.length }, `Trainer invitation${recipients.length === 1 ? '' : 's'} sent.`);
+    return successResponse(res, { queued: recipients.length - failedEmails.length, failed: failedEmails.length }, `Trainer invitation${recipients.length === 1 ? '' : 's'} queued.`);
   } catch (err) { next(err); }
 };
 
@@ -221,9 +221,9 @@ export const sendParticipantInvitations = async (req, res, next) => {
         recipientType: selectedIds?.length > 0 ? 'selected' : 'all_approved',
         recipients: emails,
         subject: `${type === 'invitation' ? 'Invitation' : 'Reminder'}: ${training.title}`,
-        body: `Sent to ${emails.length} participants`,
+        body: `Queued for ${emails.length} participants`,
         sentBy: req.user._id,
-        deliveryStatus: failed.length === 0 ? 'sent' : failed.length === emails.length ? 'failed' : 'partial',
+        deliveryStatus: failed.length === 0 ? 'queued' : failed.length === emails.length ? 'failed' : 'partial',
         failedRecipients: failed,
       });
     })().catch((error) => console.error('Bulk invitation send failed:', error.message));

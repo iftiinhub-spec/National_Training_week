@@ -3,6 +3,7 @@ import Event from '../../models/Event.js';
 import EventDay from '../../models/EventDay.js';
 import Trainer from '../../models/Trainer.js';
 import User from '../../models/User.js';
+import Registration from '../../models/Registration.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { completeTrainingSession } from '../../services/completeTrainingSession.js';
 import { getTrainingDateTime, normalizeTrainingTime } from '../../utils/trainingDateTime.js';
@@ -10,6 +11,7 @@ import { registrationClosedReason, sessionEndsAt, sessionPhase, withSessionPhase
 import { escapeRegex } from '../../utils/search.js';
 import { pick } from '../../utils/pick.js';
 import { deleteTrainingCascade } from '../../utils/cascadeDelete.js';
+import { sendReminderEmail } from '../../utils/email.js';
 
 const trainingPayload = (input) => pick(input, ['title', 'description', 'event', 'eventDay', 'category', 'trainers', 'moderator', 'date', 'startTime', 'endTime', 'audience', 'level', 'language', 'capacity', 'registrationRequired', 'status']);
 
@@ -195,7 +197,17 @@ export const updateTraining = async (req, res, next) => {
     delete data.status;
     const training = await Training.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true });
     if (!training) return errorResponse(res, 'Training not found.', 404);
-    return successResponse(res, { training }, 'Training updated successfully.');
+    const scheduleChanged = ['date', 'startTime', 'endTime'].some((field) => String(existing[field] || '') !== String(training[field] || ''));
+    let scheduleEmailsQueued = 0;
+    if (scheduleChanged && existing.status === 'published') {
+      const approved = await Registration.find({ training: training._id, status: 'approved' }).populate('participant', 'email').lean();
+      const emails = [...new Set(approved.map((item) => item.participant?.email).filter(Boolean))];
+      if (emails.length) {
+        const result = await sendReminderEmail({ to: emails, trainingTitle: training.title, startTime: getTrainingDateTime(training.date, training.startTime), type: 'schedule_change' });
+        scheduleEmailsQueued = result.count || emails.length;
+      }
+    }
+    return successResponse(res, { training, scheduleEmailsQueued }, scheduleEmailsQueued ? `Training updated. ${scheduleEmailsQueued} schedule-change email(s) were queued.` : 'Training updated successfully.');
   } catch (err) { next(err); }
 };
 
@@ -224,9 +236,19 @@ export const updateTrainingStatus = async (req, res, next) => {
       return errorResponse(res, 'A finished session cannot be reopened because attendance is locked and certificates may already be issued.', 400);
     }
 
+    const wasPublished = training.status === 'published';
     training.status = status;
     await training.save();
-    return successResponse(res, { training: withSessionPhase(training, training.event) }, STATUS_MESSAGES[status]);
+    let cancellationEmailsQueued = 0;
+    if (status === 'cancelled' && wasPublished) {
+      const approved = await Registration.find({ training: training._id, status: 'approved' }).populate('participant', 'email').lean();
+      const emails = [...new Set(approved.map((item) => item.participant?.email).filter(Boolean))];
+      if (emails.length) {
+        const result = await sendReminderEmail({ to: emails, trainingTitle: training.title, startTime: getTrainingDateTime(training.date, training.startTime), type: 'cancellation' });
+        cancellationEmailsQueued = result.count || emails.length;
+      }
+    }
+    return successResponse(res, { training: withSessionPhase(training, training.event), cancellationEmailsQueued }, cancellationEmailsQueued ? `Session cancelled. ${cancellationEmailsQueued} cancellation email(s) were queued.` : STATUS_MESSAGES[status]);
   } catch (err) { next(err); }
 };
 

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { createHash } from 'node:crypto';
 import SiteSettings from '../models/SiteSettings.js';
 import { decryptSetting } from './settingsEncryption.js';
+import { enqueueEmail } from '../services/emailQueue.js';
 
 export const escapeHtml = (value = '') => String(value)
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -61,10 +62,7 @@ const createTransporter = ({ user, pass } = {}) => {
   return nodemailer.createTransport(options);
 };
 
-export const sendEmail = async ({ to, subject, html, text }) => {
-  if (process.env.EMAIL_DELIVERY_MODE === 'disabled') {
-    return { success: true, messageId: `disabled-${Date.now()}` };
-  }
+export const deliverEmailNow = async ({ to, subject, html, text }) => {
   try {
     const settings = await getEmailSettings();
     const relayTransport = isRelayTransport();
@@ -99,6 +97,9 @@ export const sendEmail = async ({ to, subject, html, text }) => {
   }
 };
 
+// Features persist messages first; only the controlled outbox worker contacts SMTP.
+export const sendEmail = (message) => enqueueEmail(message);
+
 export const closeEmailTransporter = () => {
   pooledTransporter?.close();
   pooledTransporter = null;
@@ -108,7 +109,7 @@ export const closeEmailTransporter = () => {
 
 export const sendInvitationEmail = ({ to, trainingTitle, eventName, meetingUrl, meetingId, passcode, startTime, platform, notes }) => {
   const platformNames = { zoom: 'Zoom', google_meet: 'Google Meet', teams: 'Microsoft Teams', other: 'Online' };
-  return sendEmail({ to, subject: `Invitation: ${trainingTitle} — National Training Week`, html: emailLayout({ title: 'Your training invitation', preview: `Join ${trainingTitle}`, body: `<p style="margin-top:0">You are invited to attend the following expert-led session.</p>${emailInfoCard([['Training', trainingTitle], ['Event', eventName], ['Date and time', startTime ? new Date(startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short', hour12: true }) : ''], ['Platform', platformNames[platform] || platform], ['Meeting ID', meetingId], ['Passcode', passcode]])}${emailButton('Join the live session', meetingUrl)}${notes ? `<p style="background:#fefce8;border-radius:10px;padding:14px"><strong>Joining notes:</strong> ${escapeHtml(notes)}</p>` : ''}<p>Keep this email available for the session. The meeting link is intended for registered attendees.</p>` }) });
+  return sendEmail({ to, category: 'invitation', subject: `Invitation: ${trainingTitle} — National Training Week`, html: emailLayout({ title: 'Your training invitation', preview: `Join ${trainingTitle}`, body: `<p style="margin-top:0">You are invited to attend the following expert-led session.</p>${emailInfoCard([['Training', trainingTitle], ['Event', eventName], ['Date and time', startTime ? new Date(startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short', hour12: true }) : ''], ['Platform', platformNames[platform] || platform], ['Meeting ID', meetingId], ['Passcode', passcode]])}${emailButton('Join the live session', meetingUrl)}${notes ? `<p style="background:#fefce8;border-radius:10px;padding:14px"><strong>Joining notes:</strong> ${escapeHtml(notes)}</p>` : ''}<p>Keep this email available for the session. The meeting link is intended for registered attendees.</p>` }) });
 };
 
 const formatRemainingTime = (startTime) => {
@@ -131,17 +132,25 @@ export const sendReminderEmail = ({ to, trainingTitle, startTime, type = 'remind
   const label = labels[type] || 'Session notice';
   const timingMessage = type === 'reminder' ? formatRemainingTime(startTime) : 'There is an update to your training session.';
   const formattedStart = startTime ? new Date(startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'full', timeStyle: 'short', hour12: true }) : '';
-  return sendEmail({ to, subject: `${label}: ${trainingTitle}`, html: emailLayout({ eyebrow: label, title: trainingTitle, preview: `${label}: ${trainingTitle}`, body: `<p style="margin-top:0"><strong>${escapeHtml(timingMessage)}</strong></p>${emailInfoCard([['Training', trainingTitle], ['Scheduled start', formattedStart], ...(type === 'reminder' ? [['Time remaining', timingMessage.replace(/^The session (starts|is starting) /, '').replace(/\.$/, '')]] : [])])}<p>Open your participant portal for the latest schedule and access information. For security, meeting access is not included in reminder emails.</p>` }) });
+  return sendEmail({ to, category: type, subject: `${label}: ${trainingTitle}`, html: emailLayout({ eyebrow: label, title: trainingTitle, preview: `${label}: ${trainingTitle}`, body: `<p style="margin-top:0"><strong>${escapeHtml(timingMessage)}</strong></p>${emailInfoCard([['Training', trainingTitle], ['Scheduled start', formattedStart], ...(type === 'reminder' ? [['Time remaining', timingMessage.replace(/^The session (starts|is starting) /, '').replace(/\.$/, '')]] : [])])}<p>Open your participant portal for the latest schedule and access information. For security, meeting access is not included in reminder emails.</p>` }) });
 };
 
-export const sendCertificateIssuedEmail = ({ to, participantName, trainingTitle, certificateId, verifyUrl, portalUrl }) => sendEmail({
+export const sendCertificateIssuedEmail = ({ to, participantName, trainingTitle, certificateId, verifyUrl, portalUrl, relatedModel, relatedId, dedupeKey }) => sendEmail({
   to,
+  category: 'certificate',
+  relatedModel,
+  relatedId,
+  dedupeKey,
   subject: `Your certificate is ready: ${trainingTitle}`,
   html: emailLayout({ eyebrow: 'Verified achievement', title: 'Your certificate is ready', preview: `Certificate issued for ${trainingTitle}`, body: `<p style="margin-top:0">Hello ${escapeHtml(participantName || 'Participant')},</p><p>Congratulations. Your attendance and completion have been verified, and your official certificate is now available.</p>${emailInfoCard([['Training', trainingTitle], ['Certificate ID', certificateId]])}${emailButton('View and download certificate', portalUrl)}<p style="font-size:13px">Public verification: <a href="${escapeHtml(verifyUrl)}" style="color:#1a6b3c">${escapeHtml(verifyUrl)}</a></p>` }),
 });
 
-export const sendTrainerCertificateIssuedEmail = ({ to, trainerName, trainingTitle, certificateId, verifyUrl, portalUrl }) => sendEmail({
+export const sendTrainerCertificateIssuedEmail = ({ to, trainerName, trainingTitle, certificateId, verifyUrl, portalUrl, relatedModel, relatedId, dedupeKey }) => sendEmail({
   to,
+  category: 'certificate',
+  relatedModel,
+  relatedId,
+  dedupeKey,
   subject: `Certificate of Appreciation: ${trainingTitle}`,
   html: emailLayout({ eyebrow: 'Trainer recognition', title: 'Your Certificate of Appreciation is ready', preview: `Thank you for delivering ${trainingTitle}`, body: `<p style="margin-top:0">Hello ${escapeHtml(trainerName || 'Trainer')},</p><p>Thank you for sharing your expertise during National Training Week. Your session has been completed, and your official Certificate of Appreciation is now available.</p>${emailInfoCard([['Session', trainingTitle], ['Certificate ID', certificateId]])}${emailButton('View and download certificate', portalUrl)}<p style="font-size:13px">Public verification: <a href="${escapeHtml(verifyUrl)}" style="color:#1a6b3c">${escapeHtml(verifyUrl)}</a></p>` }),
 });

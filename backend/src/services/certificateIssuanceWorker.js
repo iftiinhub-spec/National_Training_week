@@ -22,6 +22,10 @@ let running = false;
 let stopped = false;
 
 const emailUpdate = async (Model, certificate, result) => {
+  if (result.queued) {
+    await Model.updateOne({ _id: certificate._id }, { $set: { emailStatus: 'pending', emailLastError: '' } });
+    return;
+  }
   await Model.updateOne({ _id: certificate._id }, result.success ? {
     $set: { emailStatus: 'sent', emailSentAt: new Date(), emailLastError: '' },
   } : {
@@ -44,7 +48,7 @@ const issueParticipantCertificate = async ({ participant, training, requestedBy 
       certificate = await Certificate.findOne({ participant: participant._id, training: training._id });
     }
   }
-  if (!certificate || certificate.emailStatus === 'sent' || certificate.emailAttempts >= maxEmailAttempts) return;
+  if (!certificate || certificate.emailStatus === 'sent' || (certificate.emailStatus === 'pending' && certificate.emailAttempts > 0) || certificate.emailAttempts >= maxEmailAttempts) return;
   await Certificate.updateOne({ _id: certificate._id }, { $set: { emailStatus: 'processing' }, $inc: { emailAttempts: 1 } });
   const result = await sendCertificateIssuedEmail({
     to: participant.email,
@@ -53,6 +57,9 @@ const issueParticipantCertificate = async ({ participant, training, requestedBy 
     certificateId: certificate.certificateId,
     verifyUrl: `${process.env.FRONTEND_URL}/verify-certificate?id=${certificate.certificateId}`,
     portalUrl: `${process.env.FRONTEND_URL}/portal/certificates`,
+    relatedModel: 'Certificate',
+    relatedId: certificate._id,
+    dedupeKey: `certificate:${certificate._id}`,
   });
   await emailUpdate(Certificate, certificate, result);
 };
@@ -73,7 +80,7 @@ const issueTrainerCertificate = async ({ training, trainer, requestedBy }) => {
       certificate = await TrainerCertificate.findOne({ trainer: trainer._id, training: training._id });
     }
   }
-  if (!certificate || certificate.emailStatus === 'sent' || certificate.emailAttempts >= maxEmailAttempts) return;
+  if (!certificate || certificate.emailStatus === 'sent' || (certificate.emailStatus === 'pending' && certificate.emailAttempts > 0) || certificate.emailAttempts >= maxEmailAttempts) return;
   await TrainerCertificate.updateOne({ _id: certificate._id }, { $set: { emailStatus: 'processing' }, $inc: { emailAttempts: 1 } });
   const result = await sendTrainerCertificateIssuedEmail({
     to: trainer.email,
@@ -82,6 +89,9 @@ const issueTrainerCertificate = async ({ training, trainer, requestedBy }) => {
     certificateId: certificate.certificateId,
     verifyUrl: `${process.env.FRONTEND_URL}/verify-certificate?id=${certificate.certificateId}`,
     portalUrl: `${process.env.FRONTEND_URL}/trainer/certificates`,
+    relatedModel: 'TrainerCertificate',
+    relatedId: certificate._id,
+    dedupeKey: `trainer-certificate:${certificate._id}`,
   });
   await emailUpdate(TrainerCertificate, certificate, result);
 };

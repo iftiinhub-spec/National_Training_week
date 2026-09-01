@@ -2,6 +2,7 @@ import { emailButton, emailInfoCard, emailLayout, escapeHtml, sendEmail } from '
 
 export const sendWelcomeEmail = ({ to, participantName }) => sendEmail({
   to,
+  category: 'welcome',
   subject: 'Welcome to National Training Week',
   html: emailLayout({
     eyebrow: 'Welcome to the learning portal',
