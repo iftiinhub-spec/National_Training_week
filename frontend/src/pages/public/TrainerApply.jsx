@@ -5,6 +5,7 @@ import { CameraIcon, EyeIcon, EyeSlashIcon, UserCircleIcon, XMarkIcon } from '@i
 import api from '../../api/axios';
 import PhoneInput from '../../components/common/PhoneInput';
 import PhotoCropModal from '../../components/common/PhotoCropModal';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 const TITLES = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.', 'Eng.'];
 const EMPTY_FORM = { title: '', name: '', email: '', phone: '', organization: '', portfolioUrl: '', linkedinUrl: '', expertise: '', biography: '', password: '', confirmPassword: '' };
@@ -82,7 +83,6 @@ export default function TrainerApply() {
         </button>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={selectPhoto} />
         <div className="mt-2 flex items-center gap-3"><button type="button" onClick={() => fileRef.current?.click()} className="text-xs font-bold text-[#1a6b3c] hover:underline">{photoPreview ? 'Change photo' : 'Upload photo'}</button>{photoPreview && <button type="button" onClick={removePhoto} className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600"><XMarkIcon className="h-4 w-4" /> Remove</button>}</div>
-        <p className="mt-1 text-[11px] text-slate-400">JPEG, PNG or WebP · Max 5 MB</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -104,7 +104,7 @@ export default function TrainerApply() {
         <PasswordField label="Password *" value={form.password} onChange={(value) => update('password', value)} visible={showPassword} onToggle={() => setShowPassword((value) => !value)} placeholder="At least 8 characters" />
         <PasswordField label="Confirm password *" value={form.confirmPassword} onChange={(value) => update('confirmPassword', value)} visible={showConfirmPassword} onToggle={() => setShowConfirmPassword((value) => !value)} placeholder="Re-enter password" />
       </div>
-      <button disabled={saving} className="mt-4 w-full rounded-xl bg-[#15803d] py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-black disabled:opacity-60">{saving ? 'Submitting...' : 'Submit application'}</button>
+      <button disabled={saving} className="mt-4 w-full rounded-xl bg-[#15803d] py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-black disabled:opacity-60">{saving ? <><ButtonSpinner /> Submitting...</> : 'Submit application'}</button>
       <div className="mt-4 border-t border-black/10 pt-4 text-center text-xs text-black/70">Already applied? <Link to="/signin" className="font-bold text-[#1da156] hover:underline">Sign in</Link></div>
     </form>
     {cropSrc && <PhotoCropModal imageSrc={cropSrc} onCancel={cancelCrop} onCropped={applyCroppedPhoto} />}

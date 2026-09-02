@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 const emptyForm = { question: '', answer: '', category: 'General', displayOrder: 0, isPublished: true };
 const FAQ_CATEGORIES = ['General', 'Registration', 'Training Sessions', 'Attendance', 'Certificates', 'Trainer Applications', 'Technical Support'];
@@ -16,6 +17,8 @@ export default function FAQsManagement() {
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // One FAQ row is acted on at a time, so `<id>:<action>` identifies the busy control.
+  const [busy, setBusy] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
 
@@ -72,17 +75,21 @@ export default function FAQsManagement() {
   };
 
   const togglePublished = async (faq) => {
+    setBusy(`${faq._id}:publish`);
     try {
       await api.patch(`/admin/faqs/${faq._id}/publish`, { isPublished: !faq.isPublished });
       toast.success(faq.isPublished ? 'FAQ moved to draft.' : 'FAQ published.');
       await loadFAQs();
     } catch (error) {
       toast.error(error.message || 'Unable to change FAQ status.');
+    } finally {
+      setBusy('');
     }
   };
 
   const deleteFAQ = async (faq) => {
     if (!await confirmAction({ title: 'Delete FAQ?', message: `This question will be permanently removed:\n\n${faq.question}`, confirmLabel: 'Delete FAQ' })) return;
+    setBusy(`${faq._id}:delete`);
     try {
       await api.delete(`/admin/faqs/${faq._id}`);
       if (editing?._id === faq._id) resetForm();
@@ -90,6 +97,8 @@ export default function FAQsManagement() {
       await loadFAQs();
     } catch (error) {
       toast.error(error.message || 'Unable to delete FAQ.');
+    } finally {
+      setBusy('');
     }
   };
 
@@ -132,7 +141,7 @@ export default function FAQsManagement() {
           </label>
           <div className="flex justify-end sm:col-span-2">
             <button disabled={saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#124d2a] disabled:opacity-60">
-              {editing ? <PencilIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />}{saving ? 'Saving...' : editing ? 'Update FAQ' : 'Add FAQ'}
+              {saving ? <ButtonSpinner /> : editing ? <PencilIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />}{saving ? 'Saving...' : editing ? 'Update FAQ' : 'Add FAQ'}
             </button>
           </div>
         </form>
@@ -158,9 +167,9 @@ export default function FAQsManagement() {
                   <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-500">{faq.answer}</p>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <button type="button" onClick={() => togglePublished(faq)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100" aria-label={faq.isPublished ? `Unpublish ${faq.question}` : `Publish ${faq.question}`}>{faq.isPublished ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}</button>
-                  <button type="button" onClick={() => editFAQ(faq)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-[#1a6b3c]/30 hover:bg-emerald-50 hover:text-[#1a6b3c]" aria-label={`Edit ${faq.question}`}><PencilIcon className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => deleteFAQ(faq)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600" aria-label={`Delete ${faq.question}`}><TrashIcon className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => togglePublished(faq)} disabled={busy.startsWith(`${faq._id}:`)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60" aria-label={faq.isPublished ? `Unpublish ${faq.question}` : `Publish ${faq.question}`}>{busy === `${faq._id}:publish` ? <ButtonSpinner /> : faq.isPublished ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}</button>
+                  <button type="button" onClick={() => editFAQ(faq)} disabled={busy.startsWith(`${faq._id}:`)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-[#1a6b3c]/30 hover:bg-emerald-50 hover:text-[#1a6b3c] disabled:cursor-not-allowed disabled:opacity-60" aria-label={`Edit ${faq.question}`}><PencilIcon className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => deleteFAQ(faq)} disabled={busy.startsWith(`${faq._id}:`)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60" aria-label={`Delete ${faq.question}`}>{busy === `${faq._id}:delete` ? <ButtonSpinner /> : <TrashIcon className="h-4 w-4" />}</button>
                 </div>
               </div>
             </article>

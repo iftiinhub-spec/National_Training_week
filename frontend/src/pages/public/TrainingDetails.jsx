@@ -15,6 +15,7 @@ import {
   ArrowLeftIcon,
 } from '@icons';
 import { formatTimeRange12 } from '../../utils/timeFormat';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const TrainingDetails = () => {
   const { id } = useParams();
@@ -299,7 +300,7 @@ export const TrainingDetails = () => {
                   disabled={submitting}
                   className="w-full py-3.5 px-4 bg-[#15803d] hover:bg-black text-white font-bold rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {submitting ? 'Submitting...' : 'Register for Session'}
+                  {submitting ? <><ButtonSpinner /> Submitting...</> : 'Register for Session'}
                 </button>
               ) : (
                 <div className="bg-white text-black border border-black/20 rounded-xl p-4 text-xs font-medium text-center">

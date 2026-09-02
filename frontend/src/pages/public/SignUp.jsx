@@ -6,6 +6,7 @@ import { EyeIcon, EyeSlashIcon } from '@icons';
 import PhoneInput from '../../components/common/PhoneInput';
 import TrainerApply from './TrainerApply';
 import { getCountries } from 'libphonenumber-js';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 const SOMALIA_REGIONS = [
   'Awdal', 'Bakool', 'Banaadir', 'Bari', 'Bay', 'Galguduud', 'Gedo', 'Hiiraan',
@@ -242,7 +243,7 @@ export const SignUp = () => {
               disabled={submitting}
               className="w-full py-3.5 bg-[#15803d] hover:bg-black text-white font-bold text-sm rounded-xl shadow-md transition-all disabled:opacity-50 mt-4"
             >
-              {submitting ? 'Creating Account...' : 'Complete Registration'}
+              {submitting ? <><ButtonSpinner /> Creating Account...</> : 'Complete Registration'}
             </button>
           </form>
 

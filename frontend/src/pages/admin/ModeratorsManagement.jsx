@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon, KeyIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, UserPlusIcon } from '@icons';
 import PhoneInput from '../../components/common/PhoneInput';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const ModeratorsManagement = () => {
   const confirmAction = useConfirmDialog();
@@ -22,6 +23,9 @@ export const ModeratorsManagement = () => {
   const [editingModerator, setEditingModerator] = useState(null);
   const [resetTarget, setResetTarget] = useState(null);
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  // One moderator row is acted on at a time, so `<id>:<action>` identifies the busy control.
+  const [busy, setBusy] = useState('');
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [showResetPasswords, setShowResetPasswords] = useState({ newPassword: false, confirmPassword: false });
   const [saving, setSaving] = useState(false);
 
@@ -130,14 +134,17 @@ export const ModeratorsManagement = () => {
   };
 
   const handleToggleStatus = async (id) => {
+    setBusy(`${id}:status`);
     try {
       const res = await api.patch(`/admin/moderators/${id}/toggle-status`);
       if (res.success) {
         toast.success(res.message);
-        fetchModerators();
+        await fetchModerators();
       }
     } catch (err) {
       toast.error(err.message || 'Status update failed');
+    } finally {
+      setBusy('');
     }
   };
 
@@ -155,12 +162,17 @@ export const ModeratorsManagement = () => {
       confirmLabel: 'Delete',
       tone: 'danger',
     })) return;
+    if (ids.length === 1) setBusy(`${ids[0]}:delete`); else setBulkDeleting(true);
     try {
       const res = ids.length === 1 ? await api.delete(`/admin/moderators/${ids[0]}`) : await api.delete('/admin/moderators', { data: { ids } });
       toast.success(res.message || 'Moderator(s) deleted.');
-      fetchModerators();
+      setSelectedIds([]);
+      await fetchModerators();
     } catch (err) {
       toast.error(err.message || 'Delete failed');
+    } finally {
+      setBusy('');
+      setBulkDeleting(false);
     }
   };
 
@@ -192,8 +204,8 @@ export const ModeratorsManagement = () => {
           <label className="relative block"><span className="sr-only">Search moderators</span><MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="search" value={filters.search} onChange={(e) => setFilters((current) => ({ ...current, search: e.target.value }))} placeholder="Search moderators" className="min-h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15" /></label>
         </div>
         <div className="flex flex-wrap gap-2 border-b border-slate-200 px-4 py-3">
-          <button type="button" onClick={() => deleteModerators(selectedIds)} disabled={!selectedIds.length} className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Delete selected</button>
-          <button type="button" onClick={() => deleteModerators(moderators.map((item) => item._id))} disabled={!moderators.length} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 disabled:opacity-40">Delete all</button>
+          <button type="button" onClick={() => deleteModerators(selectedIds)} disabled={!selectedIds.length || bulkDeleting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{bulkDeleting && <ButtonSpinner size="xs" />}{bulkDeleting ? 'Deleting…' : 'Delete selected'}</button>
+          <button type="button" onClick={() => deleteModerators(moderators.map((item) => item._id))} disabled={!moderators.length || bulkDeleting} className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 disabled:cursor-not-allowed disabled:opacity-40">{bulkDeleting && <ButtonSpinner size="xs" />}{bulkDeleting ? 'Deleting…' : 'Delete all'}</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-xs">
@@ -225,13 +237,15 @@ export const ModeratorsManagement = () => {
                     <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleToggleStatus(mod._id)}
-                      className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded text-xs"
+                      disabled={busy.startsWith(`${mod._id}:`)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded text-xs disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {mod.isActive ? 'Deactivate' : 'Activate'}
+                      {busy === `${mod._id}:status` && <ButtonSpinner size="xs" />}
+                      {busy === `${mod._id}:status` ? 'Updating…' : mod.isActive ? 'Deactivate' : 'Activate'}
                     </button>
                     <button onClick={() => openEditModal(mod)} className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-emerald-50 hover:text-[#1a6b3c]" title="Edit moderator"><PencilIcon className="h-4 w-4" />Edit</button>
                     <button onClick={() => openResetModal(mod)} className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-amber-50 hover:text-amber-700" title="Reset moderator password"><KeyIcon className="h-4 w-4" />Reset password</button>
-                    <button onClick={() => deleteModerators([mod._id])} aria-label={`Delete ${mod.fullName}`} title="Delete moderator" className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-4 w-4" /></button>
+                    <button onClick={() => deleteModerators([mod._id])} disabled={busy.startsWith(`${mod._id}:`)} aria-label={`Delete ${mod.fullName}`} title="Delete moderator" className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60">{busy === `${mod._id}:delete` ? <ButtonSpinner /> : <TrashIcon className="h-4 w-4" />}</button>
                     </div>
                   </td>
                 </tr>
@@ -313,7 +327,7 @@ export const ModeratorsManagement = () => {
                   disabled={saving}
                   className="px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs disabled:opacity-60"
                 >
-                  {saving ? 'Saving…' : editingModerator ? 'Save Changes' : 'Create Account'}
+                  {saving ? <><ButtonSpinner /> Saving…</> : editingModerator ? 'Save Changes' : 'Create Account'}
                 </button>
               </div>
             </form>
@@ -330,7 +344,7 @@ export const ModeratorsManagement = () => {
             <form onSubmit={resetPassword} className="mt-5 space-y-4">
               {[['newPassword', 'New password', 'At least 8 characters'], ['confirmPassword', 'Confirm new password', 'Re-enter the new password']].map(([key, label, hint]) => <label key={key} className="block text-xs font-bold uppercase text-slate-700">{label}<span className="relative mt-1 block"><input type={showResetPasswords[key] ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={128} required value={passwordForm[key]} onChange={(e) => setPasswordForm({ ...passwordForm, [key]: e.target.value })} placeholder={hint} className="w-full rounded-lg border border-slate-300 p-2.5 pr-11 text-sm font-normal normal-case placeholder:text-slate-400" /><button type="button" aria-label={`${showResetPasswords[key] ? 'Hide' : 'Show'} ${label.toLowerCase()}`} onClick={() => setShowResetPasswords({ ...showResetPasswords, [key]: !showResetPasswords[key] })} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400">{showResetPasswords[key] ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></span></label>)}
               <p className="text-xs text-slate-500">Use between 8 and 128 characters.</p>
-              <div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setResetTarget(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Resetting…' : 'Reset Password'}</button></div>
+              <div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setResetTarget(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white disabled:opacity-60">{saving ? <><ButtonSpinner /> Resetting…</> : 'Reset Password'}</button></div>
             </form>
           </div>
         </div>

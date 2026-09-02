@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import Cropper from 'react-easy-crop';
 import { XMarkIcon } from '@icons';
+import ButtonSpinner from './ButtonSpinner';
 
 const OUTPUT_SIZE = 500;
 
@@ -81,7 +82,7 @@ export default function PhotoCropModal({ imageSrc, onCancel, onCropped }) {
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={onCancel} className="rounded-lg px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100">Cancel</button>
           <button type="button" onClick={confirm} disabled={processing || !croppedAreaPixels} className="rounded-lg bg-[#1a6b3c] px-4 py-2 text-xs font-bold text-white hover:bg-black disabled:opacity-60">
-            {processing ? 'Applying...' : 'Use photo'}
+            {processing ? <><ButtonSpinner /> Applying...</> : 'Use photo'}
           </button>
         </div>
       </div>

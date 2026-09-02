@@ -5,6 +5,7 @@ import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon, KeyIcon, TrashIcon } from '@icons';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const ParticipantsManagement = () => {
   const confirmAction = useConfirmDialog();
@@ -17,6 +18,9 @@ export const ParticipantsManagement = () => {
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  // One participant row is acted on at a time, so `<id>:<action>` identifies the busy control.
+  const [busy, setBusy] = useState('');
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchParticipants = useCallback(async () => {
     try {
@@ -38,14 +42,17 @@ export const ParticipantsManagement = () => {
   }, [fetchParticipants]);
 
   const handleToggleStatus = async (id) => {
+    setBusy(`${id}:status`);
     try {
       const res = await api.patch(`/admin/participants/${id}/toggle-status`);
       if (res.success) {
         toast.success(res.message);
-        fetchParticipants();
+        await fetchParticipants();
       }
     } catch (err) {
       toast.error(err.message || 'Status update failed');
+    } finally {
+      setBusy('');
     }
   };
 
@@ -87,12 +94,17 @@ export const ParticipantsManagement = () => {
       confirmLabel: 'Delete',
       tone: 'danger',
     })) return;
+    if (ids.length === 1) setBusy(`${ids[0]}:delete`); else setBulkDeleting(true);
     try {
       const res = ids.length === 1 ? await api.delete(`/admin/participants/${ids[0]}`) : await api.delete('/admin/participants', { data: { ids } });
       toast.success(res.message || 'Participant(s) deleted.');
-      fetchParticipants();
+      setSelectedIds([]);
+      await fetchParticipants();
     } catch (err) {
       toast.error(err.message || 'Delete failed');
+    } finally {
+      setBusy('');
+      setBulkDeleting(false);
     }
   };
 
@@ -120,8 +132,8 @@ export const ParticipantsManagement = () => {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
-        <button type="button" onClick={() => deleteParticipants(selectedIds)} disabled={!selectedIds.length} className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Delete selected</button>
-        <button type="button" onClick={() => deleteParticipants(participants.map((item) => item._id))} disabled={!participants.length} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 disabled:opacity-40">Delete all</button>
+        <button type="button" onClick={() => deleteParticipants(selectedIds)} disabled={!selectedIds.length || bulkDeleting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{bulkDeleting && <ButtonSpinner size="xs" />}{bulkDeleting ? 'Deleting…' : 'Delete selected'}</button>
+        <button type="button" onClick={() => deleteParticipants(participants.map((item) => item._id))} disabled={!participants.length || bulkDeleting} className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 disabled:cursor-not-allowed disabled:opacity-40">{bulkDeleting && <ButtonSpinner size="xs" />}{bulkDeleting ? 'Deleting…' : 'Delete all'}</button>
       </div>
 
       {loading ? <LoadingSpinner label="Loading participants..." /> : (
@@ -160,12 +172,14 @@ export const ParticipantsManagement = () => {
                       <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleToggleStatus(p._id)}
-                        className="rounded bg-slate-100 px-3 py-1 text-xs font-bold text-slate-800 hover:bg-slate-200"
+                        disabled={busy.startsWith(`${p._id}:`)}
+                        className="inline-flex items-center gap-1.5 rounded bg-slate-100 px-3 py-1 text-xs font-bold text-slate-800 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {p.isActive ? 'Deactivate' : 'Activate'}
+                        {busy === `${p._id}:status` && <ButtonSpinner size="xs" />}
+                        {busy === `${p._id}:status` ? 'Updating…' : p.isActive ? 'Deactivate' : 'Activate'}
                       </button>
-                      <button onClick={() => openPasswordReset(p)} aria-label={`Reset password for ${p.fullName}`} title="Reset password" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><KeyIcon className="h-4 w-4" /></button>
-                      <button onClick={() => deleteParticipants([p._id])} aria-label={`Delete ${p.fullName}`} title="Delete participant" className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-4 w-4" /></button>
+                      <button onClick={() => openPasswordReset(p)} disabled={busy.startsWith(`${p._id}:`)} aria-label={`Reset password for ${p.fullName}`} title="Reset password" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"><KeyIcon className="h-4 w-4" /></button>
+                      <button onClick={() => deleteParticipants([p._id])} disabled={busy.startsWith(`${p._id}:`)} aria-label={`Delete ${p.fullName}`} title="Delete participant" className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60">{busy === `${p._id}:delete` ? <ButtonSpinner /> : <TrashIcon className="h-4 w-4" />}</button>
                       </div>
                     </td>
                   </tr>
@@ -240,7 +254,7 @@ export const ParticipantsManagement = () => {
                   disabled={savingPassword}
                   className="px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs disabled:opacity-50"
                 >
-                  {savingPassword ? 'Saving...' : 'Reset Password'}
+                  {savingPassword ? <><ButtonSpinner /> Saving...</> : 'Reset Password'}
                 </button>
               </div>
             </form>

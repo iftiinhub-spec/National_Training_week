@@ -1,3 +1,5 @@
+import { MAX_DOCUMENT_SIZE, MAX_FILE_SIZE } from './upload.js';
+
 // Centralized error handler - must be last middleware in Express chain
 const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
@@ -27,8 +29,10 @@ const errorHandler = (err, req, res, next) => {
   // Upload failures are things the user can correct, not server faults.
   if (err.name === 'MulterError') {
     statusCode = 400;
+    // Documents arrive on the `file` field; every other field is an image, which has a tighter cap.
+    const limit = err.field === 'file' ? MAX_DOCUMENT_SIZE : MAX_FILE_SIZE;
     message = err.code === 'LIMIT_FILE_SIZE'
-      ? 'The file is too large.'
+      ? `The file is too large. The maximum upload size is ${Math.round(limit / (1024 * 1024))}MB.`
       : err.code === 'LIMIT_FILE_COUNT' ? 'Only one file can be uploaded at a time.' : 'File upload failed.';
   }
 

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
+import ButtonSpinner from "../../components/common/ButtonSpinner";
 import {
   EnvelopeIcon,
   PhoneIcon,
@@ -200,8 +201,9 @@ export const Contact = () => {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full rounded-xl bg-[#15803d] py-3.5 text-sm font-black text-white shadow transition-colors hover:bg-black disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#15803d] py-3.5 text-sm font-black text-white shadow transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
                   >
+                    {submitting && <ButtonSpinner />}
                     {submitting ? "Sending…" : "Send Message →"}
                   </button>
                 </form>

@@ -5,7 +5,7 @@ import fs from 'fs';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
-const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // 5MB default
+export const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // 5MB default
 const ALLOWED_FIELDS = new Set(['profilePhoto', 'photo', 'coverImage', 'certificateSignature', 'sponsorLogo']);
 
 const ensureUploadDir = (dir) => {
@@ -100,7 +100,7 @@ const ALLOWED_DOCUMENT_TYPES = {
   'text/plain': ['.txt'],
   'application/zip': ['.zip'],
 };
-const MAX_DOCUMENT_SIZE = parseInt(process.env.MAX_DOCUMENT_SIZE) || 25 * 1024 * 1024; // 25MB default
+export const MAX_DOCUMENT_SIZE = parseInt(process.env.MAX_DOCUMENT_SIZE) || 50 * 1024 * 1024; // 50MB default
 
 export const MATERIALS_DIR = path.join(process.cwd(), process.env.MATERIALS_DIR || 'private_uploads/materials');
 

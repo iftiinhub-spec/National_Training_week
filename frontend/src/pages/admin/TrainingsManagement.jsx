@@ -10,6 +10,7 @@ import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon, EllipsisVerticalIcon, LockClosedIcon, LockOpenIcon } from '@icons';
 import { formatTimeRange12, toTimeInputValue } from '../../utils/timeFormat';
 import { statusControlClass } from '../../utils/statusPresentation';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 // What an administrator decides about a session. All four can be chosen at any time, because none
 // of them depends on the clock. Whether registration is open, whether the session is running and
@@ -141,6 +142,9 @@ export const TrainingsManagement = () => {
   const [page, setPage] = useState(1);
 
   const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // The row-level actions act on one session at a time, so one id drives every row spinner.
+  const [busyId, setBusyId] = useState('');
   const [editingTraining, setEditingTraining] = useState(null);
   const [coverImageFile, setCoverImageFile] = useState(null);
   const [coverImagePreview, setCoverImagePreview] = useState('');
@@ -298,6 +302,7 @@ export const TrainingsManagement = () => {
       return;
     }
 
+    setSaving(true);
     try {
       const formData = new FormData();
       Object.keys(form).forEach((key) => {
@@ -324,36 +329,44 @@ export const TrainingsManagement = () => {
       setEditingTraining(null);
       setCoverImageFile(null);
       setCoverImagePreview('');
-      fetchData();
+      await fetchData();
     } catch (err) {
       toast.error(err.message || 'Save failed');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleStatusChange = async (trainingId, newStatus) => {
     if (newStatus === 'completed' && !await confirmAction({ title: 'Mark this session as finished?', message: 'Unmarked attendance will become absent and a six-hour administrator review will begin. Certificates will be processed after the review closes. This session cannot be reopened.', confirmLabel: 'Start attendance review', tone: 'warning' })) return;
+    setBusyId(trainingId);
     try {
       const res = await api.patch(`/admin/trainings/${trainingId}/status`, { status: newStatus });
       if (res.success) {
         toast.success(res.message || 'Session updated.');
-        fetchData();
+        await fetchData();
       }
     } catch (err) {
       toast.error(err.message || 'Could not update this session.');
+    } finally {
+      setBusyId('');
     }
   };
 
   // Opening simply removes the manual stop, so the session goes back to following the event dates.
   // Closing records "closed from now". The server decides whether either is possible and says why.
   const handleRegistrationChange = async (trainingId, open) => {
+    setBusyId(trainingId);
     try {
       const res = await api.patch(`/admin/trainings/${trainingId}/registration`, { open });
       if (res.success) {
         toast.success(res.message || (open ? 'Registration opened.' : 'Registration closed.'));
-        fetchData();
+        await fetchData();
       }
     } catch (err) {
       toast.error(err.message || 'Could not change registration.');
+    } finally {
+      setBusyId('');
     }
   };
 
@@ -364,12 +377,15 @@ export const TrainingsManagement = () => {
       confirmLabel: 'Delete session and data',
       tone: 'danger',
     })) return;
+    setBusyId(id);
     try {
       await api.delete(`/admin/trainings/${id}`);
       toast.success('Training deleted');
-      fetchData();
+      await fetchData();
     } catch (err) {
       toast.error(err.message || 'Delete failed');
+    } finally {
+      setBusyId('');
     }
   };
 
@@ -441,24 +457,29 @@ export const TrainingsManagement = () => {
                         <select
                           value={tr.status}
                           onChange={(e) => handleStatusChange(tr._id, e.target.value)}
+                          disabled={busyId === tr._id}
                           aria-label={`Change status for ${tr.title}`}
-                          className="admin-status-select w-full cursor-pointer appearance-none bg-transparent py-2 pl-2 pr-9 text-xs font-bold"
+                          className="admin-status-select w-full cursor-pointer appearance-none bg-transparent py-2 pl-2 pr-9 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {SESSION_STATUSES.map(([value, label]) => (
                             <option key={value} value={value}>{label}</option>
                           ))}
                         </select>
-                        <ChevronDownIcon className="pointer-events-none absolute right-3 h-4 w-4" />
+                        {busyId === tr._id ? <ButtonSpinner size="xs" className="pointer-events-none absolute right-3" /> : <ChevronDownIcon className="pointer-events-none absolute right-3 h-4 w-4" />}
                     </div>
                   </td>
                   <td className="p-4">
-                    <SessionActionsMenu
-                      training={tr}
-                      canChangeRegistration={canChangeRegistration(tr)}
-                      onRegistration={() => handleRegistrationChange(tr._id, !tr.registration?.open)}
-                      onEdit={() => handleOpenEditModal(tr)}
-                      onDelete={() => handleDelete(tr._id)}
-                    />
+                    {busyId === tr._id ? (
+                      <span className="inline-flex items-center gap-2 text-xs font-bold text-slate-500"><ButtonSpinner size="xs" className="text-[#1a6b3c]" />Working…</span>
+                    ) : (
+                      <SessionActionsMenu
+                        training={tr}
+                        canChangeRegistration={canChangeRegistration(tr)}
+                        onRegistration={() => handleRegistrationChange(tr._id, !tr.registration?.open)}
+                        onEdit={() => handleOpenEditModal(tr)}
+                        onDelete={() => handleDelete(tr._id)}
+                      />
+                    )}
                   </td>
                 </tr>
               ))}
@@ -726,15 +747,18 @@ export const TrainingsManagement = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-slate-600 rounded-lg hover:bg-slate-100"
+                  disabled={saving}
+                  className="px-4 py-2 text-slate-600 rounded-lg hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs"
+                  disabled={saving}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Save Training Session
+                  {saving && <ButtonSpinner />}
+                  {saving ? 'Saving…' : 'Save Training Session'}
                 </button>
               </div>
             </form>

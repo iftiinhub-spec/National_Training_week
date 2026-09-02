@@ -7,6 +7,7 @@ import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, E
 import PhoneInput from '../../components/common/PhoneInput';
 import PhotoCropModal from '../../components/common/PhotoCropModal';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 // Resolve the photo URL — Vite proxies /uploads → backend in dev; same origin in prod
 const photoUrl = (path) => {
@@ -54,6 +55,9 @@ export const TrainersManagement = () => {
   const [rejectingTrainer, setRejectingTrainer] = useState(null);
   const [rejectionNote, setRejectionNote] = useState('');
   const [reviewing, setReviewing] = useState(false);
+  // One trainer card is acted on at a time, so `<id>:<action>` identifies the busy control.
+  const [busy, setBusy] = useState('');
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [showResetPasswords, setShowResetPasswords] = useState({ newPassword: false, confirmPassword: false });
@@ -202,6 +206,7 @@ export const TrainersManagement = () => {
       return;
     }
     setReviewing(true);
+    setBusy(`${id}:access`);
     try {
       await api.patch(`/admin/trainers/${id}/access`, { status, ...(reason.trim() && { reason: reason.trim() }) });
       toast.success(`Trainer ${status}.`);
@@ -209,7 +214,7 @@ export const TrainersManagement = () => {
       setRejectionNote('');
       fetchTrainers();
     } catch (error) { toast.error(error.message || 'Access update failed.'); }
-    finally { setReviewing(false); }
+    finally { setReviewing(false); setBusy(''); }
   };
 
   const submitRejection = (event) => {
@@ -234,12 +239,17 @@ export const TrainersManagement = () => {
       confirmLabel: 'Delete',
       tone: 'danger',
     })) return;
+    if (trainerIds.length === 1) setBusy(`${trainerIds[0]}:delete`); else setBulkDeleting(true);
     try {
       const res = trainerIds.length === 1 ? await api.delete(`/admin/trainers/${trainerIds[0]}`) : await api.delete('/admin/trainers', { data: { ids: trainerIds } });
       toast.success(res.message || 'Trainer profile(s) deleted.');
-      fetchTrainers();
+      setSelectedIds([]);
+      await fetchTrainers();
     } catch (err) {
       toast.error(err.message || 'Delete failed');
+    } finally {
+      setBusy('');
+      setBulkDeleting(false);
     }
   };
 
@@ -291,8 +301,8 @@ export const TrainersManagement = () => {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => handleDelete(selectedIds)} disabled={!selectedIds.length} className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Delete selected</button>
-        <button type="button" onClick={() => handleDelete(trainers.map((item) => item._id))} disabled={!trainers.length} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 disabled:opacity-40">Delete all</button>
+        <button type="button" onClick={() => handleDelete(selectedIds)} disabled={!selectedIds.length || bulkDeleting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{bulkDeleting && <ButtonSpinner size="xs" />}{bulkDeleting ? 'Deleting…' : 'Delete selected'}</button>
+        <button type="button" onClick={() => handleDelete(trainers.map((item) => item._id))} disabled={!trainers.length || bulkDeleting} className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 disabled:cursor-not-allowed disabled:opacity-40">{bulkDeleting && <ButtonSpinner size="xs" />}{bulkDeleting ? 'Deleting…' : 'Delete all'}</button>
       </div>
 
       {/* Cards Grid */}
@@ -358,7 +368,8 @@ export const TrainersManagement = () => {
 
                   {/* Actions */}
                   <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-                    <select value={tr.accessStatus || 'pending'} onChange={(e) => reviewAccess(tr._id, e.target.value)} className="min-h-10 min-w-28 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold sm:flex-none"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="suspended">Suspended</option></select>
+                    <select value={tr.accessStatus || 'pending'} onChange={(e) => reviewAccess(tr._id, e.target.value)} disabled={busy.startsWith(`${tr._id}:`)} className="min-h-10 min-w-28 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="suspended">Suspended</option></select>
+                    {busy === `${tr._id}:access` && <ButtonSpinner size="xs" className="text-[#1a6b3c]" />}
                     {imgSrc && (
                       <a
                         href={imgSrc}
@@ -372,7 +383,8 @@ export const TrainersManagement = () => {
                     )}
                     <button
                       onClick={() => openEditModal(tr)}
-                      className="flex min-h-10 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-emerald-50 hover:text-[#1a6b3c]"
+                      disabled={busy.startsWith(`${tr._id}:`)}
+                      className="flex min-h-10 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-emerald-50 hover:text-[#1a6b3c] disabled:cursor-not-allowed disabled:opacity-60"
                       title="Edit trainer profile"
                     >
                       <PencilIcon className="w-4 h-4" />
@@ -380,11 +392,12 @@ export const TrainersManagement = () => {
                     </button>
                     <button
                       onClick={() => handleDelete(tr._id)}
-                      className="flex min-h-10 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                      disabled={busy.startsWith(`${tr._id}:`)}
+                      className="flex min-h-10 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
                       title="Delete trainer profile"
                     >
-                      <TrashIcon className="w-4 h-4" />
-                      Delete
+                      {busy === `${tr._id}:delete` ? <ButtonSpinner size="xs" /> : <TrashIcon className="w-4 h-4" />}
+                      {busy === `${tr._id}:delete` ? 'Deleting…' : 'Delete'}
                     </button>
                   </div>
                 </div>
@@ -450,7 +463,6 @@ export const TrainersManagement = () => {
                 >
                   {photoPreview ? 'Change Photo' : 'Upload Photo'}
                 </button>
-                <p className="text-[10px] text-slate-400">JPEG, PNG or WebP · Max 5 MB</p>
               </div>
 
               {/* Name & Title */}
@@ -565,7 +577,7 @@ export const TrainersManagement = () => {
                   disabled={saving}
                   className="px-5 py-2 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-lg shadow-sm disabled:opacity-60"
                 >
-                  {saving ? 'Saving…' : 'Save Profile'}
+                  {saving ? <><ButtonSpinner /> Saving…</> : 'Save Profile'}
                 </button>
               </div>
             </form>
@@ -584,7 +596,7 @@ export const TrainersManagement = () => {
               <p className="mt-1 text-right text-xs text-slate-400">{rejectionNote.length}/500</p>
               <div className="mt-5 flex justify-end gap-2">
                 <button type="button" disabled={reviewing} onClick={() => { setRejectingTrainer(null); setRejectionNote(''); }} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-60">Cancel</button>
-                <button type="submit" disabled={reviewing || !rejectionNote.trim()} className="min-h-11 rounded-xl bg-rose-600 px-5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-50">{reviewing ? 'Rejecting...' : 'Reject and send email'}</button>
+                <button type="submit" disabled={reviewing || !rejectionNote.trim()} className="min-h-11 rounded-xl bg-rose-600 px-5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-50">{reviewing ? <><ButtonSpinner /> Rejecting...</> : 'Reject and send email'}</button>
               </div>
             </form>
           </div>
@@ -599,7 +611,7 @@ export const TrainersManagement = () => {
             <form onSubmit={resetPassword} className="mt-5 space-y-4">
               {[['newPassword', 'New password', 'At least 8 characters'], ['confirmPassword', 'Confirm new password', 'Re-enter the new password']].map(([key, label, hint]) => <label key={key} className="block text-xs font-bold uppercase text-slate-700">{label}<span className="relative mt-1 block"><input type={showResetPasswords[key] ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={128} required value={passwordForm[key]} onChange={(e) => setPasswordForm({ ...passwordForm, [key]: e.target.value })} placeholder={hint} className="w-full rounded-lg border border-slate-300 p-2.5 pr-11 text-sm font-normal normal-case placeholder:text-slate-400" /><button type="button" aria-label={`${showResetPasswords[key] ? 'Hide' : 'Show'} ${label.toLowerCase()}`} onClick={() => setShowResetPasswords({ ...showResetPasswords, [key]: !showResetPasswords[key] })} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400">{showResetPasswords[key] ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></span></label>)}
               <p className="text-xs text-slate-500">Use between 8 and 128 characters.</p>
-              <div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setResetTarget(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Resetting…' : 'Reset Password'}</button></div>
+              <div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setResetTarget(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white disabled:opacity-60">{saving ? <><ButtonSpinner /> Resetting…</> : 'Reset Password'}</button></div>
             </form>
           </div>
         </div>

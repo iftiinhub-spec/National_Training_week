@@ -3,6 +3,7 @@ import api from '../../api/axios';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import { MagnifyingGlassIcon, UserPlusIcon, XMarkIcon } from '@icons';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const AssignParticipants = () => {
   const [selection, setSelection] = useState({ event: '', eventDay: '', training: '' });
@@ -128,7 +129,7 @@ export const AssignParticipants = () => {
                   className="inline-flex items-center gap-2 rounded-lg bg-[#1a6b3c] px-4 py-2 text-xs font-bold text-white shadow-xs disabled:opacity-50"
                 >
                   <UserPlusIcon className="h-4 w-4" />
-                  {assigning ? 'Assigning...' : `Assign ${assignable.length} participant${assignable.length === 1 ? '' : 's'}`}
+                  {assigning ? <><ButtonSpinner /> Assigning...</> : `Assign ${assignable.length} participant${assignable.length === 1 ? '' : 's'}`}
                 </button>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">

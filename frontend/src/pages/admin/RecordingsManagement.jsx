@@ -6,6 +6,7 @@ import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { PlusIcon, VideoCameraIcon, EyeIcon, EyeSlashIcon, ArchiveBoxArrowDownIcon, ArrowPathIcon } from '@icons';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const RecordingsManagement = () => {
   const confirmAction = useConfirmDialog();
@@ -13,6 +14,9 @@ export const RecordingsManagement = () => {
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // One recording row at a time is acted on, so a single id drives every row spinner.
+  const [busyId, setBusyId] = useState('');
   const [filters, setFilters] = useState({ event: '', eventDay: '', training: '', archived: 'false' });
 
   const [form, setForm] = useState({
@@ -50,6 +54,7 @@ export const RecordingsManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       await api.post('/admin/recordings', form);
       toast.success('Recording added successfully!');
@@ -57,35 +62,45 @@ export const RecordingsManagement = () => {
       fetchData();
     } catch (err) {
       toast.error(err.message || 'Save failed');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleTogglePublish = async (id) => {
+    setBusyId(id);
     try {
       const res = await api.patch(`/admin/recordings/${id}/publish`);
       if (res.success) {
         toast.success(res.message);
-        fetchData();
+        await fetchData();
       }
     } catch (err) {
       toast.error(err.message || 'Publish toggle failed');
+    } finally {
+      setBusyId('');
     }
   };
 
   const handleArchive = async (id) => {
     if (!await confirmAction({ title: 'Archive recording?', message: 'The recording will be unpublished and removed from the public library. You can restore it later.', confirmLabel: 'Archive recording', tone: 'warning' })) return;
+    setBusyId(id);
     try {
       await api.delete(`/admin/recordings/${id}`);
       toast.success('Recording archived safely.');
-      fetchData();
+      await fetchData();
     } catch (err) {
       toast.error(err.message || 'Archive failed');
+    } finally {
+      setBusyId('');
     }
   };
 
   const handleRestore = async (id) => {
-    try { const res = await api.patch(`/admin/recordings/${id}/restore`); toast.success(res.message); fetchData(); }
+    setBusyId(id);
+    try { const res = await api.patch(`/admin/recordings/${id}/restore`); toast.success(res.message); await fetchData(); }
     catch (err) { toast.error(err.message || 'Restore failed'); }
+    finally { setBusyId(''); }
   };
 
   if (loading) return <LoadingSpinner label="Loading recordings library..." />;
@@ -134,13 +149,14 @@ export const RecordingsManagement = () => {
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
               {!rec.isArchived && <button
                 onClick={() => handleTogglePublish(rec._id)}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg text-xs flex items-center gap-1"
+                disabled={busyId === rec._id}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg text-xs flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {rec.isPublished ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-                <span>{rec.isPublished ? 'Unpublish' : 'Publish'}</span>
+                {busyId === rec._id ? <ButtonSpinner size="xs" /> : rec.isPublished ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                <span>{busyId === rec._id ? 'Working…' : rec.isPublished ? 'Unpublish' : 'Publish'}</span>
               </button>}
 
-              {rec.isArchived ? <button onClick={() => handleRestore(rec._id)} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-[#1a6b3c] hover:bg-emerald-50"><ArrowPathIcon className="h-4 w-4" /> Restore</button> : <button onClick={() => handleArchive(rec._id)} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-amber-50 hover:text-amber-700"><ArchiveBoxArrowDownIcon className="h-4 w-4" /> Archive</button>}
+              {rec.isArchived ? <button onClick={() => handleRestore(rec._id)} disabled={busyId === rec._id} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-[#1a6b3c] hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60">{busyId === rec._id ? <ButtonSpinner size="xs" /> : <ArrowPathIcon className="h-4 w-4" />} {busyId === rec._id ? 'Restoring…' : 'Restore'}</button> : <button onClick={() => handleArchive(rec._id)} disabled={busyId === rec._id} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-60">{busyId === rec._id ? <ButtonSpinner size="xs" /> : <ArchiveBoxArrowDownIcon className="h-4 w-4" />} {busyId === rec._id ? 'Archiving…' : 'Archive'}</button>}
             </div>
           </div>
         ))}
@@ -219,15 +235,18 @@ export const RecordingsManagement = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-slate-600 rounded-lg hover:bg-slate-100"
+                  disabled={saving}
+                  className="px-4 py-2 text-slate-600 rounded-lg hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs"
+                  disabled={saving}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Save Recording
+                  {saving && <ButtonSpinner />}
+                  {saving ? 'Saving…' : 'Save Recording'}
                 </button>
               </div>
             </form>

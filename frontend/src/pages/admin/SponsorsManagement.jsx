@@ -13,6 +13,7 @@ import {
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 const CATEGORIES = ['Strategic Co-Organizer', 'Lead Co-Organizer', 'Co-Organizer', 'Supporting Co-Organizer', 'Media Co-Organizer'];
 const LEGACY_CATEGORY_LABELS = {
@@ -37,6 +38,8 @@ export const SponsorsManagement = ({ mediaPartnersOnly = false }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // One row is acted on at a time, so `<id>:<action>` identifies the busy control.
+  const [busy, setBusy] = useState('');
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -137,20 +140,24 @@ export const SponsorsManagement = ({ mediaPartnersOnly = false }) => {
   };
 
   const toggleStatus = async (sponsor) => {
+    setBusy(`${sponsor._id}:status`);
     try {
       const response = await api.patch(`/admin/sponsors/${sponsor._id}/status`, { isActive: !sponsor.isActive });
       toast.success(response.message);
       await loadData();
     } catch (error) { toast.error(error.message || 'Failed to update co-organizer.'); }
+    finally { setBusy(''); }
   };
 
   const remove = async (sponsor) => {
     if (!await confirmAction({ title: `Delete ${sponsor.name}?`, message: `The ${itemLabel} record and its uploaded logo will be permanently removed.`, confirmLabel: `Delete ${itemLabel}` })) return;
+    setBusy(`${sponsor._id}:delete`);
     try {
       const response = await api.delete(`/admin/sponsors/${sponsor._id}`);
       toast.success(response.message);
       await loadData();
     } catch (error) { toast.error(error.message || 'Failed to delete co-organizer.'); }
+    finally { setBusy(''); }
   };
 
   if (loading) return <LoadingSpinner label={`Loading ${title.toLowerCase()}...`} />;
@@ -177,7 +184,7 @@ export const SponsorsManagement = ({ mediaPartnersOnly = false }) => {
 
       {visibleSponsors.length ? (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Logo</th><th className="px-4 py-3">{mediaPartnersOnly ? 'Media Partner' : 'Co-Organizer'}</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Event</th><th className="px-4 py-3">Order</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{visibleSponsors.map((sponsor) => <tr key={sponsor._id} className="align-middle hover:bg-slate-50/70"><td className="px-4 py-3"><img src={imageUrl(sponsor.logo)} alt={`${sponsor.name} logo`} className="h-12 w-20 object-contain" /></td><td className="px-4 py-3 font-black text-slate-950">{sponsor.name}{sponsor.isFeatured && <StarIcon className="ml-2 inline h-4 w-4 text-amber-500" title={`Featured ${itemLabel}`} />}</td><td className="px-4 py-3 text-xs font-semibold text-[#1a6b3c]">{coOrganizerCategory(sponsor.category)}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.event?.name || 'Event'}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.displayOrder}</td><td className="px-4 py-3"><button onClick={() => toggleStatus(sponsor)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${sponsor.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>{sponsor.isActive ? 'Visible' : 'Hidden'}</button></td><td className="px-4 py-3"><div className="flex justify-end gap-1"><button onClick={() => openEdit(sponsor)} aria-label={`Edit ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-[#1a6b3c]"><PencilSquareIcon className="h-5 w-5" /></button><button onClick={() => remove(sponsor)} aria-label={`Delete ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><TrashIcon className="h-5 w-5" /></button></div></td></tr>)}</tbody></table>
+          <table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Logo</th><th className="px-4 py-3">{mediaPartnersOnly ? 'Media Partner' : 'Co-Organizer'}</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Event</th><th className="px-4 py-3">Order</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{visibleSponsors.map((sponsor) => <tr key={sponsor._id} className="align-middle hover:bg-slate-50/70"><td className="px-4 py-3"><img src={imageUrl(sponsor.logo)} alt={`${sponsor.name} logo`} className="h-12 w-20 object-contain" /></td><td className="px-4 py-3 font-black text-slate-950">{sponsor.name}{sponsor.isFeatured && <StarIcon className="ml-2 inline h-4 w-4 text-amber-500" title={`Featured ${itemLabel}`} />}</td><td className="px-4 py-3 text-xs font-semibold text-[#1a6b3c]">{coOrganizerCategory(sponsor.category)}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.event?.name || 'Event'}</td><td className="px-4 py-3 text-xs text-slate-500">{sponsor.displayOrder}</td><td className="px-4 py-3"><button onClick={() => toggleStatus(sponsor)} disabled={busy.startsWith(`${sponsor._id}:`)} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-60 ${sponsor.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>{busy === `${sponsor._id}:status` && <ButtonSpinner size="xs" />}{busy === `${sponsor._id}:status` ? 'Updating…' : sponsor.isActive ? 'Visible' : 'Hidden'}</button></td><td className="px-4 py-3"><div className="flex justify-end gap-1"><button onClick={() => openEdit(sponsor)} aria-label={`Edit ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-[#1a6b3c]"><PencilSquareIcon className="h-5 w-5" /></button><button onClick={() => remove(sponsor)} disabled={busy.startsWith(`${sponsor._id}:`)} aria-label={`Delete ${sponsor.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60">{busy === `${sponsor._id}:delete` ? <ButtonSpinner /> : <TrashIcon className="h-5 w-5" />}</button></div></td></tr>)}</tbody></table>
         </div>
       ) : (
         <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><BuildingOffice2Icon className="mx-auto h-11 w-11 text-slate-300" /><h2 className="mt-4 text-lg font-black text-slate-900">{search.trim() || eventFilter ? `No ${title.toLowerCase()} match these filters` : `No ${title.toLowerCase()} added yet`}</h2><p className="mt-2 text-sm text-slate-500">{search.trim() || eventFilter ? 'Try a different search term or event.' : `Add the first organization to publish the Home-page ${title.toLowerCase()} section.`}</p></div>
@@ -198,7 +205,7 @@ export const SponsorsManagement = ({ mediaPartnersOnly = false }) => {
               </div>
               <label className="block text-sm font-bold text-slate-700">Short description<textarea rows="3" maxLength={500} className={`${inputClass} py-3`} value={form.description} placeholder="One or two lines about this partner" onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
               <div><p className="text-sm font-bold text-slate-700">{mediaPartnersOnly ? 'Media partner' : 'Co-organizer'} logo {editing ? '' : '*'}</p><button type="button" onClick={() => fileRef.current?.click()} className="mt-2 flex min-h-40 w-full items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 hover:border-[#1a6b3c]">{preview ? <img src={preview} alt={`${itemLabel} logo preview`} className="max-h-28 max-w-full object-contain" /> : <span className="flex flex-col items-center gap-2 text-sm font-semibold text-slate-500"><ArrowUpTrayIcon className="h-8 w-8" />Choose PNG, JPEG, or WebP</span>}</button><input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={selectLogo} className="sr-only" /><p className="mt-2 text-xs text-slate-400">Transparent PNG or WebP works best. Maximum 5 MB.</p></div>
-              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end"><button type="button" onClick={closeForm} className="min-h-11 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700">Cancel</button><button disabled={saving} className="min-h-11 rounded-xl bg-[#1a6b3c] px-6 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Saving...' : editing ? 'Save Changes' : `Add ${mediaPartnersOnly ? 'Media Partner' : 'Co-Organizer'}`}</button></div>
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end"><button type="button" onClick={closeForm} className="min-h-11 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700">Cancel</button><button disabled={saving} className="min-h-11 rounded-xl bg-[#1a6b3c] px-6 text-sm font-bold text-white disabled:opacity-60">{saving ? <><ButtonSpinner /> Saving...</> : editing ? 'Save Changes' : `Add ${mediaPartnersOnly ? 'Media Partner' : 'Co-Organizer'}`}</button></div>
             </form>
           </section>
         </div>

@@ -4,10 +4,12 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import toast from 'react-hot-toast';
 import { CheckBadgeIcon, ArrowDownTrayIcon, ShieldCheckIcon } from '@icons';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const MyCertificates = () => {
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState('');
 
   useEffect(() => {
     const fetchCertificates = async () => {
@@ -26,6 +28,7 @@ export const MyCertificates = () => {
   }, []);
 
   const handleDownload = async (certId, certificateIdString) => {
+    setDownloadingId(certId);
     try {
       const response = await fetch(`/api/participant/certificates/${certId}/download`, {
         headers: {
@@ -47,6 +50,8 @@ export const MyCertificates = () => {
       toast.success('Certificate downloaded successfully!');
     } catch (err) {
       toast.error('Failed to download certificate PDF.');
+    } finally {
+      setDownloadingId('');
     }
   };
 
@@ -89,10 +94,11 @@ export const MyCertificates = () => {
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <button
                   onClick={() => handleDownload(cert._id, cert.certificateId)}
-                  className="w-full py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center justify-center gap-2"
+                  disabled={downloadingId === cert._id}
+                  className="w-full py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <ArrowDownTrayIcon className="w-4 h-4" />
-                  <span>Download Official PDF</span>
+                  {downloadingId === cert._id ? <ButtonSpinner size="xs" /> : <ArrowDownTrayIcon className="w-4 h-4" />}
+                  <span>{downloadingId === cert._id ? 'Preparing…' : 'Download Official PDF'}</span>
                 </button>
               </div>
             </div>
