@@ -3,8 +3,10 @@ import { randomUUID } from 'node:crypto';
 import EmailOutbox from '../models/EmailOutbox.js';
 import Certificate from '../models/Certificate.js';
 import TrainerCertificate from '../models/TrainerCertificate.js';
+import CertificateEmailDigest from '../models/CertificateEmailDigest.js';
 import { deliverEmailNow } from '../utils/email.js';
 import { materializeNextApprovalDigest } from './approvalEmailDigest.js';
+import { materializeNextCertificateDigest } from './certificateEmailDigest.js';
 
 const workerId = `${os.hostname()}:${process.pid}:${randomUUID().slice(0, 8)}`;
 const intervalMs = Math.max(12_000, Number(process.env.EMAIL_MIN_INTERVAL_MS) || 12_000);
@@ -14,6 +16,18 @@ let timer; let running = false; let stopped = false; let circuit = { open: false
 
 const relatedModel = (name) => name === 'Certificate' ? Certificate : name === 'TrainerCertificate' ? TrainerCertificate : null;
 const updateRelated = async (message, success, error = '') => {
+  if (message.relatedModel === 'CertificateDigest' && message.relatedId) {
+    const digest = await CertificateEmailDigest.findById(message.relatedId).select('items').lean();
+    if (!digest) return;
+    const certificateIds = digest.items.map((item) => item.certificate);
+    await Promise.all([
+      Certificate.updateMany({ _id: { $in: certificateIds } }, success
+        ? { $set: { emailStatus: 'sent', emailSentAt: new Date(), emailLastError: '' } }
+        : { $set: { emailStatus: 'failed', emailLastError: error.slice(0, 500) } }),
+      CertificateEmailDigest.updateOne({ _id: message.relatedId }, { $set: { status: success ? 'sent' : 'failed', lastError: success ? '' : error.slice(0, 500) } }),
+    ]);
+    return;
+  }
   const Model = relatedModel(message.relatedModel);
   if (!Model || !message.relatedId) return;
   await Model.updateOne({ _id: message.relatedId }, success
@@ -40,6 +54,7 @@ const work = async () => {
   let message;
   try {
     await materializeNextApprovalDigest();
+    await materializeNextCertificateDigest();
     const sentLastHour = await EmailOutbox.countDocuments({ status: 'sent', sentAt: { $gte: new Date(Date.now() - 3600_000) } });
     if (sentLastHour >= hourlyLimit) return;
     message = await claim(); if (!message) return;

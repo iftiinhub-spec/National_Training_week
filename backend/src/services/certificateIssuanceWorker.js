@@ -6,8 +6,9 @@ import CertificateIssuanceJob from '../models/CertificateIssuanceJob.js';
 import Registration from '../models/Registration.js';
 import TrainerCertificate from '../models/TrainerCertificate.js';
 import Training from '../models/Training.js';
-import { sendCertificateIssuedEmail, sendTrainerCertificateIssuedEmail } from '../utils/email.js';
+import { sendTrainerCertificateIssuedEmail } from '../utils/email.js';
 import { generateCertificateId, generateTrainerCertificateId } from '../utils/generateCertificateId.js';
+import { queueCertificateDigest } from './certificateEmailDigest.js';
 
 const workerId = `${os.hostname()}:${process.pid}:${randomUUID().slice(0, 8)}`;
 const batchSize = Math.max(1, Math.min(Number(process.env.CERTIFICATE_BATCH_SIZE) || 25, 100));
@@ -35,6 +36,7 @@ const emailUpdate = async (Model, certificate, result) => {
 
 const issueParticipantCertificate = async ({ participant, training, requestedBy }) => {
   let certificate = await Certificate.findOne({ participant: participant._id, training: training._id });
+  let created = false;
   if (!certificate) {
     try {
       certificate = await Certificate.create({
@@ -43,25 +45,24 @@ const issueParticipantCertificate = async ({ participant, training, requestedBy 
         certificateId: generateCertificateId(training.event?.year || new Date().getFullYear()),
         issuedBy: requestedBy,
       });
+      created = true;
     } catch (error) {
       if (error.code !== 11000) throw error;
       certificate = await Certificate.findOne({ participant: participant._id, training: training._id });
     }
   }
-  if (!certificate || certificate.emailStatus === 'sent' || (certificate.emailStatus === 'pending' && certificate.emailAttempts > 0) || certificate.emailAttempts >= maxEmailAttempts) return;
-  await Certificate.updateOne({ _id: certificate._id }, { $set: { emailStatus: 'processing' }, $inc: { emailAttempts: 1 } });
-  const result = await sendCertificateIssuedEmail({
+  if (!certificate || !created) return certificate;
+  const result = await queueCertificateDigest({
     to: participant.email,
     participantName: participant.fullName,
     trainingTitle: training.title,
+    certificate: certificate._id,
     certificateId: certificate.certificateId,
-    verifyUrl: `${process.env.FRONTEND_URL}/verify-certificate?id=${certificate.certificateId}`,
-    portalUrl: `${process.env.FRONTEND_URL}/portal/certificates`,
-    relatedModel: 'Certificate',
-    relatedId: certificate._id,
-    dedupeKey: `certificate:${certificate._id}`,
   });
-  await emailUpdate(Certificate, certificate, result);
+  await Certificate.updateOne({ _id: certificate._id }, result.success
+    ? { $set: { emailStatus: 'pending', emailLastError: '' }, $inc: { emailAttempts: 1 } }
+    : { $set: { emailStatus: 'failed', emailLastError: String(result.error || 'Certificate digest could not be queued.').slice(0, 500) }, $inc: { emailAttempts: 1 } });
+  return certificate;
 };
 
 const issueTrainerCertificate = async ({ training, trainer, requestedBy }) => {
@@ -112,10 +113,7 @@ const processJob = async (job) => {
   const validRegistrations = registrations.filter((registration) => registration.participant?.email);
   const certificates = await Certificate.find({ training: training._id }).select('participant emailStatus emailAttempts').lean();
   const certificateByParticipant = new Map(certificates.map((certificate) => [String(certificate.participant), certificate]));
-  const candidates = validRegistrations.filter((registration) => {
-    const certificate = certificateByParticipant.get(String(registration.participant._id));
-    return !certificate || (certificate.emailStatus !== 'sent' && (certificate.emailAttempts || 0) < maxEmailAttempts);
-  });
+  const candidates = validRegistrations.filter((registration) => !certificateByParticipant.has(String(registration.participant._id)));
 
   for (const registration of candidates.slice(0, batchSize)) {
     await issueParticipantCertificate({ participant: registration.participant, training, requestedBy: job.requestedBy });
@@ -130,13 +128,10 @@ const processJob = async (job) => {
     Certificate.countDocuments({ training: training._id, emailStatus: 'failed', emailAttempts: { $gte: maxEmailAttempts } }),
     TrainerCertificate.find({ training: training._id, trainer: { $in: trainers.map((trainer) => trainer._id) } }).select('emailStatus emailAttempts').lean(),
   ]);
-  const processedParticipants = participantEmailsSent + participantEmailsFailed;
-  const participantsFinished = processedParticipants >= validRegistrations.length;
-  const trainerFinished = trainers.length === 0 || (trainerCertificates.length >= trainers.length && trainerCertificates.every((certificate) => certificate.emailStatus === 'sent' || certificate.emailAttempts >= maxEmailAttempts));
+  const participantsFinished = participantCertificates >= validRegistrations.length;
+  const trainerFinished = trainers.length === 0 || trainerCertificates.length >= trainers.length;
   const finished = participantsFinished && trainerFinished;
-  const hasErrors = participantEmailsFailed > 0
-    || validRegistrations.length < registrations.length
-    || trainerCertificates.some((certificate) => certificate.emailStatus !== 'sent');
+  const hasErrors = validRegistrations.length < registrations.length;
 
   await CertificateIssuanceJob.updateOne({ _id: job._id, lockedBy: workerId }, {
     $set: {
@@ -178,6 +173,12 @@ const reconcileCompletedTrainings = async () => {
   await Promise.all([
     Certificate.updateMany({ emailStatus: { $exists: false } }, { $set: { emailStatus: 'sent', emailAttempts: 1 } }),
     TrainerCertificate.updateMany({ emailStatus: { $exists: false } }, { $set: { emailStatus: 'sent', emailAttempts: 1 } }),
+    // Jobs created by the former delivery-coupled worker could consume every
+    // run while waiting for SMTP and remain labelled queued forever.
+    CertificateIssuanceJob.updateMany(
+      { status: 'queued', attempts: { $gte: maxJobRuns }, lastError: '' },
+      { $set: { attempts: 0, nextRunAt: new Date(), lockedAt: null, lockedBy: '' } },
+    ),
   ]);
   const completed = await Training.find({
     status: 'completed', completedBy: { $ne: null },

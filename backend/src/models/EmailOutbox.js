@@ -19,7 +19,7 @@ const emailOutboxSchema = new mongoose.Schema({
   sentAt: { type: Date, default: null },
   providerMessageId: { type: String, default: '' },
   lastError: { type: String, default: '' },
-  relatedModel: { type: String, enum: ['', 'Certificate', 'TrainerCertificate'], default: '' },
+  relatedModel: { type: String, enum: ['', 'Certificate', 'TrainerCertificate', 'CertificateDigest'], default: '' },
   relatedId: { type: mongoose.Schema.Types.ObjectId, default: null },
 }, { timestamps: true });
 
