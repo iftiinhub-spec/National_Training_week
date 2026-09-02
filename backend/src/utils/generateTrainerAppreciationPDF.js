@@ -74,14 +74,46 @@ export const generateTrainerAppreciationPDF = async ({ trainerName, trainingTitl
       .text('In recognition of your exceptional contribution as a Trainer, and in appreciation of the expertise, dedication, and inspiration you shared with our learning community.', 170, 274, { width: width - 240, align: 'center', lineGap: 4 });
 
     // Session recognition panel with a strong editorial hierarchy.
-    doc.roundedRect(166, 354, width - 236, 74, 10).fillAndStroke(pale, '#c9e3d3');
-    doc.rect(166, 354, 7, 74).fill(brightGreen);
+    const panelTop = 354;
+    const titleText = trainingTitle || 'Training Session';
+    const eventText = eventName || 'National Training Week';
+    const textOptions = { width: width - 288 };
+    const titleY = 384;
+    const gap = 3;
+    // The signature image starts at 439, so the panel has to stop short of it.
+    const maxPanelBottom = 432;
+
+    doc.font('Helvetica').fontSize(9.5);
+    const eventHeight = doc.heightOfString(eventText, textOptions);
+
+    // A long session title wraps onto a second line. Both rows used to be drawn at
+    // fixed y positions 23pt apart, so a wrapped title ran straight through the
+    // event name. Measure the title instead, and only shrink it when even the
+    // taller panel could not hold it.
+    let titleSize = 14.5;
+    let titleHeight = 0;
+    for (const size of [14.5, 13, 11.5, 10]) {
+      titleSize = size;
+      doc.font('Helvetica-Bold').fontSize(size);
+      titleHeight = doc.heightOfString(titleText, textOptions);
+      if (titleY + titleHeight + gap + eventHeight + 8 <= maxPanelBottom) break;
+    }
+    // An unreasonably long title is clipped rather than allowed to escape the panel.
+    titleHeight = Math.min(titleHeight, maxPanelBottom - 8 - eventHeight - gap - titleY);
+
+    // Holding the event name at its original y keeps single-line titles - the
+    // overwhelming majority - rendering exactly as they always have.
+    const eventY = Math.max(407, titleY + titleHeight + gap);
+    const panelHeight = Math.max(74, eventY + eventHeight + 8 - panelTop);
+
+    doc.roundedRect(166, panelTop, width - 236, panelHeight, 10).fillAndStroke(pale, '#c9e3d3');
+    doc.rect(166, panelTop, 7, panelHeight).fill(brightGreen);
     doc.fillColor(green).font('Helvetica-Bold').fontSize(8)
       .text('SESSION DELIVERED', 192, 368, { width: width - 288, characterSpacing: 1.3 });
-    doc.fillColor(black).font('Helvetica-Bold').fontSize(14.5)
-      .text(trainingTitle || 'Training Session', 192, 384, { width: width - 288 });
+    doc.fillColor(black).font('Helvetica-Bold').fontSize(titleSize)
+      .text(titleText, 192, titleY, { ...textOptions, height: titleHeight, ellipsis: true });
     doc.fillColor(muted).font('Helvetica').fontSize(9.5)
-      .text(eventName || 'National Training Week', 192, 407, { width: width - 288 });
+      .text(eventText, 192, eventY, textOptions);
 
     const formattedDate = new Date(issuedDate || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     doc.fillColor(green).font('Helvetica-Bold').fontSize(8)
