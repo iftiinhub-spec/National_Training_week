@@ -2,7 +2,7 @@ import Attendance from '../../models/Attendance.js';
 import QRSession from '../../models/QRSession.js';
 import Registration from '../../models/Registration.js';
 import Training from '../../models/Training.js';
-import { randomUUID, randomBytes, createHmac, timingSafeEqual } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { generateQRDataUrl } from '../../utils/qrGenerator.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
 import { sessionStartsAt, sessionEndsAt } from '../../utils/lifecycle.js';
@@ -13,37 +13,12 @@ const checkAccess = async (trainingId, userId, role) => {
   return training && String(training.moderator) === String(userId);
 };
 
-// --- Rolling check-in code -------------------------------------------------
-// The displayed QR carries a code derived from the session secret and the
-// current time step. A screenshot is therefore only usable for a few seconds,
-// which is what stops participants forwarding the code to people who are not
-// attending.
-const ROTATE_SECONDS = Number(process.env.QR_ROTATE_SECONDS) || 30;
+// Each opening creates one fixed code. It remains valid for ten minutes unless
+// the moderator closes or replaces it first.
+const SESSION_MINUTES = Math.max(1, Number(process.env.QR_SESSION_MINUTES) || 10);
 // How far outside its own scheduled time a session still accepts check-ins.
 const WINDOW_BEFORE_MINUTES = Number(process.env.QR_WINDOW_BEFORE_MINUTES) || 15;
-const WINDOW_AFTER_MINUTES = Number(process.env.QR_WINDOW_AFTER_MINUTES) || 30;
-
-const currentStep = (at = Date.now()) => Math.floor(at / (ROTATE_SECONDS * 1000));
-
-const rollingCode = (secret, step) =>
-  createHmac('sha256', secret).update(String(step)).digest('base64url').slice(0, 12);
-
-const codeMatches = (secret, step, candidate) => {
-  const expected = Buffer.from(rollingCode(secret, step));
-  const given = Buffer.from(String(candidate || ''));
-  return expected.length === given.length && timingSafeEqual(expected, given);
-};
-
-// Accepts the current step and the one before it, so a code stays valid for at
-// most 2 x ROTATE_SECONDS. That covers clock skew and slow scans without
-// widening the sharing window meaningfully.
-const codeIsValid = (secret, candidate, at = Date.now()) => {
-  const step = currentStep(at);
-  return codeMatches(secret, step, candidate) || codeMatches(secret, step - 1, candidate);
-};
-
-const secondsLeftInStep = (at = Date.now()) =>
-  ROTATE_SECONDS - Math.floor((at % (ROTATE_SECONDS * 1000)) / 1000);
+const WINDOW_AFTER_MINUTES = Number(process.env.QR_WINDOW_AFTER_MINUTES) || 60;
 
 // The window a session may accept check-ins in, derived from the training's own
 // schedule rather than from when the moderator happened to open the QR.
@@ -57,10 +32,8 @@ const checkInWindow = (training) => {
   };
 };
 
-const buildQrPayload = (trainingId, session, at = Date.now()) => {
-  const code = rollingCode(session.secret, currentStep(at));
-  return `${process.env.FRONTEND_URL}/qr-checkin?t=${trainingId}&s=${session.sessionToken}&c=${code}`;
-};
+const buildQrPayload = (trainingId, session) =>
+  `${process.env.FRONTEND_URL}/qr-checkin?t=${trainingId}&s=${session.sessionToken}`;
 
 const attendanceIsLocked = async (trainingId) => {
   const training = await Training.findById(trainingId).select('status attendanceLockedAt');
@@ -81,17 +54,18 @@ export const openQRSession = async (req, res, next) => {
     const training = await Training.findById(trainingId).select('date startTime endTime');
     const window = checkInWindow(training);
     if (!window) return errorResponse(res, 'This training has no scheduled time, so check-in cannot be opened.', 400);
+    if (Date.now() < window.opensAt.getTime()) {
+      return errorResponse(res, `Check-in can open ${WINDOW_BEFORE_MINUTES} minutes before this session starts.`, 400);
+    }
     if (Date.now() > window.closesAt.getTime()) {
       return errorResponse(res, 'This session has already finished. Mark attendance manually instead.', 400);
     }
 
     const sessionToken = randomUUID();
-    const secret = randomBytes(32).toString('hex');
-    // The session can never outlive the window it belongs to.
-    const expiresAt = window.closesAt;
+    const expiresAt = new Date(Date.now() + SESSION_MINUTES * 60000);
 
     const session = await QRSession.create({
-      training: trainingId, sessionToken, secret, isOpen: true,
+      training: trainingId, sessionToken, isOpen: true,
       openedBy: req.user._id, expiresAt,
     });
 
@@ -102,21 +76,20 @@ export const openQRSession = async (req, res, next) => {
       session: { _id: session._id, expiresAt, isOpen: true, opensAt: window.opensAt },
       qrDataUrl,
       checkUrl,
-      rotateSeconds: ROTATE_SECONDS,
-      secondsLeftInStep: secondsLeftInStep(),
+      sessionMinutes: SESSION_MINUTES,
     }, 'Check-in opened.');
   } catch (err) { next(err); }
 };
 
 // GET /api/.../trainings/:trainingId/qr-session/current
-// The moderator screen polls this so the displayed code keeps rotating.
+// Returns the same fixed code so the moderator can recover it after reloading.
 export const currentQRCode = async (req, res, next) => {
   try {
     const { trainingId } = req.params;
     const hasAccess = await checkAccess(trainingId, req.user._id, req.user.role);
     if (!hasAccess) return errorResponse(res, 'Access denied.', 403);
 
-    const session = await QRSession.findOne({ training: trainingId, isOpen: true }).select('+secret');
+    const session = await QRSession.findOne({ training: trainingId, isOpen: true });
     if (!session) return errorResponse(res, 'No active check-in for this training.', 404);
     if (session.expiresAt < new Date()) {
       await QRSession.findByIdAndUpdate(session._id, { isOpen: false, closedAt: new Date() });
@@ -130,8 +103,7 @@ export const currentQRCode = async (req, res, next) => {
       qrDataUrl,
       checkUrl,
       expiresAt: session.expiresAt,
-      rotateSeconds: ROTATE_SECONDS,
-      secondsLeftInStep: secondsLeftInStep(),
+      sessionMinutes: SESSION_MINUTES,
     }, 'Current check-in code.');
   } catch (err) { next(err); }
 };
@@ -151,50 +123,40 @@ export const closeQRSession = async (req, res, next) => {
 // POST /api/participant/qr-checkin  — participant scans QR
 export const qrCheckIn = async (req, res, next) => {
   try {
-    const { trainingId, sessionToken, code } = req.body;
+    const { trainingId, sessionToken } = req.body;
     const participantId = req.user._id;
 
     if (await attendanceIsLocked(trainingId)) return errorResponse(res, 'Attendance is closed for this completed training.', 400);
 
     // 1. Verify QR session is open and valid
-    const session = await QRSession.findOne({ training: trainingId, sessionToken, isOpen: true }).select('+secret');
+    const session = await QRSession.findOne({ training: trainingId, sessionToken, isOpen: true });
     if (!session) return errorResponse(res, 'QR session is not active or has expired.', 400);
     if (session.expiresAt < new Date()) {
       await QRSession.findByIdAndUpdate(session._id, { isOpen: false, closedAt: new Date() });
       return errorResponse(res, 'QR session has expired.', 400);
     }
 
-    // 2. The code must be the one on screen right now. A forwarded screenshot
-    //    stops working within roughly a minute.
-    if (!session.secret) {
-      return errorResponse(res, 'This check-in was opened before rolling codes were enabled. Ask the moderator to restart it.', 400);
-    }
-    if (!codeIsValid(session.secret, code)) {
-      return errorResponse(res, 'This code has expired. Scan the code currently on screen.', 400);
-    }
-
-    // 3. Only during the session's own scheduled window, so nobody can be
-    //    marked present hours or days later.
+    // 2. The configured pre-session boundary still applies. Once opened, the
+    //    QR session's own ten-minute expiry is its upper bound.
     const scheduled = await Training.findById(trainingId).select('date startTime endTime');
     const window = checkInWindow(scheduled);
     if (!window) return errorResponse(res, 'This training has no scheduled time.', 400);
     const now = new Date();
     if (now < window.opensAt) return errorResponse(res, 'Check-in has not opened yet for this session.', 400);
-    if (now > window.closesAt) return errorResponse(res, 'Check-in has closed for this session.', 400);
 
-    // 4. Verify participant has approved registration for this training
+    // 3. Verify participant has approved registration for this training
     const registration = await Registration.findOne({
       participant: participantId, training: trainingId, status: 'approved',
     });
     if (!registration) return errorResponse(res, 'You do not have an approved registration for this training.', 403);
 
-    // 5. Check for duplicate check-in
+    // 4. Check for duplicate check-in
     const existing = await Attendance.findOne({ participant: participantId, training: trainingId });
     if (existing && existing.status === 'present') {
       return errorResponse(res, 'You have already checked in for this training.', 409);
     }
 
-    // 6. Mark attendance
+    // 5. Mark attendance
     const attendance = await Attendance.findOneAndUpdate(
       { participant: participantId, training: trainingId },
       { status: 'present', checkinTime: new Date(), method: 'qr', markedBy: req.user._id },

@@ -12,9 +12,6 @@ const qrSessionSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    // HMAC key for the rolling check-in code. select:false so it can never be
-    // serialised into an API response by accident.
-    secret: { type: String, required: true, select: false },
     isOpen: { type: Boolean, default: true },
     openedBy: {
       type: mongoose.Schema.Types.ObjectId,

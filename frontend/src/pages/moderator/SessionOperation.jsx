@@ -41,14 +41,14 @@ export const SessionOperation = () => {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [checkUrl, setCheckUrl] = useState('');
   const [qrFullscreen, setQrFullscreen] = useState(false);
-  const [rotateSeconds, setRotateSeconds] = useState(30);
 
   const fetchSessionData = useCallback(async () => {
     try {
-      const [trRes, meetRes, attRes] = await Promise.all([
+      const [trRes, meetRes, attRes, qrRes] = await Promise.all([
         api.get(`/moderator/trainings/${trainingId}`),
         api.get(`/moderator/trainings/${trainingId}/meeting`).catch(() => ({ success: false })),
         api.get(`/moderator/trainings/${trainingId}/attendance`).catch(() => ({ success: false })),
+        api.get(`/moderator/trainings/${trainingId}/qr-session/current`).catch(() => ({ success: false })),
       ]);
 
       if (trRes.success) setTraining(trRes.data.training);
@@ -63,6 +63,11 @@ export const SessionOperation = () => {
         });
       }
       if (attRes.success) setAttendance(attRes.data.records || []);
+      if (qrRes.success) {
+        setQrSession({ isOpen: true, expiresAt: qrRes.data.expiresAt });
+        setQrDataUrl(qrRes.data.qrDataUrl);
+        setCheckUrl(qrRes.data.checkUrl || '');
+      }
     } catch (err) {
       toast.error('Failed to load session data.');
     } finally {
@@ -122,7 +127,6 @@ export const SessionOperation = () => {
         setQrSession(res.data.session);
         setQrDataUrl(res.data.qrDataUrl);
         setCheckUrl(res.data.checkUrl || '');
-        setRotateSeconds(res.data.rotateSeconds || 30);
         toast.success('QR Attendance session opened!');
       }
     } catch (err) {
@@ -145,27 +149,6 @@ export const SessionOperation = () => {
       toast.error(err.message || 'Failed to close QR session.');
     }
   };
-
-  // The displayed code rotates, so the screen has to keep pulling the current
-  // one. Without this the QR on screen would stop working after one step.
-  useEffect(() => {
-    if (!qrSession) return undefined;
-    let cancelled = false;
-    const refresh = async () => {
-      try {
-        const res = await api.get(`/moderator/trainings/${trainingId}/qr-session/current`);
-        if (!cancelled && res.success) {
-          setQrDataUrl(res.data.qrDataUrl);
-          setCheckUrl(res.data.checkUrl || '');
-          setRotateSeconds(res.data.rotateSeconds || 30);
-        }
-      } catch {
-        // A failed refresh is not fatal; the next tick tries again.
-      }
-    };
-    const id = setInterval(refresh, Math.max(5, (rotateSeconds || 30) - 3) * 1000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [qrSession, trainingId, rotateSeconds]);
 
   useEffect(() => {
     if (!qrFullscreen) return undefined;
@@ -487,7 +470,9 @@ export const SessionOperation = () => {
 
                   <div className="text-center sm:text-left">
                     <p className="text-lg font-bold text-slate-900">Check-in is active</p>
-                    <p className="mt-1 max-w-sm text-sm leading-6 text-slate-500">Keep this screen visible while participants scan the current code.</p>
+                    <p className="mt-1 max-w-sm text-sm leading-6 text-slate-500">
+                      This code does not refresh. It expires at {new Date(qrSession.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.
+                    </p>
 
                     <div className="mt-5 flex flex-col gap-2 sm:flex-row">
                       {checkUrl && (

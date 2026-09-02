@@ -33,7 +33,7 @@ test('regex search input is treated as literal text', () => {
 
 test('QR check-in rejects malformed IDs and tokens', async () => {
   const errors = await runRules(qrCheckinValidation, { trainingId: 'bad', sessionToken: 'bad' });
-  assert.deepEqual([...new Set(errors.map(({ path }) => path))].sort(), ['code', 'sessionToken', 'trainingId']);
+  assert.deepEqual([...new Set(errors.map(({ path }) => path))].sort(), ['sessionToken', 'trainingId']);
 });
 
 test('feedback only accepts ratings from one to five', async () => {

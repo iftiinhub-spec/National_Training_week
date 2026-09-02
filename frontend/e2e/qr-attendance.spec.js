@@ -26,7 +26,7 @@ const eatTime = (date) => new Intl.DateTimeFormat('en-GB', {
 }).format(date);
 
 test.beforeAll(async () => {
-  await mongoose.connect(envValue('MONGODB_URI'));
+  await mongoose.connect(process.env.MONGODB_URI || envValue('MONGODB_URI'));
   const event = await Event.findOne({}).sort({ createdAt: -1 });
   const eventDay = await EventDay.findOne({ event: event?._id }).sort({ dayNumber: 1 });
   if (!event || !eventDay) throw new Error('A local event and event day are required for the QR test.');
@@ -72,11 +72,13 @@ test.afterAll(async () => {
   await mongoose.disconnect();
 });
 
-test('rotating QR checks in an approved participant and rejects unsafe reuse', async ({ page, request }) => {
+test('fixed QR checks in an approved participant and invalidates a replaced session', async ({ page, request }) => {
   test.setTimeout(90_000);
 
   const adminLogin = await request.post(`${apiBase}/api/auth/login`, {
-    data: { email: envValue('ADMIN_EMAIL'), password: envValue('ADMIN_PASSWORD') },
+    data: process.env.E2E_API_URL
+      ? { email: 'admin.e2e@example.com', password: 'AdminE2E123!' }
+      : { email: envValue('ADMIN_EMAIL'), password: envValue('ADMIN_PASSWORD') },
   });
   expect(adminLogin.ok(), await adminLogin.text()).toBeTruthy();
   const adminToken = (await adminLogin.json()).data.token;
@@ -93,28 +95,40 @@ test('rotating QR checks in an approved participant and rejects unsafe reuse', a
   expect(openedResponse.ok(), await openedResponse.text()).toBeTruthy();
   const opened = (await openedResponse.json()).data;
   expect(opened.checkUrl).toContain('/qr-checkin?');
-  expect(opened.checkUrl).toContain('&c=');
-  expect(opened).not.toHaveProperty('secret');
-  expect(opened.session).not.toHaveProperty('secret');
+  expect(opened.checkUrl).not.toContain('&c=');
+  expect(opened.sessionMinutes).toBe(10);
 
   const firstUrl = new URL(opened.checkUrl);
-  const firstCode = firstUrl.searchParams.get('c');
-  await page.waitForTimeout((opened.secondsLeftInStep + 1) * 1_000);
 
   const currentResponse = await request.get(`${apiBase}/api/admin/trainings/${created.training._id}/qr-session/current`, {
     headers: authHeaders(adminToken),
   });
   expect(currentResponse.ok(), await currentResponse.text()).toBeTruthy();
   const current = (await currentResponse.json()).data;
-  const currentUrl = new URL(current.checkUrl);
-  expect(currentUrl.searchParams.get('c')).not.toBe(firstCode);
-  expect(current).not.toHaveProperty('secret');
+  expect(current.checkUrl).toBe(opened.checkUrl);
+
+  const replacementResponse = await request.post(`${apiBase}/api/admin/trainings/${created.training._id}/qr-session/open`, {
+    headers: authHeaders(adminToken),
+  });
+  expect(replacementResponse.ok(), await replacementResponse.text()).toBeTruthy();
+  const replacement = (await replacementResponse.json()).data;
+  const replacementUrl = new URL(replacement.checkUrl);
+  expect(replacementUrl.searchParams.get('s')).not.toBe(firstUrl.searchParams.get('s'));
+
+  const replacedResponse = await request.post(`${apiBase}/api/participant/qr-checkin`, {
+    headers: authHeaders(participantAuth.token),
+    data: {
+      trainingId: String(created.training._id),
+      sessionToken: firstUrl.searchParams.get('s'),
+    },
+  });
+  expect(replacedResponse.status()).toBe(400);
 
   await page.addInitScript(({ token, user }) => {
     localStorage.setItem('ntw_token', token);
     localStorage.setItem('ntw_user', JSON.stringify(user));
   }, participantAuth);
-  await page.goto(`${currentUrl.pathname}${currentUrl.search}`);
+  await page.goto(`${replacementUrl.pathname}${replacementUrl.search}`);
   await expect(page.getByRole('heading', { name: 'Confirm your attendance' })).toBeVisible();
   await page.getByRole('button', { name: 'Confirm check-in' }).click();
   await expect(page.getByText(/attendance confirmed/i)).toBeVisible();
@@ -127,22 +141,20 @@ test('rotating QR checks in an approved participant and rejects unsafe reuse', a
     headers: authHeaders(participantAuth.token),
     data: {
       trainingId: String(created.training._id),
-      sessionToken: currentUrl.searchParams.get('s'),
-      code: currentUrl.searchParams.get('c'),
+      sessionToken: replacementUrl.searchParams.get('s'),
     },
   });
   expect(duplicateResponse.status()).toBe(409);
 
-  const invalidCodeResponse = await request.post(`${apiBase}/api/participant/qr-checkin`, {
+  const invalidSessionResponse = await request.post(`${apiBase}/api/participant/qr-checkin`, {
     headers: authHeaders(participantAuth.token),
     data: {
       trainingId: String(created.training._id),
-      sessionToken: currentUrl.searchParams.get('s'),
-      code: 'invalidcode12',
+      sessionToken: '00000000-0000-4000-8000-000000000000',
     },
   });
-  expect(invalidCodeResponse.status()).toBe(400);
-  expect((await invalidCodeResponse.json()).message).toMatch(/expired|currently on screen/i);
+  expect(invalidSessionResponse.status()).toBe(400);
+  expect((await invalidSessionResponse.json()).message).toMatch(/not active|expired/i);
 
   const closeResponse = await request.post(`${apiBase}/api/admin/trainings/${created.training._id}/qr-session/close`, {
     headers: authHeaders(adminToken),

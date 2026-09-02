@@ -9,17 +9,16 @@ const QRCheckIn = () => {
   const [searchParams] = useSearchParams();
   const trainingId = searchParams.get('t')?.trim() || '';
   const sessionToken = searchParams.get('s')?.trim() || '';
-  const code = searchParams.get('c')?.trim() || '';
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
-  const returnPath = `/qr-checkin?t=${encodeURIComponent(trainingId)}&s=${encodeURIComponent(sessionToken)}&c=${encodeURIComponent(code)}`;
+  const returnPath = `/qr-checkin?t=${encodeURIComponent(trainingId)}&s=${encodeURIComponent(sessionToken)}`;
 
   const checkIn = async () => {
     setSubmitting(true);
     setError('');
     try {
-      const res = await api.post('/participant/qr-checkin', { trainingId, sessionToken, code });
+      const res = await api.post('/participant/qr-checkin', { trainingId, sessionToken });
       if (res.success) setResult(res.data?.attendance || true);
     } catch (err) {
       setError(err.message || 'Check-in failed. The QR session may be closed or expired.');
@@ -27,7 +26,7 @@ const QRCheckIn = () => {
   };
 
   if (loading) return null;
-  const invalid = !trainingId || !sessionToken || !code;
+  const invalid = !trainingId || !sessionToken;
 
   return <div className="flex min-h-[75vh] items-center justify-center bg-slate-50 px-4 py-16">
     <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">

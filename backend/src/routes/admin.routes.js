@@ -65,8 +65,8 @@ router.post('/trainings/:trainingId/invitations/participants', idParam('training
 router.get('/trainings/:trainingId/communications', getCommunications);
 
 // Attendance
-router.post('/trainings/:trainingId/qr-session/open', openQRSession);
-router.post('/trainings/:trainingId/qr-session/close', closeQRSession);
+router.post('/trainings/:trainingId/qr-session/open', idParam('trainingId', 'training ID'), validate, openQRSession);
+router.post('/trainings/:trainingId/qr-session/close', idParam('trainingId', 'training ID'), validate, closeQRSession);
 router.get('/trainings/:trainingId/qr-session/current', idParam('trainingId', 'training ID'), validate, currentQRCode);
 router.get('/trainings/:trainingId/attendance', getAttendance);
 router.patch('/trainings/:trainingId/attendance/:attendanceId', idParam('trainingId', 'training ID'), idParam('attendanceId', 'attendance ID'), attendanceValidation, validate, updateAttendance);

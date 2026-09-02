@@ -44,7 +44,6 @@ export const registrationCreateValidation = [
 export const qrCheckinValidation = [
   objectId(body, 'trainingId', 'training ID'),
   body('sessionToken').isUUID().withMessage('A valid QR session token is required.'),
-  body('code').isString().trim().isLength({ min: 8, max: 24 }).withMessage('A valid check-in code is required.'),
 ];
 
 export const feedbackValidation = [
