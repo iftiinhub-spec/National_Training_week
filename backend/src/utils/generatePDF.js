@@ -82,14 +82,47 @@ export const generateCertificatePDF = async ({
     // The completed session is the central achievement record.
     const panelX = 145;
     const panelWidth = width - 290;
-    doc.roundedRect(panelX, 329, panelWidth, 86, 8).fillAndStroke(pale, '#c9e3d3');
-    doc.rect(panelX, 329, 7, 86).fill(brightGreen);
+    const panelTop = 329;
+    const titleText = trainingTitle || 'Training Session';
+    const eventText = eventName || 'National Training Week';
+    const textX = panelX + 28;
+    const textOptions = { width: panelWidth - 56, align: 'center' };
+    const titleY = 365;
+    const gap = 3;
+    // The signature block starts at 431, so the panel has to stop short of it.
+    const maxPanelBottom = 424;
+
+    doc.font('Helvetica').fontSize(9.5);
+    const eventHeight = doc.heightOfString(eventText, textOptions);
+
+    // A long session title wraps onto a second line. Both rows used to be drawn at
+    // fixed y positions 27pt apart, so a wrapped title ran straight through the
+    // event name. Measure the title instead, and only shrink it when even the
+    // taller panel could not hold it.
+    let titleSize = 16;
+    let titleHeight = 0;
+    for (const size of [16, 14.5, 13, 11.5, 10]) {
+      titleSize = size;
+      doc.font('Helvetica-Bold').fontSize(size);
+      titleHeight = doc.heightOfString(titleText, textOptions);
+      if (titleY + titleHeight + gap + eventHeight + 8 <= maxPanelBottom) break;
+    }
+    // An unreasonably long title is clipped rather than allowed to escape the panel.
+    titleHeight = Math.min(titleHeight, maxPanelBottom - 8 - eventHeight - gap - titleY);
+
+    // Holding the event name at its original y keeps single-line titles - the
+    // overwhelming majority - rendering exactly as they always have.
+    const eventY = Math.max(392, titleY + titleHeight + gap);
+    const panelHeight = Math.max(86, eventY + eventHeight + 8 - panelTop);
+
+    doc.roundedRect(panelX, panelTop, panelWidth, panelHeight, 8).fillAndStroke(pale, '#c9e3d3');
+    doc.rect(panelX, panelTop, 7, panelHeight).fill(brightGreen);
     doc.fillColor(green).font('Helvetica-Bold').fontSize(8)
       .text('TRAINING COMPLETED', panelX + 27, 345, { width: panelWidth - 54, align: 'center', characterSpacing: 1.35 });
-    doc.fillColor(black).font('Helvetica-Bold').fontSize(16)
-      .text(trainingTitle || 'Training Session', panelX + 28, 365, { width: panelWidth - 56, align: 'center' });
+    doc.fillColor(black).font('Helvetica-Bold').fontSize(titleSize)
+      .text(titleText, textX, titleY, { ...textOptions, height: titleHeight, ellipsis: true });
     doc.fillColor(muted).font('Helvetica').fontSize(9.5)
-      .text(eventName || 'National Training Week', panelX + 28, 392, { width: panelWidth - 56, align: 'center' });
+      .text(eventText, textX, eventY, textOptions);
 
     const dateValue = new Date(issuedDate || Date.now());
     const formattedDate = Number.isNaN(dateValue.getTime())
