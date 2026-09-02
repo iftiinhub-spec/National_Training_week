@@ -13,7 +13,7 @@ import {
   UserGroupIcon,
   CheckCircleIcon,
   ArrowLeftIcon,
-} from '@heroicons/react/24/outline';
+} from '@icons';
 import { formatTimeRange12 } from '../../utils/timeFormat';
 
 export const TrainingDetails = () => {
@@ -174,7 +174,7 @@ export const TrainingDetails = () => {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
               {category && (
-                <span className="bg-[#1da156] text-white px-3 py-1 rounded-full">
+                <span className="bg-[#15803d] text-white px-3 py-1 rounded-full">
                   {category.name}
                 </span>
               )}
@@ -218,7 +218,7 @@ export const TrainingDetails = () => {
           {/* Trainer / Speaker Profile Box */}
           {assignedTrainers.map((trainer) => (
             <div key={trainer._id} className="bg-white rounded-2xl p-6 sm:p-8 border border-black/10 shadow-xs space-y-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#1da156]">
+              <span className="text-sm font-bold text-[#1da156]">
                 Assigned Trainer / Speaker
               </span>
 
@@ -230,7 +230,7 @@ export const TrainingDetails = () => {
                     className="w-20 h-20 rounded-2xl object-cover border-2 border-[#1da156] shrink-0"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-2xl bg-[#1da156] text-white flex items-center justify-center font-bold text-2xl shrink-0">
+                  <div className="w-20 h-20 rounded-2xl bg-[#15803d] text-white flex items-center justify-center font-bold text-2xl shrink-0">
                     {trainer.name?.charAt(0)}
                   </div>
                 )}
@@ -273,7 +273,7 @@ export const TrainingDetails = () => {
           <div className="bg-white rounded-2xl p-6 border border-black/10 shadow-lg sticky top-28 space-y-6">
             
             <div className="space-y-3 border-b border-black/10 pb-5">
-              <span className="text-xs font-bold uppercase tracking-wider text-black/60">
+              <span className="text-sm font-bold text-black/60">
                 Enrollment Action
               </span>
 
@@ -288,7 +288,7 @@ export const TrainingDetails = () => {
                   </p>
                   <Link
                     to="/portal/trainings"
-                    className="block w-full text-center py-2 bg-[#1da156] text-white rounded-lg text-xs font-bold mt-2"
+                    className="block w-full text-center py-2 bg-[#15803d] text-white rounded-lg text-xs font-bold mt-2"
                   >
                     View in My Portal
                   </Link>
@@ -297,7 +297,7 @@ export const TrainingDetails = () => {
                 <button
                   onClick={handleRegister}
                   disabled={submitting}
-                  className="w-full py-3.5 px-4 bg-[#1da156] hover:bg-black text-white font-bold rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3.5 px-4 bg-[#15803d] hover:bg-black text-white font-bold rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {submitting ? 'Submitting...' : 'Register for Session'}
                 </button>
@@ -310,7 +310,7 @@ export const TrainingDetails = () => {
 
             {/* Schedule Details */}
             <div className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-black">
+              <h4 className="text-sm font-bold text-black">
                 Schedule & Platform Info
               </h4>
 

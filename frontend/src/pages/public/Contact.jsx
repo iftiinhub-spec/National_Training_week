@@ -6,7 +6,7 @@ import {
   EnvelopeIcon,
   PhoneIcon,
   MapPinIcon,
-} from "@heroicons/react/24/outline";
+} from "@icons";
 import PublicPageHeader from "../../components/common/PublicPageHeader";
 
 const CONTACT_INFO = [
@@ -70,12 +70,12 @@ export const Contact = () => {
             {/* Left: info column */}
             <div className="lg:col-span-2 space-y-6">
               {/* Info card */}
-              <div className="rounded-2xl p-8 text-white shadow-xl space-y-6 bg-[#1da156]">
+              <div className="rounded-2xl p-8 text-white shadow-xl space-y-6 bg-[#15803d]">
                 <div>
                   <h2 className="text-2xl font-black">
                     National Training Week
                   </h2>
-                  <p className="text-white/80 text-sm mt-1">
+                  <p className="text-white text-sm mt-1">
                     Organizing Secretariat
                   </p>
                 </div>
@@ -105,7 +105,7 @@ export const Contact = () => {
               </div>
 
               <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-black uppercase tracking-wide text-black">
+                <h3 className="text-sm font-black text-black">
                   Looking for a quick answer?
                 </h3>
                 <p className="mt-3 text-sm leading-6 text-black/70">
@@ -123,7 +123,6 @@ export const Contact = () => {
 
             {/* Right: form */}
             <div className="lg:col-span-3 bg-white rounded-2xl border border-black/10 shadow-sm overflow-hidden">
-              <div className="h-1.5 bg-[#1da156]" />
               <div className="p-8 sm:p-10">
                 <h2 className="text-2xl font-black text-black mb-1">
                   Send a Message
@@ -135,7 +134,7 @@ export const Contact = () => {
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-xs font-black text-black uppercase tracking-wide mb-2">
+                      <label className="mb-2 block text-sm font-bold text-black">
                         Full Name *
                       </label>
                       <input
@@ -150,7 +149,7 @@ export const Contact = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-black text-black uppercase tracking-wide mb-2">
+                      <label className="mb-2 block text-sm font-bold text-black">
                         Email Address *
                       </label>
                       <input
@@ -167,7 +166,7 @@ export const Contact = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black text-black uppercase tracking-wide mb-2">
+                    <label className="mb-2 block text-sm font-bold text-black">
                       Subject *
                     </label>
                     <input
@@ -183,7 +182,7 @@ export const Contact = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black text-black uppercase tracking-wide mb-2">
+                    <label className="mb-2 block text-sm font-bold text-black">
                       Message *
                     </label>
                     <textarea
@@ -201,7 +200,7 @@ export const Contact = () => {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3.5 bg-[#1da156] hover:bg-black text-white font-black rounded-xl shadow transition-colors disabled:opacity-50 text-sm tracking-wide uppercase"
+                    className="w-full rounded-xl bg-[#15803d] py-3.5 text-sm font-black text-white shadow transition-colors hover:bg-black disabled:opacity-50"
                   >
                     {submitting ? "Sending…" : "Send Message →"}
                   </button>

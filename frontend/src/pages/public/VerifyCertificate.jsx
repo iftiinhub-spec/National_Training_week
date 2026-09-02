@@ -10,7 +10,7 @@ import {
   MagnifyingGlassIcon,
   CalendarIcon,
   UserIcon,
-} from '@heroicons/react/24/outline';
+} from '@icons';
 
 export const VerifyCertificate = () => {
   const [searchParams] = useSearchParams();
@@ -89,7 +89,7 @@ export const VerifyCertificate = () => {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-[#1da156] hover:bg-black text-white font-bold text-sm rounded-xl shadow transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="px-6 py-3 bg-[#15803d] hover:bg-black text-white font-bold text-sm rounded-xl shadow transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? 'Verifying...' : 'Verify Certificate'}
             </button>

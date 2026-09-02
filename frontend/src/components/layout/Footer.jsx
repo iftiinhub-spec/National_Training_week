@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BuildingLibraryIcon, MapPinIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
-import { FaFacebookF, FaInstagram, FaLinkedinIn, FaTiktok, FaXTwitter } from 'react-icons/fa6';
+import { BuildingLibraryIcon, MapPinIcon, EnvelopeIcon } from '@icons';
+import { FaFacebookF, FaInstagram, FaLinkedinIn, FaTiktok, FaXTwitter } from '@icons';
 import { useCurrentEvent } from '../../context/EventContext';
 import api from '../../api/axios';
 
@@ -84,7 +84,7 @@ export const Footer = () => {
             professionals, and the public with practical learning and expert-led
             professional development.
           </p>
-          {socialLinks.length > 0 && <div className="flex flex-wrap gap-3 pt-2">{socialLinks.map(({ key, label, Icon }) => <a key={key} href={settings[key]} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition-all hover:border-[#1da156] hover:bg-[#1da156] focus:outline-none focus:ring-2 focus:ring-[#1da156] focus:ring-offset-2 focus:ring-offset-black"><Icon className="h-4 w-4" /></a>)}</div>}
+          {socialLinks.length > 0 && <div className="flex flex-wrap gap-3 pt-2">{socialLinks.map(({ key, label, Icon }) => <a key={key} href={settings[key]} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition-all hover:border-[#1da156] hover:bg-[#15803d] focus:outline-none focus:ring-2 focus:ring-[#1da156] focus:ring-offset-2 focus:ring-offset-black"><Icon className="h-4 w-4" /></a>)}</div>}
         </div>
 
         {/* Col 2 */}

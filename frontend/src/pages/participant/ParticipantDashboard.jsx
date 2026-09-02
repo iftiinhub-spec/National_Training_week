@@ -11,7 +11,7 @@ import {
   ClipboardDocumentCheckIcon,
   ArrowRightIcon,
   ClockIcon,
-} from '@heroicons/react/24/outline';
+} from '@icons';
 
 export const ParticipantDashboard = () => {
   const { user } = useAuth();

@@ -44,6 +44,7 @@ export const registrationCreateValidation = [
 export const qrCheckinValidation = [
   objectId(body, 'trainingId', 'training ID'),
   body('sessionToken').isUUID().withMessage('A valid QR session token is required.'),
+  body('code').isString().trim().isLength({ min: 8, max: 24 }).withMessage('A valid check-in code is required.'),
 ];
 
 export const feedbackValidation = [
@@ -100,6 +101,8 @@ export const trainerValidation = [
   body('phone').optional({ checkFalsy: true }).customSanitizer(normalizePhone).custom(isValidInternationalPhone),
   body('title').optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
   body('organization').optional({ checkFalsy: true }).trim().isLength({ max: 150 }),
+  body('portfolioUrl').optional({ checkFalsy: true }).trim().isURL({ protocols: ['https'], require_protocol: true }).withMessage('Portfolio website must be a valid HTTPS URL.').isLength({ max: 500 }),
+  body('linkedinUrl').optional({ checkFalsy: true }).trim().isURL({ protocols: ['https'], require_protocol: true }).withMessage('LinkedIn profile must be a valid HTTPS URL.').custom((value) => /^(?:https:\/\/)(?:[a-z]{2,3}\.)?linkedin\.com\//i.test(value)).withMessage('Enter a valid LinkedIn profile URL.').isLength({ max: 500 }),
   body('biography').optional({ checkFalsy: true }).trim().isLength({ max: 2000 }),
   body('expertise').optional().custom((value) => Array.isArray(value) || typeof value === 'string').withMessage('Expertise must be text or a list.'),
   body('isActive').optional().isBoolean().toBoolean(),
@@ -112,6 +115,8 @@ export const trainerProfileValidation = [
   body('phone').optional({ checkFalsy: true }).customSanitizer(normalizePhone).custom(isValidInternationalPhone),
   body('title').optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
   body('organization').optional({ checkFalsy: true }).trim().isLength({ max: 150 }),
+  body('portfolioUrl').optional({ checkFalsy: true }).trim().isURL({ protocols: ['https'], require_protocol: true }).withMessage('Portfolio website must be a valid HTTPS URL.').isLength({ max: 500 }),
+  body('linkedinUrl').optional({ checkFalsy: true }).trim().isURL({ protocols: ['https'], require_protocol: true }).withMessage('LinkedIn profile must be a valid HTTPS URL.').custom((value) => /^(?:https:\/\/)(?:[a-z]{2,3}\.)?linkedin\.com\//i.test(value)).withMessage('Enter a valid LinkedIn profile URL.').isLength({ max: 500 }),
   body('biography').optional({ checkFalsy: true }).trim().isLength({ max: 2000 }),
   body('expertise').optional().custom((value) => Array.isArray(value) || typeof value === 'string'),
 ];

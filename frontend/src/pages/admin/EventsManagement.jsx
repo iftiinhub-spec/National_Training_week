@@ -4,7 +4,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { ArrowPathIcon, CalendarDaysIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, CalendarDaysIcon, PlusIcon, PencilIcon, TrashIcon } from '@icons';
 import StatusBadge from '../../components/common/StatusBadge';
 
 // The server sends `phase` with every event: what is happening right now, worked out from the
@@ -383,7 +383,7 @@ export const EventsManagement = () => {
                 )}
               </div>
 
-              <div className="space-y-3 rounded-xl bg-emerald-50/60 border border-emerald-100 p-4">
+              <div className="space-y-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-[#123426]">
                 <div>
                   <label className="block font-bold uppercase text-slate-700 mb-1">Registration opens</label>
                   <input
@@ -393,7 +393,7 @@ export const EventsManagement = () => {
                     className="w-full p-2.5 rounded-lg border border-slate-300 bg-white"
                     required
                   />
-                  <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                  <p className="mt-1 text-[11px] leading-5 text-slate-600 dark:text-slate-300">
                     From this moment people can register. Each session then stops taking registrations when its own day begins, so day 5 stays open while day 1 is running.
                   </p>
                 </div>
@@ -403,11 +403,11 @@ export const EventsManagement = () => {
                     type="checkbox"
                     checked={useCutOff}
                     onChange={(e) => setUseCutOff(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 accent-[#1a6b3c]"
+                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-400 accent-[#1a6b3c]"
                   />
                   <span>
-                    <strong className="block text-sm text-slate-900">Stop all registration at one time</strong>
-                    <span className="block text-xs text-slate-500 mt-1">Only tick this if you want registration for the whole event to end at a fixed moment. Most editions do not need it.</span>
+                    <strong className="block text-sm text-slate-900 dark:text-white">Stop all registration at one time</strong>
+                    <span className="mt-1 block text-xs text-slate-600 dark:text-slate-300">Only tick this if you want registration for the whole event to end at a fixed moment. Most editions do not need it.</span>
                   </span>
                 </label>
 

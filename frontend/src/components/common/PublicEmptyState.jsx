@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDaysIcon } from '@heroicons/react/24/outline';
+import { CalendarDaysIcon } from '@icons';
 
 const PublicEmptyState = ({ title, description, action }) => (
   <div className="mx-auto max-w-2xl rounded-3xl border border-dashed border-black/20 bg-white px-6 py-16 text-center">

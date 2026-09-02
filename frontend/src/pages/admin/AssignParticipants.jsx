@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import api from '../../api/axios';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
-import { MagnifyingGlassIcon, UserPlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, UserPlusIcon, XMarkIcon } from '@icons';
 
 export const AssignParticipants = () => {
   const [selection, setSelection] = useState({ event: '', eventDay: '', training: '' });

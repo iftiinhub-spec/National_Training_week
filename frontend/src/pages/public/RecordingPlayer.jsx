@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeftIcon, PlayIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, PlayIcon } from '@icons';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
@@ -57,7 +57,7 @@ export const RecordingPlayer = () => {
             <button type="button" onClick={() => setStarted(true)} aria-label={`Play ${recording.title}`} className="group relative h-full w-full bg-slate-900">
               <img src={poster} alt="" className="h-full w-full object-cover" />
               <span className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20">
-                <span className="flex h-20 w-20 items-center justify-center rounded-full bg-[#1da156] text-white shadow-2xl group-hover:scale-105">
+                <span className="flex h-20 w-20 items-center justify-center rounded-full bg-[#15803d] text-white shadow-2xl group-hover:scale-105">
                   <PlayIcon className="ml-1 h-10 w-10" />
                 </span>
               </span>

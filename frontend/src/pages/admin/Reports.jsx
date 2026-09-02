@@ -4,7 +4,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { ArrowDownTrayIcon, UserGroupIcon, CheckBadgeIcon, ClipboardDocumentCheckIcon, StarIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, UserGroupIcon, CheckBadgeIcon, ClipboardDocumentCheckIcon, StarIcon } from '@icons';
 import { useTheme } from '../../context/ThemeContext';
 
 const COLORS = ['#1a6b3c', '#2f855a', '#68a67d', '#94a3b8', '#334155', '#0f172a'];

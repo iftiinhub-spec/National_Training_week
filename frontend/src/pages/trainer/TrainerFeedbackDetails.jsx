@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ArrowLeftIcon, ChatBubbleLeftRightIcon, StarIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ChatBubbleLeftRightIcon, StarIcon } from '@icons';
 import api from '../../api/axios';
 import { formatTimeRange12 } from '../../utils/timeFormat';
 

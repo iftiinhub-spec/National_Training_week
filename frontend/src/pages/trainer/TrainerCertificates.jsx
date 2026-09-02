@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { ArrowDownTrayIcon, CheckBadgeIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, CheckBadgeIcon, ShieldCheckIcon } from '@icons';
 import api from '../../api/axios';
 import EmptyState from '../../components/common/EmptyState';
 import LoadingSpinner from '../../components/common/LoadingSpinner';

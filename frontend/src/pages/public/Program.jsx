@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { ClockIcon } from '@heroicons/react/24/outline';
+import { ClockIcon } from '@icons';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
 import { formatTime12, formatTimeRange12 } from '../../utils/timeFormat';
@@ -58,7 +58,7 @@ export const Program = () => {
 
       {/* ── Page Hero ─────────────────────────────── */}
       <PublicPageHeader eyebrow="Official event schedule" title={eventData?.name || 'Program schedule'} description={eventData?.theme || 'The next edition schedule will be published here when it is ready.'}>
-          {eventData && <p className="mt-3 text-xs font-semibold text-white/75">
+          {eventData && <p className="mt-3 text-xs font-semibold text-white">
             {eventData?.startDate
               ? new Date(eventData.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
               : 'Dates'}{' '}–{' '}
@@ -68,11 +68,11 @@ export const Program = () => {
             · {programDays.length || 'Program'} Days · Online
           </p>}
           {events.length > 1 && (
-            <label className="mt-6 inline-flex items-center gap-3 rounded-xl bg-white/10 border border-white/20 px-4 py-2">
+            <label className="mt-6 inline-flex items-center gap-3 rounded-xl bg-black/10 border border-white/20 px-4 py-2">
               <span className="text-xs font-bold">View edition</span>
               <select aria-label="Select event edition" value={selectedEvent} onChange={(e) => selectEdition(e.target.value)} className="bg-white text-black rounded-lg px-3 py-1.5 text-sm font-semibold">
                 <option value="">Current edition</option>
-                {events.map((event) => <option key={event._id} value={event._id}>{event.year} — {event.theme}</option>)}
+                {events.map((event) => <option key={event._id} value={event._id}>{event.year}: {event.theme}</option>)}
               </select>
             </label>
           )}
@@ -105,7 +105,7 @@ export const Program = () => {
                     onClick={() => setActiveDay(p.day._id)}
                     className={`w-[138px] shrink-0 cursor-pointer rounded-2xl border px-4 py-3 text-center transition-all duration-300 ${
                       isActive
-                        ? 'bg-[#1da156] border-[#1da156] shadow-xl shadow-[#1da156]/25 text-white'
+                        ? 'bg-[#15803d] border-[#1da156] shadow-xl shadow-[#1da156]/25 text-white'
                         : 'bg-white border-black/10 text-black hover:border-[#1da156] hover:shadow-md'
                     }`}
                   >
@@ -150,7 +150,7 @@ export const Program = () => {
   );
 };
 
-/* ── Session Card — matches TrainingTile / HomeSessionCard style ── */
+/* Session card matching the TrainingTile and HomeSessionCard style. */
 const SessionCard = ({ session: s, dayNumber }) => {
   const photoUrl = (p) => {
     if (!p) return null;
@@ -193,7 +193,7 @@ const SessionCard = ({ session: s, dayNumber }) => {
       {/* Card body */}
       <div className="p-5 bg-white">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <span className="rounded-full bg-[#1da156] px-2.5 py-1 text-[10px] font-bold capitalize text-white">
+          <span className="rounded-full bg-[#15803d] px-2.5 py-1 text-[10px] font-bold capitalize text-white">
             {s.status?.replace(/_/g, ' ')}
           </span>
           {s.startTime && (
@@ -203,7 +203,7 @@ const SessionCard = ({ session: s, dayNumber }) => {
             </span>
           )}
         </div>
-        <p className="text-[10px] font-bold text-[#1da156] uppercase tracking-wide mb-1">
+        <p className="mb-1 text-xs font-bold text-[#1da156]">
           Day {dayNumber} Session
         </p>
         <h3 className="font-black text-black text-base leading-snug mb-1 group-hover:text-[#1da156] transition-colors line-clamp-2">
@@ -216,7 +216,7 @@ const SessionCard = ({ session: s, dayNumber }) => {
           <span>
             {s.date
               ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-              : '—'}
+              : 'Not scheduled'}
           </span>
           <span>{formatTimeRange12(s.startTime, s.endTime)}</span>
         </div>

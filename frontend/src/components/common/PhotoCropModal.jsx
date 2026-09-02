@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import Cropper from 'react-easy-crop';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon } from '@icons';
 
 const OUTPUT_SIZE = 500;
 

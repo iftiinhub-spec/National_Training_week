@@ -7,7 +7,7 @@ import AdminModalClose from '../../components/common/AdminModalClose';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon, EllipsisVerticalIcon, LockClosedIcon, LockOpenIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PhotoIcon, ArrowUpTrayIcon, XMarkIcon, EllipsisVerticalIcon, LockClosedIcon, LockOpenIcon } from '@icons';
 import { formatTimeRange12, toTimeInputValue } from '../../utils/timeFormat';
 import { statusControlClass } from '../../utils/statusPresentation';
 
@@ -716,7 +716,7 @@ export const TrainingsManagement = () => {
                 <label className="block font-bold uppercase text-slate-700 mb-1">Description & Overview</label>
                 <textarea
                   rows={3}
-                  value={form.description}
+                  value={form.description} placeholder="What the session covers and who it is for"
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300"
                 ></textarea>

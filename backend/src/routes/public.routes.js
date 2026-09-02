@@ -35,6 +35,8 @@ router.post('/trainer-applications', uploadImage.single('photo'), verifyUploaded
   body('name').customSanitizer(normalizeHumanName).custom(isValidHumanName).withMessage(HUMAN_NAME_MESSAGE), body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 8 }), body('phone').customSanitizer(normalizePhone).custom(isValidInternationalPhone),
   body('organization').trim().notEmpty().isLength({ max: 150 }), body('expertise').trim().notEmpty().isLength({ max: 1000 }),
+  body('portfolioUrl').optional({ checkFalsy: true }).trim().isURL({ protocols: ['https'], require_protocol: true }).withMessage('Portfolio website must be a valid HTTPS URL.').isLength({ max: 500 }),
+  body('linkedinUrl').optional({ checkFalsy: true }).trim().isURL({ protocols: ['https'], require_protocol: true }).withMessage('LinkedIn profile must be a valid HTTPS URL.').custom((value) => /^(?:https:\/\/)(?:[a-z]{2,3}\.)?linkedin\.com\//i.test(value)).withMessage('Enter a valid LinkedIn profile URL.').isLength({ max: 500 }),
   body('title').optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
   body('biography').trim().notEmpty().isLength({ min: 30, max: 2000 }),
 ], validate, applyAsTrainer);

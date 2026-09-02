@@ -35,6 +35,18 @@ const trainerSchema = new mongoose.Schema(
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     title: { type: String, trim: true }, // e.g. "Dr.", "Prof."
     organization: { type: String, trim: true },
+    portfolioUrl: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Portfolio URL cannot exceed 500 characters'],
+      validate: { validator: (value) => !value || /^https:\/\//i.test(value), message: 'Portfolio URL must use HTTPS.' },
+    },
+    linkedinUrl: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'LinkedIn URL cannot exceed 500 characters'],
+      validate: { validator: (value) => !value || /^https:\/\/(?:[a-z]{2,3}\.)?linkedin\.com\//i.test(value), message: 'Enter a valid LinkedIn profile URL.' },
+    },
     biography: { type: String },
     photo: { type: String, default: null },
     expertise: [{ type: String }],

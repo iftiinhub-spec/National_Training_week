@@ -10,7 +10,7 @@ import { pick } from '../../utils/pick.js';
 import { sendTrainerApprovedEmail, sendTrainerRejectedEmail } from '../../utils/trainerStatusEmail.js';
 import { deleteFile } from '../../middleware/upload.js';
 
-const trainerPayload = (input) => pick(input, ['name', 'email', 'phone', 'password', 'title', 'organization', 'biography', 'expertise', 'isActive', 'accessStatus']);
+const trainerPayload = (input) => pick(input, ['name', 'email', 'phone', 'password', 'title', 'organization', 'portfolioUrl', 'linkedinUrl', 'biography', 'expertise', 'isActive', 'accessStatus']);
 const idsFromRequest = (req) => [...new Set((req.body?.ids || [req.params.id]).filter(Boolean).map(String))];
 
 const deleteTrainerIds = async (ids) => {

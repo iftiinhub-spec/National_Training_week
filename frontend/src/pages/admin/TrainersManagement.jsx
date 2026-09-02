@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, EyeSlashIcon, ArrowDownTrayIcon, KeyIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, UserCircleIcon, EyeIcon, EyeSlashIcon, ArrowDownTrayIcon, KeyIcon, MagnifyingGlassIcon } from '@icons';
 import PhoneInput from '../../components/common/PhoneInput';
 import PhotoCropModal from '../../components/common/PhotoCropModal';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
@@ -23,6 +23,8 @@ const EMPTY_FORM = {
   phone: '',
   title: '',
   organization: '',
+  portfolioUrl: '',
+  linkedinUrl: '',
   biography: '',
   expertise: '',
   password: '',
@@ -118,6 +120,8 @@ export const TrainersManagement = () => {
       phone: tr.phone || '',
       title: tr.title || '',
       organization: tr.organization || '',
+      portfolioUrl: tr.portfolioUrl || '',
+      linkedinUrl: tr.linkedinUrl || '',
       biography: tr.biography || '',
       expertise: tr.expertise || '',
       password: '',
@@ -396,7 +400,7 @@ export const TrainersManagement = () => {
         <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/50 p-0 sm:items-center sm:p-4" onMouseDown={() => setViewingTrainer(null)}>
           <div className="max-h-[95vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl sm:max-h-[90vh] sm:rounded-2xl sm:p-6" onMouseDown={(e) => e.stopPropagation()}>
             <div className="relative border-b border-slate-200 pb-4 pr-11"><div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4"><div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-2xl font-black text-[#1a6b3c] sm:h-20 sm:w-20">{viewingTrainer.photo ? <img src={photoUrl(viewingTrainer.photo)} alt={viewingTrainer.name} className="h-full w-full object-cover" /> : viewingTrainer.name?.charAt(0)?.toUpperCase()}</div><div className="min-w-0"><p className="text-xs font-bold uppercase tracking-wide text-[#1a6b3c]">Trainer profile</p><h2 className="mt-1 break-words text-lg font-black text-slate-900 sm:text-xl">{viewingTrainer.title ? `${viewingTrainer.title} ` : ''}{viewingTrainer.name}</h2><div className="mt-2 flex flex-wrap items-center gap-2"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${viewingTrainer.accessStatus === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{viewingTrainer.accessStatus || 'Pending'}</span>{viewingTrainer.photo && <a href={photoUrl(viewingTrainer.photo)} download className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-1 text-xs font-bold text-[#1a6b3c] hover:bg-emerald-50"><ArrowDownTrayIcon className="h-4 w-4" />Download photo</a>}</div></div></div><AdminModalClose onClick={() => setViewingTrainer(null)} /></div>
-            <div className="mt-5 grid min-w-0 grid-cols-1 gap-4 text-sm sm:grid-cols-2"><div className="min-w-0"><p className="text-xs font-bold uppercase text-slate-400">Email</p><p className="mt-1 break-all text-slate-700">{viewingTrainer.email || '—'}</p></div><div className="min-w-0"><p className="text-xs font-bold uppercase text-slate-400">Phone</p><p className="mt-1 break-words text-slate-700">{viewingTrainer.phone || '—'}</p></div><div className="min-w-0"><p className="text-xs font-bold uppercase text-slate-400">Organization</p><p className="mt-1 break-words text-slate-700">{viewingTrainer.organization || '—'}</p></div><div className="min-w-0 sm:col-span-2"><p className="text-xs font-bold uppercase text-slate-400">Areas of expertise</p><div className="mt-2 flex flex-wrap gap-2">{String(viewingTrainer.expertise || '').split(',').map((area) => area.trim()).filter(Boolean).map((area) => <span key={area} className="max-w-full break-words rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-[#1a6b3c]">{area}</span>)}{!viewingTrainer.expertise && <span className="text-slate-500">—</span>}</div></div><div className="min-w-0 sm:col-span-2"><p className="text-xs font-bold uppercase text-slate-400">Biography</p><p className="mt-1 whitespace-pre-wrap break-words leading-6 text-slate-700">{viewingTrainer.biography || '—'}</p></div></div>
+            <div className="mt-5 grid min-w-0 grid-cols-1 gap-4 text-sm sm:grid-cols-2"><div className="min-w-0"><p className="text-xs font-bold uppercase text-slate-400">Email</p><p className="mt-1 break-all text-slate-700">{viewingTrainer.email || '—'}</p></div><div className="min-w-0"><p className="text-xs font-bold uppercase text-slate-400">Phone</p><p className="mt-1 break-words text-slate-700">{viewingTrainer.phone || '—'}</p></div><div className="min-w-0"><p className="text-xs font-bold uppercase text-slate-400">Organization</p><p className="mt-1 break-words text-slate-700">{viewingTrainer.organization || '—'}</p></div><AdminProfileLink label="Portfolio website" value={viewingTrainer.portfolioUrl} /><AdminProfileLink label="LinkedIn profile" value={viewingTrainer.linkedinUrl} /><div className="min-w-0 sm:col-span-2"><p className="text-xs font-bold uppercase text-slate-400">Areas of expertise</p><div className="mt-2 flex flex-wrap gap-2">{String(viewingTrainer.expertise || '').split(',').map((area) => area.trim()).filter(Boolean).map((area) => <span key={area} className="max-w-full break-words rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-[#1a6b3c]">{area}</span>)}{!viewingTrainer.expertise && <span className="text-slate-500">—</span>}</div></div><div className="min-w-0 sm:col-span-2"><p className="text-xs font-bold uppercase text-slate-400">Biography</p><p className="mt-1 whitespace-pre-wrap break-words leading-6 text-slate-700">{viewingTrainer.biography || '—'}</p></div></div>
           </div>
         </div>
       )}
@@ -506,6 +510,17 @@ export const TrainersManagement = () => {
                 />
               </div>
 
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block font-bold uppercase text-slate-700">Portfolio website</label>
+                  <input type="url" value={form.portfolioUrl} onChange={(e) => setForm({ ...form, portfolioUrl: e.target.value })} placeholder="https://yourname.com" className="w-full rounded-lg border border-slate-300 p-2.5 focus:border-[#1a6b3c] focus:outline-none" />
+                </div>
+                <div>
+                  <label className="mb-1 block font-bold uppercase text-slate-700">LinkedIn profile</label>
+                  <input type="url" value={form.linkedinUrl} onChange={(e) => setForm({ ...form, linkedinUrl: e.target.value })} placeholder="https://www.linkedin.com/in/yourname" className="w-full rounded-lg border border-slate-300 p-2.5 focus:border-[#1a6b3c] focus:outline-none" />
+                </div>
+              </div>
+
               {/* Expertise */}
               <div>
                 <label className="block font-bold uppercase text-slate-700 mb-1">Area of Expertise</label>
@@ -582,9 +597,9 @@ export const TrainersManagement = () => {
             <h3 id="reset-trainer-title" className="pr-10 text-lg font-bold text-slate-900">Reset Trainer Password</h3>
             <p className="mt-2 text-sm text-slate-500">Set a new password for <strong className="text-slate-700">{resetTarget.name}</strong>. Existing sessions will be signed out.</p>
             <form onSubmit={resetPassword} className="mt-5 space-y-4">
-              {[['newPassword', 'New password'], ['confirmPassword', 'Confirm new password']].map(([key, label]) => <label key={key} className="block text-xs font-bold uppercase text-slate-700">{label}<span className="relative mt-1 block"><input type={showResetPasswords[key] ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={128} required value={passwordForm[key]} onChange={(e) => setPasswordForm({ ...passwordForm, [key]: e.target.value })} className="w-full rounded-lg border border-slate-300 p-2.5 pr-11 text-sm font-normal normal-case" /><button type="button" aria-label={`${showResetPasswords[key] ? 'Hide' : 'Show'} ${label.toLowerCase()}`} onClick={() => setShowResetPasswords({ ...showResetPasswords, [key]: !showResetPasswords[key] })} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400">{showResetPasswords[key] ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></span></label>)}
+              {[['newPassword', 'New password', 'At least 8 characters'], ['confirmPassword', 'Confirm new password', 'Re-enter the new password']].map(([key, label, hint]) => <label key={key} className="block text-xs font-bold uppercase text-slate-700">{label}<span className="relative mt-1 block"><input type={showResetPasswords[key] ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={128} required value={passwordForm[key]} onChange={(e) => setPasswordForm({ ...passwordForm, [key]: e.target.value })} placeholder={hint} className="w-full rounded-lg border border-slate-300 p-2.5 pr-11 text-sm font-normal normal-case placeholder:text-slate-400" /><button type="button" aria-label={`${showResetPasswords[key] ? 'Hide' : 'Show'} ${label.toLowerCase()}`} onClick={() => setShowResetPasswords({ ...showResetPasswords, [key]: !showResetPasswords[key] })} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400">{showResetPasswords[key] ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></span></label>)}
               <p className="text-xs text-slate-500">Use between 8 and 128 characters.</p>
-              <div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setResetTarget(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Resetting…' : 'Reset Password'}</button></div>
+              <div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setResetTarget(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Resetting…' : 'Reset Password'}</button></div>
             </form>
           </div>
         </div>
@@ -595,3 +610,7 @@ export const TrainersManagement = () => {
 };
 
 export default TrainersManagement;
+
+function AdminProfileLink({ label, value }) {
+  return <div className="min-w-0"><p className="text-xs font-bold uppercase text-slate-400">{label}</p>{value ? <a href={value} target="_blank" rel="noopener noreferrer" className="mt-1 block break-all font-semibold text-[#1a6b3c] hover:underline">{value}</a> : <p className="mt-1 text-slate-500">—</p>}</div>;
+}

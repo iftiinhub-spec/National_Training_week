@@ -17,7 +17,7 @@ import {
   ClockIcon,
   UserGroupIcon,
   HeartIcon,
-} from '@heroicons/react/24/outline';
+} from '@icons';
 import { formatTime12, formatTimeRange12 } from '../../utils/timeFormat';
 import { formatTrainerName } from '../../utils/trainerName';
 import { trainingPath } from '../../utils/trainingLink';
@@ -52,7 +52,7 @@ const Digit = ({ v, label }) => (
     <span className="text-2xl font-black leading-none tabular-nums text-white sm:text-3xl">
       {String(v).padStart(2, '0')}
     </span>
-    <span className="text-[10px] uppercase tracking-widest text-white mt-1 font-bold">{label}</span>
+    <span className="mt-1 text-[11px] font-semibold text-white/80">{label}</span>
   </div>
 );
 
@@ -62,7 +62,7 @@ const CountdownDisplay = ({ stage }) => {
     return <h2 className="text-xl font-black text-white sm:text-2xl">{stage?.message || 'The next event stage is starting now'}</h2>;
   }
   return <div>
-    <p className={`mb-3 text-sm font-extrabold uppercase tracking-[.14em] ${stage.accent}`}>{stage.label}</p>
+    <p className={`mb-3 text-sm font-extrabold ${stage.accent}`}>{stage.label}</p>
     <div className="flex max-w-xl items-center justify-start gap-1.5 sm:gap-2" aria-label={stage.label}>
       <Digit v={countdown.months} label="Months" />
       <Digit v={countdown.days} label="Days" />
@@ -77,7 +77,7 @@ const CountdownDisplay = ({ stage }) => {
 const SectionTitle = ({ tag, title, subtitle, light = false }) => (
   <div className="mx-auto mb-12 max-w-3xl text-center" data-section-title>
     {tag && (
-      <p className={`mb-4 inline-flex rounded-full px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] ${light ? 'bg-white/10 text-white' : 'bg-[#1da156]/10 text-[#1da156]'}`}>{tag}</p>
+      <p className={`mb-3 text-sm font-bold ${light ? 'text-white' : 'text-[#1da156]'}`}>{tag}</p>
     )}
     <h2 className={`text-3xl font-bold leading-tight tracking-[-.025em] sm:text-4xl lg:text-[2.75rem] ${light ? 'text-white' : 'text-black'}`}>
       {title}
@@ -92,7 +92,7 @@ const PartnerLogoSection = ({ partners, title, tag, subtitle, headingId }) => pa
   <section className="bg-white py-20 text-black" aria-labelledby={headingId}>
     <div className="mx-auto max-w-7xl px-4 sm:px-8">
       <div className="mx-auto mb-12 max-w-3xl text-center">
-        <p className="mb-4 inline-flex rounded-full bg-[#1da156]/10 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-[#1da156]">{tag}</p>
+        <p className="mb-3 text-sm font-bold text-[#1da156]">{tag}</p>
         <h2 id={headingId} className="text-3xl font-bold leading-tight tracking-[-.025em] text-black sm:text-4xl">{title}</h2>
         <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-black/60">{subtitle}</p>
       </div>
@@ -162,7 +162,7 @@ export const Home = () => {
           key: 'live',
           message: 'National Training Week is underway',
           detail: currentProgramDay
-            ? `Day ${currentProgramDay.dayNumber} of ${days.length} — ${currentProgramDay.theme}`
+            ? `Day ${currentProgramDay.dayNumber} of ${days.length}: ${currentProgramDay.theme}`
             : 'View the current program and join your approved sessions.',
         };
       case 'finished':
@@ -222,7 +222,7 @@ export const Home = () => {
         <div className="mx-auto flex min-h-[680px] max-w-7xl items-center justify-start px-4 py-20 text-left sm:px-8">
           <div className="max-w-3xl animate-fade-up">
             <h1 className="text-5xl font-black leading-[.98] tracking-[-.04em] sm:text-6xl lg:text-7xl">National<br /><span className="text-[#1da156]">Training Week</span></h1>
-            <p className="mt-6 max-w-2xl text-lg font-bold leading-snug text-white sm:text-xl">{event ? <><span className="text-white/65">Theme {event.year}:</span> {event.theme}</> : 'Skills, knowledge, and opportunity—accessible nationwide.'}</p>
+            <p className="mt-6 max-w-2xl text-lg font-bold leading-snug text-white sm:text-xl">{event ? <><span className="text-white/65">Theme {event.year}:</span> {event.theme}</> : 'Skills, knowledge, and opportunity, accessible nationwide.'}</p>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75 sm:text-base">{event?.description || 'An annual virtual learning platform connecting students, graduates, and professionals with expert-led training across technology, education, health, business, and community development.'}</p>
             {event && <div className="mt-6 flex flex-wrap items-center justify-start gap-x-6 gap-y-2 text-xs font-bold text-white/80"><span>{eventDates}</span><span>{days.length} day{days.length === 1 ? '' : 's'} · {sessionCount} session{sessionCount === 1 ? '' : 's'}</span><StatusBadge status={event.phase} /></div>}
             {event && <div className="mt-7 max-w-2xl" aria-live="polite">
@@ -230,7 +230,7 @@ export const Home = () => {
               <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">{lifecycleStage.detail}</p>
             </div>}
             <div className="mt-8 flex flex-col justify-start gap-3 sm:flex-row">
-              {event ? <>{lifecycleStage.key === 'open' && <Link to="/signup" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Register free</Link>}{['scheduled', 'open'].includes(lifecycleStage.key) && <Link to="/#program" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Explore the program</Link>}{lifecycleStage.key === 'awaiting' && <><Link to="/#program" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-amber-400 px-7 text-sm font-extrabold text-black transition hover:bg-white">Explore the program</Link><Link to="/portal/trainings" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Open my sessions</Link></>}{lifecycleStage.key === 'live' && <><Link to="/#program" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">View today&apos;s program</Link><Link to="/portal/trainings" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Open my sessions</Link></>}{lifecycleStage.key === 'completed' && <><Link to="/recordings" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-7 text-sm font-extrabold text-black transition hover:bg-[#1da156] hover:text-white">Watch recordings</Link><Link to="/past-editions" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">View past editions</Link></>}</> : <><Link to="/about" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#1da156] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Discover the program</Link><Link to="/contact" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Contact the program office</Link></>}
+              {event ? <>{lifecycleStage.key === 'open' && <Link to="/signup" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#15803d] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Register free</Link>}{['scheduled', 'open'].includes(lifecycleStage.key) && <Link to="/#program" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Explore the program</Link>}{lifecycleStage.key === 'awaiting' && <><Link to="/#program" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-amber-400 px-7 text-sm font-extrabold text-black transition hover:bg-white">Explore the program</Link><Link to="/portal/trainings" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Open my sessions</Link></>}{lifecycleStage.key === 'live' && <><Link to="/#program" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#15803d] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">View today&apos;s program</Link><Link to="/portal/trainings" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Open my sessions</Link></>}{lifecycleStage.key === 'completed' && <><Link to="/recordings" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-7 text-sm font-extrabold text-black transition hover:bg-[#15803d] hover:text-white">Watch recordings</Link><Link to="/past-editions" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">View past editions</Link></>}</> : <><Link to="/about" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#15803d] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-black">Discover the program</Link><Link to="/contact" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-black/20 px-7 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white hover:text-black">Contact the program office</Link></>}
             </div>
           </div>
         </div>
@@ -253,11 +253,11 @@ export const Home = () => {
             subtitle={`Each day advances the current edition theme: ${event?.theme || 'national skills and innovation'}.`}
           />
           <ScheduleTabs fallbackDays={days} />
-          <p className="mt-8 flex items-center justify-center gap-2 text-center text-xs font-semibold text-slate-600"><ClockIcon className="h-4 w-4 text-[#1da156]" />All session times are shown in EAT / UTC+3 — Mogadishu time.</p>
+          <p className="mt-8 flex items-center justify-center gap-2 text-center text-xs font-semibold text-slate-600"><ClockIcon className="h-4 w-4 text-[#1da156]" />All session times are shown in EAT / UTC+3, Mogadishu time.</p>
           <div className="mt-12 text-center">
             <Link
               to="/trainings"
-              className="inline-flex items-center gap-2 px-8 py-3.5 border-2 border-[#1da156] text-[#1da156] hover:bg-[#1da156] hover:text-white font-bold rounded-xl text-sm transition-all"
+              className="inline-flex items-center gap-2 px-8 py-3.5 border-2 border-[#1da156] text-[#1da156] hover:bg-[#15803d] hover:text-white font-bold rounded-xl text-sm transition-all"
             >
               Browse All Trainings →
             </Link>
@@ -295,9 +295,9 @@ export const Home = () => {
                   const isActive = activeFacultyDay === day._id;
                   return (
                     <button key={day._id} type="button" onClick={() => setActiveFacultyDay(day._id)} aria-pressed={isActive}
-                      className={`w-[138px] shrink-0 cursor-pointer rounded-2xl border px-4 py-3 text-center transition-all duration-300 ${isActive ? 'border-[#1da156] bg-[#1da156] text-white shadow-xl shadow-[#1da156]/25' : 'border-black/10 bg-white text-black hover:border-[#1da156] hover:shadow-md'}`}>
+                      className={`w-[138px] shrink-0 cursor-pointer rounded-2xl border px-4 py-3 text-center transition-all duration-300 ${isActive ? 'border-[#15803d] bg-[#15803d] text-white shadow-xl shadow-[#15803d]/25' : 'border-black/10 bg-white text-black hover:border-[#1da156] hover:shadow-md'}`}>
                       <span className="block text-sm font-black">Day {day.dayNumber}</span>
-                      <span className={`mt-2 block text-xs font-bold ${isActive ? 'text-white/85' : 'text-black/55'}`}>{formatDayChoiceDate(day.date)}</span>
+                      <span className={`mt-2 block text-xs font-bold ${isActive ? 'text-white' : 'text-black/55'}`}>{formatDayChoiceDate(day.date)}</span>
                     </button>
                   );
                 })}
@@ -327,7 +327,7 @@ export const Home = () => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-[#1da156]/10">
-                        <div className="w-24 h-24 rounded-full bg-[#1da156] text-white flex items-center justify-center font-black text-4xl">
+                        <div className="w-24 h-24 rounded-full bg-[#15803d] text-white flex items-center justify-center font-black text-4xl">
                           {tr.name?.charAt(0)}
                         </div>
                       </div>
@@ -336,7 +336,7 @@ export const Home = () => {
                     {/* Expertise badge top-left */}
                     {tr.expertise?.[0] && (
                       <div className="absolute top-3 left-3">
-                        <span className="bg-[#1da156] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
+                        <span className="bg-[#15803d] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
                           {tr.expertise[0]}
                         </span>
                       </div>
@@ -391,11 +391,11 @@ export const Home = () => {
             title="Learning designed for every stage"
             subtitle="From foundational digital literacy to advanced technical practice, the program welcomes learners across Somalia."
           />
-          <div className="flex flex-wrap items-stretch justify-center gap-6">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {AUDIENCE.map((a, i) => (
               <div
                 key={i}
-                className="group w-full rounded-2xl border border-black/10 bg-white p-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:border-[#1da156] hover:shadow-xl sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)]"
+                className="group rounded-2xl border border-black/10 bg-white p-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:border-[#1da156] hover:shadow-xl"
               >
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#1da156]/10 transition-colors group-hover:bg-[#1da156]">
                   <a.Icon className="w-7 h-7 text-[#1da156] group-hover:text-white transition-colors" />
@@ -413,20 +413,20 @@ export const Home = () => {
       <PartnerLogoSection partners={mediaPartners} title="Media Partners" tag="Media" subtitle="Media organizations helping National Training Week reach learners and communities across Somalia." headingId="media-partners-heading" />
 
       {/* ══ CERTIFICATE CTA STRIP ═══════════════════ */}
-      <section className="bg-[#1da156] py-20 text-white">
+      <section className="bg-[#15803d] py-20 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col lg:flex-row items-center justify-between gap-8">
           <div className="max-w-xl">
-            <span className="inline-flex items-center gap-2 text-xs font-bold bg-white/15 border border-white/20 px-4 py-1.5 rounded-full mb-4 text-white">
+            <span className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-white">
               <ShieldCheckIcon className="w-4 h-4" /> Official Certification
             </span>
             <h2 className="text-3xl sm:text-4xl font-black leading-tight mb-3">
               Earn a Verifiable Certificate of Participation
             </h2>
-            <p className="text-white/90 text-sm leading-relaxed">
+            <p className="text-white text-sm leading-relaxed">
               Participants who attend live sessions and meet the attendance requirement receive an official
               Certificate of Participation with a unique verification code and QR identifier.
             </p>
-            <p className="mt-3 text-xs leading-6 text-white/75">All sessions are recorded and published in a free, permanently available learning library. Certificates are available for qualifying live attendance only.</p>
+            <p className="mt-3 text-xs leading-6 text-white">All sessions are recorded and published in a free, permanently available learning library. Certificates are available for qualifying live attendance only.</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 shrink-0">
             <Link
@@ -503,12 +503,12 @@ const ScheduleTabs = ({ fallbackDays = [] }) => {
                 onClick={() => setActive(i)}
                 className={`w-[138px] shrink-0 cursor-pointer rounded-2xl border px-4 py-3 text-center transition-all duration-300 ${
                   isActive
-                    ? 'bg-[#1da156] border-[#1da156] shadow-xl shadow-[#1da156]/25 text-white'
+                    ? 'bg-[#15803d] border-[#15803d] shadow-xl shadow-[#15803d]/25 text-white'
                     : 'bg-white border-black/10 text-black hover:border-[#1da156] hover:shadow-md'
                 }`}
               >
                 <span className="block text-sm font-black">Day {day.dayNumber}</span>
-                <span className={`mt-2 block text-xs font-bold ${isActive ? 'text-white/85' : 'text-black/55'}`}>{dayDate}</span>
+                <span className={`mt-2 block text-xs font-bold ${isActive ? 'text-white' : 'text-black/55'}`}>{dayDate}</span>
               </button>
             );
           })}
@@ -526,7 +526,7 @@ const ScheduleTabs = ({ fallbackDays = [] }) => {
         <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-black/10 shadow-sm overflow-hidden">
           <div className="h-1 w-full bg-[#1da156]" />
           <div className="p-10 text-center">
-            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 bg-white text-[#1da156] border border-[#1da156]">
+            <span className="mb-4 inline-block text-sm font-bold text-[#1da156]">
               Day {currentDay?.day?.dayNumber}
             </span>
             <h3 className="text-2xl font-black text-black mb-3">{currentDay?.day?.theme}</h3>
@@ -590,7 +590,7 @@ const HomeSessionCard = ({ session: s }) => {
       {/* Card body */}
       <div className="p-5 bg-white">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <span className="rounded-full bg-[#1da156] px-2.5 py-1 text-[10px] font-bold capitalize text-white">
+          <span className="rounded-full bg-[#15803d] px-2.5 py-1 text-[10px] font-bold capitalize text-white">
             {s.status?.replace(/_/g, ' ')}
           </span>
           {(s.startTime || s.endTime) && (
@@ -608,7 +608,7 @@ const HomeSessionCard = ({ session: s }) => {
           <span>
             {s.date
               ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-              : '—'}
+              : 'Not scheduled'}
           </span>
           <span>{formatTimeRange12(s.startTime, s.endTime)}</span>
         </div>

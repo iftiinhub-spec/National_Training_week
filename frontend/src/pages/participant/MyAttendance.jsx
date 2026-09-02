@@ -4,7 +4,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import QRScanModal from './QRScanModal';
-import { QrCodeIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
+import { QrCodeIcon, ClipboardDocumentCheckIcon } from '@icons';
 
 export const MyAttendance = () => {
   const [records, setRecords] = useState([]);

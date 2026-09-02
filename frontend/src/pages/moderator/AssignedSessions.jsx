@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
-import { CalendarIcon, ClockIcon, UserIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, ClockIcon, UserIcon, WrenchScrewdriverIcon } from '@icons';
 import { formatTimeRange12 } from '../../utils/timeFormat';
 
 const AssignedSessions = () => {

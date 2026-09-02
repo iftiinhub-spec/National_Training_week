@@ -14,7 +14,7 @@ import {
   AcademicCapIcon,
   DocumentTextIcon,
   FunnelIcon,
-} from '@heroicons/react/24/outline';
+} from '@icons';
 import { formatTimeRange12 } from '../../utils/timeFormat';
 
 const getSessionStart = (meeting) => {

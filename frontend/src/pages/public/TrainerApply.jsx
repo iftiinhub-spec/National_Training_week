@@ -1,13 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { CameraIcon, EyeIcon, EyeSlashIcon, UserCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, EyeIcon, EyeSlashIcon, UserCircleIcon, XMarkIcon } from '@icons';
 import api from '../../api/axios';
 import PhoneInput from '../../components/common/PhoneInput';
 import PhotoCropModal from '../../components/common/PhotoCropModal';
 
 const TITLES = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.', 'Eng.'];
-const EMPTY_FORM = { title: '', name: '', email: '', phone: '', organization: '', expertise: '', biography: '', password: '', confirmPassword: '' };
+const EMPTY_FORM = { title: '', name: '', email: '', phone: '', organization: '', portfolioUrl: '', linkedinUrl: '', expertise: '', biography: '', password: '', confirmPassword: '' };
 const INPUT_CLASS = 'w-full rounded-lg border border-black/10 bg-white px-3.5 py-2.5 text-sm font-normal text-black outline-none placeholder:font-normal placeholder:text-slate-400 focus:ring-2 focus:ring-[#1da156]/40';
 const LABEL_CLASS = 'mb-1 block text-xs font-bold uppercase text-black';
 
@@ -94,13 +94,17 @@ export default function TrainerApply() {
         <Field label="Phone number *"><PhoneInput value={form.phone} onChange={(phone) => update('phone', phone)} required /></Field>
       </div>
       <Field label="Organization / affiliation *"><input className={INPUT_CLASS} value={form.organization} onChange={(event) => update('organization', event.target.value)} placeholder="e.g. Hormuud University" required /></Field>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Portfolio website"><input type="url" className={INPUT_CLASS} value={form.portfolioUrl} onChange={(event) => update('portfolioUrl', event.target.value)} placeholder="https://yourname.com" /></Field>
+        <Field label="LinkedIn profile"><input type="url" className={INPUT_CLASS} value={form.linkedinUrl} onChange={(event) => update('linkedinUrl', event.target.value)} placeholder="https://www.linkedin.com/in/yourname" /></Field>
+      </div>
       <Field label="Areas of expertise *"><input className={INPUT_CLASS} value={form.expertise} onChange={(event) => update('expertise', event.target.value)} placeholder="e.g. Machine Learning, Cybersecurity" required /></Field>
       <Field label="Professional biography *"><textarea className={INPUT_CLASS} rows={5} minLength={30} value={form.biography} onChange={(event) => update('biography', event.target.value)} placeholder="e.g. Describe your experience, qualifications, and teaching background." required /></Field>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <PasswordField label="Password *" value={form.password} onChange={(value) => update('password', value)} visible={showPassword} onToggle={() => setShowPassword((value) => !value)} placeholder="At least 8 characters" />
         <PasswordField label="Confirm password *" value={form.confirmPassword} onChange={(value) => update('confirmPassword', value)} visible={showConfirmPassword} onToggle={() => setShowConfirmPassword((value) => !value)} placeholder="Re-enter password" />
       </div>
-      <button disabled={saving} className="mt-4 w-full rounded-xl bg-[#1da156] py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-black disabled:opacity-60">{saving ? 'Submitting...' : 'Submit application'}</button>
+      <button disabled={saving} className="mt-4 w-full rounded-xl bg-[#15803d] py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-black disabled:opacity-60">{saving ? 'Submitting...' : 'Submit application'}</button>
       <div className="mt-4 border-t border-black/10 pt-4 text-center text-xs text-black/70">Already applied? <Link to="/signin" className="font-bold text-[#1da156] hover:underline">Sign in</Link></div>
     </form>
     {cropSrc && <PhotoCropModal imageSrc={cropSrc} onCancel={cancelCrop} onCropped={applyCroppedPhoto} />}

@@ -1,13 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
-import { CalendarIcon, ClockIcon, UserIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, ClockIcon, UserIcon } from '@icons';
 import { formatTimeRange12 } from '../../utils/timeFormat';
 import { trainingPath } from '../../utils/trainingLink';
 
 export const TrainingCard = ({ training }) => {
   const {
-    _id,
     title,
     coverImage,
     trainer,

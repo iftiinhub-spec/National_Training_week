@@ -4,8 +4,8 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import {
-  ChatBubbleLeftRightIcon, MagnifyingGlassIcon, ArrowLeftIcon, StarIcon,
-} from '@heroicons/react/24/outline';
+  MagnifyingGlassIcon, ArrowLeftIcon, StarIcon,
+} from '@icons';
 
 const round = (value) => (Number.isFinite(Number(value)) ? Number(value).toFixed(1) : '—');
 

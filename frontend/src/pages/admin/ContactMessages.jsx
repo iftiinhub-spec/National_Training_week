@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, TrashIcon } from '@icons';
 
 export const ContactMessages = () => {
   const confirmAction = useConfirmDialog();

@@ -9,7 +9,7 @@ import {
   ArrowRightOnRectangleIcon,
   Squares2X2Icon,
   ChevronDownIcon,
-} from '@heroicons/react/24/outline';
+} from '@icons';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout, isAdmin, isModerator, isParticipant, isTrainer } = useAuth();
@@ -110,7 +110,7 @@ export const Navbar = () => {
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-black/10 hover:border-[#1da156] bg-white transition-all cursor-pointer"
                 >
-                  <div className="w-7 h-7 rounded-full bg-[#1da156] text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-7 h-7 rounded-full bg-[#15803d] text-white flex items-center justify-center font-bold text-xs">
                     {user?.fullName?.charAt(0) || 'U'}
                   </div>
                   <span className="text-sm font-semibold max-w-[110px] truncate text-black">
@@ -168,7 +168,7 @@ export const Navbar = () => {
                 </Link>
                 <Link
                   to="/signup"
-                  className="whitespace-nowrap px-5 py-2 rounded-xl text-sm font-bold bg-[#1da156] hover:bg-black text-white shadow-xs transition-all"
+                  className="whitespace-nowrap px-5 py-2 rounded-xl text-sm font-bold bg-[#15803d] hover:bg-black text-white shadow-xs transition-all"
                 >
                   Register Now
                 </Link>
@@ -201,7 +201,7 @@ export const Navbar = () => {
               onClick={() => setMobileMenuOpen(false)}
               className={`block px-4 py-3 rounded-lg text-sm font-bold transition-colors ${
                 isLinkActive(link)
-                  ? 'bg-white text-[#1da156] border-l-4 border-[#1da156]'
+                  ? 'bg-white text-[#1da156]'
                   : 'text-black hover:bg-white hover:text-[#1da156]'
               }`}
             >
@@ -215,7 +215,7 @@ export const Navbar = () => {
                 <Link
                   to={getDashboardPath()}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block w-full text-center px-4 py-3 rounded-lg font-bold bg-[#1da156] text-white"
+                  className="block w-full text-center px-4 py-3 rounded-lg font-bold bg-[#15803d] text-white"
                 >
                   {getDashboardLabel()}
                 </Link>
@@ -231,7 +231,7 @@ export const Navbar = () => {
                 <Link to="/signin" onClick={() => setMobileMenuOpen(false)} className="text-center px-4 py-3 rounded-lg font-semibold border border-black/20 text-black">
                   Sign In
                 </Link>
-                <Link to="/signup" onClick={() => setMobileMenuOpen(false)} className="text-center px-4 py-3 rounded-lg font-bold bg-[#1da156] text-white">
+                <Link to="/signup" onClick={() => setMobileMenuOpen(false)} className="text-center px-4 py-3 rounded-lg font-bold bg-[#15803d] text-white">
                   Register Now
                 </Link>
               </div>
