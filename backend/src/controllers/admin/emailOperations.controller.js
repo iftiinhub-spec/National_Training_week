@@ -2,13 +2,14 @@ import EmailOutbox from '../../models/EmailOutbox.js';
 import Certificate from '../../models/Certificate.js';
 import TrainerCertificate from '../../models/TrainerCertificate.js';
 import ApprovalEmailDigest from '../../models/ApprovalEmailDigest.js';
+import CertificateEmailDigest from '../../models/CertificateEmailDigest.js';
 import { getEmailCircuit, pauseEmailCircuit, resetEmailCircuit } from '../../services/emailOutboxWorker.js';
 
 const hourlyLimit = Math.max(1, Number(process.env.EMAIL_MAX_PER_HOUR) || 300);
 
 export const getEmailOperations = async (_req, res) => {
   const oneHourAgo = new Date(Date.now() - 3600_000);
-  const [byStatus, byCategory, sentLastHour, oldestQueued, approvalDigests] = await Promise.all([
+  const [byStatus, byCategory, sentLastHour, oldestQueued, approvalDigests, certificateDigests] = await Promise.all([
     EmailOutbox.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
     EmailOutbox.aggregate([
       { $group: {
@@ -24,17 +25,22 @@ export const getEmailOperations = async (_req, res) => {
     EmailOutbox.countDocuments({ status: 'sent', sentAt: { $gte: oneHourAgo } }),
     EmailOutbox.findOne({ status: { $in: ['queued', 'retrying'] } }).sort({ priority: -1, createdAt: 1 }).select('createdAt').lean(),
     ApprovalEmailDigest.countDocuments({ 'items.0': { $exists: true } }),
+    CertificateEmailDigest.countDocuments({ status: { $in: ['collecting', 'processing'] }, 'items.0': { $exists: true } }),
   ]);
   const statuses = Object.fromEntries(byStatus.map(({ _id, count }) => [_id, count]));
-  const waiting = (statuses.queued || 0) + (statuses.retrying || 0) + (statuses.processing || 0) + approvalDigests;
+  const waiting = (statuses.queued || 0) + (statuses.retrying || 0) + (statuses.processing || 0) + approvalDigests + certificateDigests;
   const categories = byCategory.map(({ _id, total, waiting: categoryWaiting, sent, failed, suppressed }) => ({ category: _id, total, waiting: categoryWaiting, sent, failed, suppressed }));
   const approvals = categories.find((item) => item.category === 'approval');
   if (approvals) { approvals.total += approvalDigests; approvals.waiting += approvalDigests; }
   else if (approvalDigests) categories.push({ category: 'approval', total: approvalDigests, waiting: approvalDigests, sent: 0, failed: 0, suppressed: 0 });
+  const certificates = categories.find((item) => item.category === 'certificate');
+  if (certificates) { certificates.total += certificateDigests; certificates.waiting += certificateDigests; }
+  else if (certificateDigests) categories.push({ category: 'certificate', total: certificateDigests, waiting: certificateDigests, sent: 0, failed: 0, suppressed: 0 });
   res.json({
     statuses,
     categories,
     approvalDigests,
+    certificateDigests,
     waiting,
     sentLastHour,
     hourlyLimit,
@@ -62,6 +68,18 @@ export const suppressEmailMessages = async (req, res) => {
   const messageIds = messages.map(({ _id }) => _id);
   const result = await EmailOutbox.updateMany({ _id: { $in: messageIds } }, { $set: { status: 'suppressed', lastError: 'Suppressed by an administrator.', lockedAt: null, lockedBy: '' } });
   await Promise.all(messages.map((message) => {
+    if (message.relatedModel === 'CertificateDigest' && message.relatedId) {
+      return CertificateEmailDigest.findById(message.relatedId).select('items').lean().then(async (digest) => {
+        if (!digest) return;
+        await Promise.all([
+          Certificate.updateMany(
+            { _id: { $in: digest.items.map((item) => item.certificate) }, emailStatus: { $ne: 'sent' } },
+            { $set: { emailStatus: 'failed', emailAttempts: message.maxAttempts, emailLastError: 'Certificate summary suppressed by an administrator.' } },
+          ),
+          CertificateEmailDigest.updateOne({ _id: message.relatedId }, { $set: { status: 'failed', lastError: 'Suppressed by an administrator.' } }),
+        ]);
+      });
+    }
     const Model = message.relatedModel === 'Certificate' ? Certificate : message.relatedModel === 'TrainerCertificate' ? TrainerCertificate : null;
     return Model && message.relatedId ? Model.updateOne({ _id: message.relatedId }, { $set: { emailStatus: 'failed', emailAttempts: message.maxAttempts, emailLastError: 'Email suppressed by an administrator.' } }) : null;
   }));

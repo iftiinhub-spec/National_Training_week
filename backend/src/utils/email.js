@@ -109,7 +109,7 @@ export const closeEmailTransporter = () => {
 
 export const sendInvitationEmail = ({ to, trainingTitle, eventName, meetingUrl, meetingId, passcode, startTime, platform, notes }) => {
   const platformNames = { zoom: 'Zoom', google_meet: 'Google Meet', teams: 'Microsoft Teams', other: 'Online' };
-  return sendEmail({ to, category: 'invitation', subject: `Invitation: ${trainingTitle} — National Training Week`, html: emailLayout({ title: 'Your training invitation', preview: `Join ${trainingTitle}`, body: `<p style="margin-top:0">You are invited to attend the following expert-led session.</p>${emailInfoCard([['Training', trainingTitle], ['Event', eventName], ['Date and time', startTime ? new Date(startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short', hour12: true }) : ''], ['Platform', platformNames[platform] || platform], ['Meeting ID', meetingId], ['Passcode', passcode]])}${emailButton('Join the live session', meetingUrl)}${notes ? `<p style="background:#fefce8;border-radius:10px;padding:14px"><strong>Joining notes:</strong> ${escapeHtml(notes)}</p>` : ''}<p>Keep this email available for the session. The meeting link is intended for registered attendees.</p>` }) });
+  return sendEmail({ to, category: 'invitation', expiresAt: startTime || null, subject: `Invitation: ${trainingTitle} — National Training Week`, html: emailLayout({ title: 'Your training invitation', preview: `Join ${trainingTitle}`, body: `<p style="margin-top:0">You are invited to attend the following expert-led session.</p>${emailInfoCard([['Training', trainingTitle], ['Event', eventName], ['Date and time', startTime ? new Date(startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short', hour12: true }) : ''], ['Platform', platformNames[platform] || platform], ['Meeting ID', meetingId], ['Passcode', passcode]])}${emailButton('Join the live session', meetingUrl)}${notes ? `<p style="background:#fefce8;border-radius:10px;padding:14px"><strong>Joining notes:</strong> ${escapeHtml(notes)}</p>` : ''}<p>Keep this email available for the session. The meeting link is intended for registered attendees.</p>` }) });
 };
 
 const formatRemainingTime = (startTime) => {
@@ -132,7 +132,30 @@ export const sendReminderEmail = ({ to, trainingTitle, startTime, type = 'remind
   const label = labels[type] || 'Session notice';
   const timingMessage = type === 'reminder' ? formatRemainingTime(startTime) : 'There is an update to your training session.';
   const formattedStart = startTime ? new Date(startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'full', timeStyle: 'short', hour12: true }) : '';
-  return sendEmail({ to, category: type, subject: `${label}: ${trainingTitle}`, html: emailLayout({ eyebrow: label, title: trainingTitle, preview: `${label}: ${trainingTitle}`, body: `<p style="margin-top:0"><strong>${escapeHtml(timingMessage)}</strong></p>${emailInfoCard([['Training', trainingTitle], ['Scheduled start', formattedStart], ...(type === 'reminder' ? [['Time remaining', timingMessage.replace(/^The session (starts|is starting) /, '').replace(/\.$/, '')]] : [])])}<p>Open your participant portal for the latest schedule and access information. For security, meeting access is not included in reminder emails.</p>` }) });
+  return sendEmail({ to, category: type, expiresAt: type === 'cancellation' ? null : (startTime || null), subject: `${label}: ${trainingTitle}`, html: emailLayout({ eyebrow: label, title: trainingTitle, preview: `${label}: ${trainingTitle}`, body: `<p style="margin-top:0"><strong>${escapeHtml(timingMessage)}</strong></p>${emailInfoCard([['Training', trainingTitle], ['Scheduled start', formattedStart], ...(type === 'reminder' ? [['Time remaining', timingMessage.replace(/^The session (starts|is starting) /, '').replace(/\.$/, '')]] : [])])}<p>Open your participant portal for the latest schedule and access information. For security, meeting access is not included in reminder emails.</p>` }) });
+};
+
+export const sendReminderDigestEmail = ({ to, recipientName, dateKey, sessions }) => {
+  const validSessions = (sessions || []).filter((session) => session?.trainingTitle && session?.startTime && new Date(session.startTime) > new Date());
+  if (!validSessions.length) return Promise.resolve({ success: false, queued: false, error: 'No future sessions were available for the reminder summary.' });
+  const rows = validSessions
+    .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
+    .map((session) => `<tr><td style="padding:14px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#0f172a">${escapeHtml(session.trainingTitle)}</strong><br><span style="color:#64748b;font-size:13px">${escapeHtml(new Date(session.startTime).toLocaleString('en-US', { timeZone: 'Africa/Nairobi', dateStyle: 'full', timeStyle: 'short', hour12: true }))}</span></td></tr>`).join('');
+  const latestStart = new Date(Math.max(...validSessions.map((session) => new Date(session.startTime).getTime())));
+  const count = validSessions.length;
+  return sendEmail({
+    to,
+    category: 'reminder',
+    subject: count === 1 ? `Upcoming session: ${validSessions[0].trainingTitle}` : `Your schedule: ${count} upcoming training sessions`,
+    dedupeKey: `daily-reminder:${dateKey}:${String(to).trim().toLowerCase()}`,
+    expiresAt: latestStart,
+    html: emailLayout({
+      eyebrow: 'Upcoming schedule',
+      title: count === 1 ? 'Your session is coming up' : 'Your upcoming training schedule',
+      preview: `You have ${count} upcoming training ${count === 1 ? 'session' : 'sessions'}.`,
+      body: `<p style="margin-top:0">Hello ${escapeHtml(recipientName || 'Participant')},</p><p>This single summary replaces separate reminder messages for each session.</p><table role="presentation" style="width:100%;border-collapse:collapse;margin:12px 0 20px">${rows}</table>${emailButton('View my schedule', `${process.env.FRONTEND_URL}/portal/trainings`)}<p>Open the portal for the latest schedule and access information.</p>`,
+    }),
+  });
 };
 
 export const sendCertificateIssuedEmail = ({ to, participantName, trainingTitle, certificateId, verifyUrl, portalUrl, relatedModel, relatedId, dedupeKey }) => sendEmail({

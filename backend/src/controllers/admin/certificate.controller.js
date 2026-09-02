@@ -7,7 +7,7 @@ import Training from '../../models/Training.js';
 import { generateCertificateId } from '../../utils/generateCertificateId.js';
 import { generateCertificatePDF } from '../../utils/generatePDF.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
-import { sendCertificateIssuedEmail } from '../../utils/email.js';
+import { queueCertificateDigest } from '../../services/certificateEmailDigest.js';
 import { enqueueCertificateIssuance } from '../../services/completeTrainingSession.js';
 import { withPdfGenerationLimit } from '../../utils/pdfGenerationLimit.js';
 
@@ -49,17 +49,12 @@ export const generateCertificate = async (req, res, next) => {
       .populate('training', 'title date event')
       .populate('issuedBy', 'fullName');
 
-    const verifyUrl = `${process.env.FRONTEND_URL}/verify-certificate?id=${certificate.certificateId}`;
-    const emailResult = await sendCertificateIssuedEmail({
+    const emailResult = await queueCertificateDigest({
       to: populated.participant.email,
       participantName: populated.participant.fullName,
       trainingTitle: populated.training.title,
+      certificate: certificate._id,
       certificateId: populated.certificateId,
-      verifyUrl,
-      portalUrl: `${process.env.FRONTEND_URL}/portal/certificates`,
-      relatedModel: 'Certificate',
-      relatedId: certificate._id,
-      dedupeKey: `certificate:${certificate._id}`,
     });
     await Certificate.updateOne({ _id: certificate._id }, emailResult.queued ? {
       $set: { emailStatus: 'pending', emailLastError: '' }, $inc: { emailAttempts: 1 },
@@ -69,7 +64,7 @@ export const generateCertificate = async (req, res, next) => {
       $set: { emailStatus: 'failed', emailLastError: String(emailResult.error || 'Email delivery failed.').slice(0, 500) }, $inc: { emailAttempts: 1 },
     });
 
-    return successResponse(res, { certificate: populated, emailDelivered: !emailResult.queued && emailResult.success, emailQueued: emailResult.queued }, emailResult.queued ? 'Certificate issued and its email was safely queued.' : emailResult.success ? 'Certificate issued and participant notified.' : 'Certificate issued, but its notification email could not be delivered.', 201);
+    return successResponse(res, { certificate: populated, emailDelivered: false, emailQueued: emailResult.queued }, emailResult.queued ? 'Certificate issued and added to the participant notification summary.' : 'Certificate issued, but its notification summary could not be queued.', 201);
   } catch (err) { next(err); }
 };
 
