@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../../components/common/ThemeToggle';
+import SidebarToggle from '../../components/common/SidebarToggle';
+import HeaderProfileMenu from '../../components/common/HeaderProfileMenu';
+import { useSidebarCollapse } from '../../utils/useSidebarCollapse';
 import {
   Squares2X2Icon,
   CalendarDaysIcon,
@@ -22,13 +25,13 @@ import {
   Cog6ToothIcon,
   QuestionMarkCircleIcon,
   BuildingOffice2Icon,
-} from '@heroicons/react/24/solid';
+} from '@icons';
 
 export const AdminLayout = () => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const profilePhoto = user?.profilePhoto ? (user.profilePhoto.startsWith('http') ? user.profilePhoto : `/${user.profilePhoto.replace(/^\//, '')}`) : null;
+  const { collapsed, toggleCollapsed } = useSidebarCollapse();
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -93,21 +96,21 @@ export const AdminLayout = () => {
       )}
       
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[min(86vw,18rem)] flex-col border-r border-slate-200 bg-white p-4 text-slate-950 shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:translate-x-0 lg:shadow-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[min(86vw,18rem)] flex-col border-r border-slate-200 bg-white p-4 text-slate-950 shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:translate-x-0 lg:shadow-none ${collapsed ? 'sidebar-collapsed' : ''} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="mb-4 flex items-center justify-between px-1 lg:hidden">
           <span className="text-xs font-bold uppercase tracking-[.16em] text-slate-400">Admin menu</span>
           <button type="button" onClick={() => setSidebarOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100" aria-label="Close administration menu">
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
-        <div className="flex h-24 shrink-0 items-center justify-center border-b border-black px-3">
-          <img src="/logo.png" alt="National Training Week" className="h-20 max-w-full w-auto object-contain" />
+        <div className="flex h-20 shrink-0 items-center justify-center -mx-4 lg:-mt-4 border-b border-slate-200 px-3">
+          <img src="/logo.png" alt="National Training Week" className="sidebar-logo h-16 max-w-full w-auto object-contain" />
         </div>
 
         <nav className="admin-sidebar-nav mt-4 flex-1 space-y-5 overflow-y-auto pr-1">
           {navGroups.map((group) => (
             <div key={group.label}>
-              <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400">{group.label}</p>
+              <p className="sidebar-group-label mb-2 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400">{group.label}</p>
               <div className="space-y-1">{group.items.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -115,14 +118,15 @@ export const AdminLayout = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
+                title={item.name}
+                className={`sidebar-link flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
                   isActive
                     ? 'bg-emerald-50 text-[#1a6b3c] shadow-xs'
                     : 'text-black hover:bg-slate-100'
                 }`}
               >
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isActive ? 'bg-[#1a6b3c] text-white' : 'bg-slate-100 text-black'}`}><Icon className="h-5 w-5" /></span>
-                <span className="truncate">{item.name}</span>
+                <span className="sidebar-label truncate">{item.name}</span>
               </Link>
             );
               })}</div>
@@ -133,10 +137,11 @@ export const AdminLayout = () => {
         <div className="mt-4 border-t border-black pt-4">
           <button
             onClick={logout}
-            className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600"
+            title="Sign Out"
+            className="sidebar-link flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600"
           >
             <ArrowLeftOnRectangleIcon className="h-5 w-5 shrink-0" />
-            <span>Sign Out</span>
+            <span className="sidebar-label">Sign Out</span>
           </button>
         </div>
       </aside>
@@ -153,6 +158,7 @@ export const AdminLayout = () => {
             >
               <Bars3Icon className="h-6 w-6" />
             </button>
+            <SidebarToggle collapsed={collapsed} onToggle={toggleCollapsed} className="hidden lg:inline-flex" />
             <div className="hidden sm:block">
               <p className="text-sm font-bold text-slate-950">Management Portal</p>
               <p className="text-xs text-slate-500">National Training Week</p>
@@ -161,15 +167,7 @@ export const AdminLayout = () => {
 
           <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link to="/admin/profile" aria-label="Open administrator profile" className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 transition hover:border-[#1a6b3c]/40 hover:bg-emerald-50 sm:min-w-52">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#1a6b3c] text-sm font-bold text-white">
-              {profilePhoto ? <img src={profilePhoto} alt="" className="h-full w-full object-cover" /> : (user?.fullName || 'A').charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-slate-950">{user?.fullName || 'System Admin'}</p>
-              {user?.email && <p className="hidden truncate text-xs text-slate-500 sm:block">{user.email}</p>}
-            </div>
-          </Link>
+          <HeaderProfileMenu profilePath="/admin/profile" fallbackName="Admin" menuLabel="Open administrator account menu" />
           </div>
         </header>
 

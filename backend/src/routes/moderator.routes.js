@@ -5,7 +5,7 @@ import Training from '../models/Training.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 
 import { getMeeting, createMeeting, updateMeeting, deleteMeeting, releaseMeeting, sendTrainerInvitation, sendParticipantInvitations, getCommunications } from '../controllers/admin/meeting.controller.js';
-import { openQRSession, closeQRSession, getAttendance, updateAttendance, createManualAttendance } from '../controllers/admin/attendance.controller.js';
+import { openQRSession, closeQRSession, currentQRCode, getAttendance, updateAttendance, createManualAttendance } from '../controllers/admin/attendance.controller.js';
 import { getTrainingFeedback } from '../controllers/admin/feedback.controller.js';
 import { completeTraining } from '../controllers/admin/training.controller.js';
 import { validate } from '../middleware/validate.js';
@@ -93,6 +93,7 @@ router.get('/trainings/:trainingId/communications', idParam('trainingId', 'train
 // Attendance
 router.post('/trainings/:trainingId/qr-session/open', idParam('trainingId', 'training ID'), validate, openQRSession);
 router.post('/trainings/:trainingId/qr-session/close', idParam('trainingId', 'training ID'), validate, closeQRSession);
+router.get('/trainings/:trainingId/qr-session/current', idParam('trainingId', 'training ID'), validate, currentQRCode);
 router.get('/trainings/:trainingId/attendance', idParam('trainingId', 'training ID'), validate, getAttendance);
 router.patch('/trainings/:trainingId/attendance/:attendanceId', idParam('trainingId', 'training ID'), idParam('attendanceId', 'attendance ID'), attendanceValidation, validate, updateAttendance);
 router.post('/trainings/:trainingId/attendance/manual', idParam('trainingId', 'training ID'), manualAttendanceValidation, validate, createManualAttendance);

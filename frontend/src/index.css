@@ -9,7 +9,7 @@
   }
   
   body {
-    @apply bg-white text-slate-950 antialiased selection:bg-[#1da156] selection:text-white min-h-screen flex flex-col;
+    @apply bg-white text-slate-950 antialiased selection:bg-[#15803d] selection:text-white min-h-screen flex flex-col;
     font-family: 'Inter Variable', 'Inter', sans-serif;
   }
 
@@ -28,6 +28,57 @@
   #root {
     min-height: 100vh;
   }
+}
+
+/* Collapsed desktop sidebar: icons only. Scoped to each layout's own
+   breakpoint so the mobile drawer and bottom nav are never affected.
+   .sidebar-collapsed  -> layouts whose sidebar appears at lg (admin, moderator, participant)
+   .sidebar-collapsed-md -> trainer, whose sidebar appears at md */
+@media (min-width: 1024px) {
+  .sidebar-collapsed {
+    width: 5rem;
+  }
+  .sidebar-collapsed .sidebar-label,
+  .sidebar-collapsed .sidebar-group-label {
+    display: none;
+  }
+  .sidebar-collapsed .sidebar-link {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .sidebar-collapsed .sidebar-logo {
+    height: 2.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .sidebar-collapsed-md {
+    width: 5rem;
+  }
+  .sidebar-collapsed-md .sidebar-label,
+  .sidebar-collapsed-md .sidebar-group-label {
+    display: none;
+  }
+  .sidebar-collapsed-md .sidebar-link {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .sidebar-collapsed-md .sidebar-logo {
+    height: 2.25rem;
+  }
+}
+
+/* Brand green as TEXT. #1da156 only reaches 3.3:1 on white, so light surfaces
+   use the darker brand green (6.5:1). Panels that are actually dark keep the
+   vivid shade. Exact-token selectors so hover-only variants are untouched. */
+[class~="text-[#1da156]"] {
+  color: #1a6b3c;
+}
+
+[class~="bg-black"] [class~="text-[#1da156]"] {
+  color: #1da156;
 }
 
 /* System-wide dark theme. Existing utility classes are mapped here so every
@@ -78,7 +129,7 @@
 
 .dark [class~="bg-blue-50"],
 .dark [class~="bg-blue-100"] {
-  background-color: #102a1c !important;
+  background-color: #10243a !important;
 }
 
 .dark [class~="bg-amber-50"],
@@ -89,6 +140,16 @@
 .dark [class~="bg-rose-50"],
 .dark [class~="bg-rose-100"] {
   background-color: #3a1720 !important;
+}
+
+.dark [class~="bg-sky-50"],
+.dark [class~="bg-sky-100"] {
+  background-color: #0e2a3a !important;
+}
+
+.dark [class~="bg-violet-50"],
+.dark [class~="bg-violet-100"] {
+  background-color: #241a3a !important;
 }
 
 .dark [class~="text-black"],
@@ -115,6 +176,52 @@
 .dark [class*="text-[#1a6b3c]"],
 .dark [class*="text-[#1da156]"] {
   color: #34d399 !important;
+}
+
+/* Filled brand-green buttons: #1a6b3c reads as only 2.9:1 against the dark
+   card surface, below the 3:1 needed for a UI component edge. Lift it in dark
+   mode so the button shape stays visible while white label text keeps 5:1. */
+.dark [class~="bg-[#1a6b3c]"] {
+  background-color: #15803d !important;
+}
+
+.dark [class~="text-emerald-600"],
+.dark [class~="text-emerald-700"],
+.dark [class~="text-emerald-800"],
+.dark [class~="text-emerald-900"] {
+  color: #34d399 !important;
+}
+
+.dark [class~="text-rose-600"],
+.dark [class~="text-rose-700"],
+.dark [class~="text-rose-800"],
+.dark [class~="text-rose-900"] {
+  color: #fb7185 !important;
+}
+
+.dark [class~="text-amber-600"],
+.dark [class~="text-amber-700"],
+.dark [class~="text-amber-800"],
+.dark [class~="text-amber-900"] {
+  color: #fbbf24 !important;
+}
+
+.dark [class~="text-blue-600"],
+.dark [class~="text-blue-700"],
+.dark [class~="text-blue-800"] {
+  color: #60a5fa !important;
+}
+
+.dark [class~="text-sky-600"],
+.dark [class~="text-sky-700"],
+.dark [class~="text-sky-800"] {
+  color: #38bdf8 !important;
+}
+
+.dark [class~="text-violet-600"],
+.dark [class~="text-violet-700"],
+.dark [class~="text-violet-800"] {
+  color: #a78bfa !important;
 }
 
 .dark [class~="border-black"],
@@ -182,6 +289,49 @@
   color: #f7f7f7 !important;
 }
 
+.dark .hover\:bg-slate-200:hover {
+  background-color: #2a2a2a !important;
+}
+
+.dark .hover\:bg-amber-50:hover,
+.dark .hover\:bg-amber-100:hover {
+  background-color: #382b0b !important;
+}
+
+.dark .hover\:bg-blue-50:hover,
+.dark .hover\:bg-blue-100:hover {
+  background-color: #10243a !important;
+}
+
+.dark .hover\:bg-sky-50:hover,
+.dark .hover\:bg-violet-50:hover {
+  background-color: #0e2a3a !important;
+}
+
+.dark .hover\:text-amber-600:hover,
+.dark .hover\:text-amber-700:hover,
+.dark .hover\:text-amber-800:hover {
+  color: #fbbf24 !important;
+}
+
+.dark .hover\:text-blue-600:hover,
+.dark .hover\:text-blue-700:hover {
+  color: #60a5fa !important;
+}
+
+.dark .hover\:text-emerald-600:hover,
+.dark .hover\:text-emerald-700:hover {
+  color: #34d399 !important;
+}
+
+.dark .hover\:text-slate-600:hover,
+.dark .hover\:text-slate-700:hover,
+.dark .hover\:text-slate-800:hover,
+.dark .hover\:text-slate-900:hover,
+.dark .hover\:text-slate-950:hover {
+  color: #f7f7f7 !important;
+}
+
 .dark ::-webkit-scrollbar-track {
   background: #080808;
 }
@@ -240,7 +390,7 @@ button, a, input, select, textarea {
   background: #1da156;
 }
 
-/* UI UX Pro Max — Micro-Interactions & Cards */
+/* Shared micro-interactions and cards */
 .card-hover-lift {
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -279,7 +429,7 @@ button, a, input, select, textarea {
   padding: 5.5rem 1rem;
   text-align: center;
   color: white;
-  background: #1da156;
+  background: #15803d;
 }
 
 .public-page-hero::after {

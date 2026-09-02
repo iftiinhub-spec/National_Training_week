@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArchiveBoxIcon, CalendarDaysIcon, MagnifyingGlassIcon, VideoCameraIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArchiveBoxIcon, CalendarDaysIcon, MagnifyingGlassIcon, VideoCameraIcon, XMarkIcon } from '@icons';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
@@ -20,7 +20,7 @@ export const PastEditions = () => {
         return groups;
       }, {});
       const completed = (eventRes.data.events || [])
-        .filter((event) => event.status === 'completed')
+        .filter((event) => event.phase === 'finished')
         .map((event) => ({ ...event, sponsors: sponsorsByEvent[event._id] || [] }));
       setEvents(completed);
     }).catch(() => {}).finally(() => setLoading(false));
@@ -50,7 +50,7 @@ export const PastEditions = () => {
           {filteredEvents.map((event) => (
             <article key={event._id} className="flex h-full flex-col rounded-2xl border border-slate-200 bg-slate-50/60 p-6">
               <div className="flex items-start justify-between gap-4">
-                <p className="inline-flex items-center gap-2 pt-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-500"><ArchiveBoxIcon className="h-4 w-4 text-[#1a6b3c]" /> Archived edition</p>
+                <p className="inline-flex items-center gap-2 pt-1 text-xs font-bold text-slate-500"><ArchiveBoxIcon className="h-4 w-4 text-[#1a6b3c]" /> Archived edition</p>
                 <p className="text-xl font-black leading-none tracking-tight text-[#1a6b3c]">{event.year}</p>
               </div>
 

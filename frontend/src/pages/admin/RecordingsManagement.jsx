@@ -5,7 +5,7 @@ import AdminModalClose from '../../components/common/AdminModalClose';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { PlusIcon, VideoCameraIcon, EyeIcon, EyeSlashIcon, ArchiveBoxArrowDownIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, VideoCameraIcon, EyeIcon, EyeSlashIcon, ArchiveBoxArrowDownIcon, ArrowPathIcon } from '@icons';
 
 export const RecordingsManagement = () => {
   const confirmAction = useConfirmDialog();
@@ -209,7 +209,7 @@ export const RecordingsManagement = () => {
                 <label className="block font-bold uppercase text-slate-700 mb-1">Description</label>
                 <textarea
                   rows={3}
-                  value={form.description}
+                  value={form.description} placeholder="Short summary shown beside the recording"
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300"
                 ></textarea>

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useCurrentEvent } from '../../context/EventContext';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon } from '@icons';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 import PublicEmptyState from '../../components/common/PublicEmptyState';
 import { formatTimeRange12 } from '../../utils/timeFormat';
@@ -61,7 +61,7 @@ const TrainingCard = ({ training: t }) => (
     {/* Card body */}
     <div className="p-5 bg-white">
       <div className="mb-4 flex">
-        <span className={`${phaseColor(t.phase)} rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white`}>
+        <span className={`${phaseColor(t.phase)} rounded-full px-2.5 py-1 text-xs font-bold text-white`}>
           {t.phaseLabel || t.phase?.replace(/_/g, ' ')}
         </span>
       </div>
@@ -75,7 +75,7 @@ const TrainingCard = ({ training: t }) => (
         <span>
           {t.date
             ? new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-            : '—'}
+            : 'Not scheduled'}
         </span>
         <span>{formatTimeRange12(t.startTime, t.endTime)}</span>
       </div>
@@ -180,7 +180,7 @@ export const Trainings = () => {
             {/* Category */}
             <select value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} aria-label="Event edition" className="px-3 py-2 rounded-lg border border-black/10 text-sm bg-white text-black focus:outline-none focus:ring-2 focus:ring-[#1da156]/40">
               <option value="">Current edition{currentEvent?.year ? ` (${currentEvent.year})` : ''}</option>
-              {events.filter((e) => e._id !== currentEvent?._id).map((e) => <option key={e._id} value={e._id}>{e.year} — {e.theme}</option>)}
+              {events.filter((e) => e._id !== currentEvent?._id).map((e) => <option key={e._id} value={e._id}>{e.year}: {e.theme}</option>)}
             </select>
 
             {/* Category */}
@@ -234,7 +234,7 @@ export const Trainings = () => {
 
             <button
               type="submit"
-              className="px-5 py-2 rounded-lg bg-[#1da156] hover:bg-black text-white font-bold text-sm transition-colors"
+              className="px-5 py-2 rounded-lg bg-[#15803d] hover:bg-black text-white font-bold text-sm transition-colors"
             >
               Search
             </button>
@@ -271,7 +271,7 @@ export const Trainings = () => {
           ) : (
             <PublicEmptyState title="No sessions found" description={currentEvent ? 'Try adjusting the search or filters. New published sessions will also appear here automatically.' : 'No current event is available. Sessions will appear here after the next edition is published.'} action={<button
                 onClick={reset}
-                className="px-6 py-2.5 bg-[#1da156] text-white rounded-lg font-bold text-sm"
+                className="px-6 py-2.5 bg-[#15803d] text-white rounded-lg font-bold text-sm"
               >
                 Reset Filters
               </button>} />

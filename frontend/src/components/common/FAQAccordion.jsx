@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MinusIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { MinusIcon, PlusIcon } from '@icons';
 
 export default function FAQAccordion({ faqs }) {
   const [openId, setOpenId] = useState(faqs[0]?._id || null);
@@ -15,7 +15,7 @@ export default function FAQAccordion({ faqs }) {
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center text-slate-950" aria-hidden="true">{open ? <MinusIcon className="h-5 w-5" /> : <PlusIcon className="h-5 w-5" />}</span>
             </button></h2>
             {open && <div id={panelId} role="region" className="px-5 pb-5 pr-14 sm:px-6 sm:pb-6 sm:pr-16">
-              {faq.category && <p className="mb-2 text-[10px] font-bold uppercase tracking-[.16em] text-[#1a6b3c]">{faq.category}</p>}
+              {faq.category && <p className="mb-2 text-xs font-bold text-[#1a6b3c]">{faq.category}</p>}
               <p className="whitespace-pre-line text-sm leading-7 text-slate-600">{faq.answer}</p>
             </div>}
           </article>

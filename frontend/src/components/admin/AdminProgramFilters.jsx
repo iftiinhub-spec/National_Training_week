@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../api/axios';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon } from '@icons';
 
 export default function AdminProgramFilters({ value, onChange, includeSession = true, includeStatus = false, statusOptions = [], includeLevel = false, includeLanguage = false, includeSearch = false, searchPlaceholder = 'Search', className = '' }) {
   const [events, setEvents] = useState([]);

@@ -4,7 +4,10 @@ import {
   ArrowLeftIcon,
   CalendarDaysIcon,
   ClockIcon,
-} from '@heroicons/react/24/outline';
+  EnvelopeIcon,
+  GlobeAltIcon,
+  FaLinkedinIn,
+} from '@icons';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useCurrentEvent } from '../../context/EventContext';
@@ -47,24 +50,24 @@ export const TrainerDetails = () => {
 
   return (
     <div className="bg-white text-black">
-      <section className="border-b border-black/10 bg-black px-4 py-12 text-white sm:px-8 sm:py-16">
+      <section className="border-b border-white/10 bg-black px-4 py-10 text-white sm:px-8 sm:py-14">
         <div className="mx-auto max-w-7xl">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-bold text-white/75 transition hover:text-[#1da156]">
+          <Link to="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-white/70 transition hover:text-[#45c77d]">
             <ArrowLeftIcon className="h-4 w-4" /> Back to Home
           </Link>
-          <div className="mt-8 grid items-center gap-8 md:grid-cols-[300px_1fr] lg:gap-14">
-            <div className="mx-auto aspect-[4/5] w-full max-w-[300px] overflow-hidden rounded-3xl border border-white/15 bg-white/10 shadow-2xl md:mx-0">
-              {photo ? <img src={photo} alt={trainer.name} className="h-full w-full object-cover object-top" /> : (
-                <div className="flex h-full items-center justify-center text-7xl font-black text-[#1da156]">{trainer.name?.charAt(0)}</div>
+          <div className="mt-6 grid items-center gap-8 md:grid-cols-[280px_1fr] lg:gap-16">
+            <div className="mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-3xl border border-white/15 bg-white/10 shadow-2xl md:mx-0">
+              {photo ? <img src={photo} alt={`${trainer.name}, National Training Week trainer`} className="h-full w-full object-cover object-[center_20%]" /> : (
+                <div className="flex h-full items-center justify-center bg-emerald-50 text-7xl font-black text-[#1a6b3c]">{trainer.name?.charAt(0)}</div>
               )}
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-[.18em] text-[#1da156]">Trainer & Keynote Speaker</p>
-              <h1 className="mt-3 text-4xl font-black leading-tight sm:text-5xl">{formatTrainerName(trainer)}</h1>
+              <p className="text-sm font-bold text-[#45c77d]">Trainer and keynote speaker</p>
+              <h1 className="mt-3 max-w-4xl text-4xl font-black leading-[1.05] tracking-[-.035em] text-white sm:text-5xl lg:text-6xl">{formatTrainerName(trainer)}</h1>
               {trainer.organization && <p className="mt-4 text-base font-semibold text-white/70">{trainer.organization}</p>}
               {trainer.expertise?.length > 0 && (
                 <div className="mt-6 flex flex-wrap gap-2">
-                  {trainer.expertise.map((item) => <span key={item} className="rounded-full border border-[#1da156]/50 bg-[#1da156]/15 px-3 py-1.5 text-xs font-bold text-white">{item}</span>)}
+                  {trainer.expertise.map((item) => <span key={item} className="rounded-xl border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-white shadow-sm">{item}</span>)}
                 </div>
               )}
             </div>
@@ -74,12 +77,22 @@ export const TrainerDetails = () => {
 
       <main className="mx-auto max-w-7xl px-4 py-14 sm:px-8 lg:py-20">
         <div className="max-w-5xl">
-          <p className="text-xs font-black uppercase tracking-[.16em] text-[#1da156]">Professional profile</p>
+          <p className="text-sm font-bold text-[#1da156]">Professional profile</p>
           <h2 className="mt-2 text-3xl font-black">About the trainer</h2>
           <p className="mt-6 whitespace-pre-line text-base leading-8 text-black/70">{trainer.biography || 'The complete professional biography will be published soon.'}</p>
 
+          <section className="mt-10 border-t border-black/10 pt-8" aria-labelledby="trainer-contact-heading">
+            <p className="text-sm font-bold text-[#1da156]">Contact</p>
+            <h2 id="trainer-contact-heading" className="sr-only">Trainer contact details</h2>
+            <a href={`mailto:${trainer.email}`} className="mt-3 inline-flex items-center gap-2 break-all text-sm font-semibold text-black transition hover:text-[#1da156]"><EnvelopeIcon aria-hidden="true" className="h-5 w-5 shrink-0 text-[#1da156]" />{trainer.email}</a>
+            {(trainer.portfolioUrl || trainer.linkedinUrl) && <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              {trainer.portfolioUrl && <a href={trainer.portfolioUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-black/10 px-4 text-sm font-bold text-black transition hover:border-[#1da156] hover:bg-[#1da156] hover:text-white"><GlobeAltIcon aria-hidden="true" className="h-5 w-5 shrink-0" />Open website</a>}
+              {trainer.linkedinUrl && <a href={trainer.linkedinUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-black/10 px-4 text-sm font-bold text-black transition hover:border-[#1da156] hover:bg-[#1da156] hover:text-white"><FaLinkedinIn aria-hidden="true" className="h-5 w-5 shrink-0" />Open in LinkedIn</a>}
+            </div>}
+          </section>
+
           <div className="mt-14">
-            <p className="text-xs font-black uppercase tracking-[.16em] text-[#1da156]">Program contributions</p>
+            <p className="text-sm font-bold text-[#1da156]">Program contributions</p>
             <h2 className="mt-2 text-3xl font-black">Training sessions</h2>
             {trainer.sessions?.length ? (
               <div className="mt-6 grid gap-4">

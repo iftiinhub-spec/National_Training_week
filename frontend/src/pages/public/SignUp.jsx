@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon } from '@icons';
 import PhoneInput from '../../components/common/PhoneInput';
 import TrainerApply from './TrainerApply';
 import { getCountries } from 'libphonenumber-js';
@@ -70,7 +70,7 @@ export const SignUp = () => {
 
   const inputClass = "w-full px-3.5 py-2.5 rounded-lg border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#1da156]/40 text-black bg-white";
 
-  const registrationTabs = <div className="mx-auto grid w-full max-w-md grid-cols-2 rounded-xl border border-slate-200 bg-slate-100 p-1" role="tablist" aria-label="Registration type"><button type="button" role="tab" aria-selected={registrationType === 'participant'} onClick={() => setSearchParams({ type: 'participant' })} className={`rounded-lg px-4 py-3 text-sm font-bold transition ${registrationType === 'participant' ? 'bg-white text-[#1a6b3c] shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>Participant</button><button type="button" role="tab" aria-selected={registrationType === 'trainer'} onClick={() => setSearchParams({ type: 'trainer' })} className={`rounded-lg px-4 py-3 text-sm font-bold transition ${registrationType === 'trainer' ? 'bg-white text-[#1a6b3c] shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>Trainer</button></div>;
+  const registrationTabs = <div className="mx-auto grid w-full max-w-md grid-cols-2 rounded-xl border border-slate-200 bg-slate-100 p-1" role="tablist" aria-label="Registration type"><button type="button" role="tab" aria-selected={registrationType === 'participant'} onClick={() => setSearchParams({ type: 'participant' })} className={`rounded-lg px-4 py-3 text-sm font-bold transition ${registrationType === 'participant' ? 'bg-white text-[#1a6b3c] shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>Participant</button><button type="button" role="tab" aria-selected={registrationType === 'trainer'} onClick={() => setSearchParams({ type: 'trainer' })} className={`rounded-lg px-4 py-3 text-sm font-bold transition ${registrationType === 'trainer' ? 'bg-white text-[#1a6b3c] shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>Trainer</button></div>;
 
   if (registrationType === 'trainer') return <div className="flex min-h-[85vh] items-center justify-center bg-white px-4 py-12 sm:px-6 lg:px-8"><div className="w-full max-w-5xl space-y-6">{registrationTabs}<TrainerApply /></div></div>;
 
@@ -240,7 +240,7 @@ export const SignUp = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 bg-[#1da156] hover:bg-black text-white font-bold text-sm rounded-xl shadow-md transition-all disabled:opacity-50 mt-4"
+              className="w-full py-3.5 bg-[#15803d] hover:bg-black text-white font-bold text-sm rounded-xl shadow-md transition-all disabled:opacity-50 mt-4"
             >
               {submitting ? 'Creating Account...' : 'Complete Registration'}
             </button>

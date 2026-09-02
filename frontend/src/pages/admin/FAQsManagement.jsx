@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { EyeIcon, EyeSlashIcon, PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from '@icons';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -125,7 +125,7 @@ export default function FAQsManagement() {
             </select>
           </label>
           <label className="text-sm font-bold uppercase text-slate-700">Display order
-            <input type="number" min="0" max="9999" value={form.displayOrder} onChange={(event) => setForm({ ...form, displayOrder: Number(event.target.value) })} className={inputClass} />
+            <input type="number" min="0" max="9999" value={form.displayOrder} placeholder="e.g. 1" onChange={(event) => setForm({ ...form, displayOrder: Number(event.target.value) })} className={inputClass} />
           </label>
           <label className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 sm:col-span-2">
             <input type="checkbox" checked={form.isPublished} onChange={(event) => setForm({ ...form, isPublished: event.target.checked })} className="h-5 w-5 accent-[#1a6b3c]" /> Publish this FAQ on the public website
@@ -160,7 +160,7 @@ export default function FAQsManagement() {
                 <div className="flex shrink-0 gap-2">
                   <button type="button" onClick={() => togglePublished(faq)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100" aria-label={faq.isPublished ? `Unpublish ${faq.question}` : `Publish ${faq.question}`}>{faq.isPublished ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}</button>
                   <button type="button" onClick={() => editFAQ(faq)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-[#1a6b3c]/30 hover:bg-emerald-50 hover:text-[#1a6b3c]" aria-label={`Edit ${faq.question}`}><PencilIcon className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => deleteFAQ(faq)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600" aria-label={`Delete ${faq.question}`}><TrashIcon className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => deleteFAQ(faq)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600" aria-label={`Delete ${faq.question}`}><TrashIcon className="h-4 w-4" /></button>
                 </div>
               </div>
             </article>

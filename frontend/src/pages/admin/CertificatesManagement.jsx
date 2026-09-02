@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { PhotoIcon, SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, SparklesIcon, XMarkIcon } from '@icons';
 
 export const CertificatesManagement = () => {
   const [certificates, setCertificates] = useState([]);

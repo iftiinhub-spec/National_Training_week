@@ -1,5 +1,5 @@
 import React from 'react';
-import { InboxIcon } from '@heroicons/react/24/outline';
+import { InboxIcon } from '@icons';
 
 export const EmptyState = ({ title = 'No records found', message = 'There are no items to display at this time.', action = null, icon: Icon = InboxIcon }) => {
   return (

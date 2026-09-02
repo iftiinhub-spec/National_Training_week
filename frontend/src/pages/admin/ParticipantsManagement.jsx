@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { EyeIcon, EyeSlashIcon, KeyIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, KeyIcon, TrashIcon } from '@icons';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
 export const ParticipantsManagement = () => {
@@ -220,7 +220,7 @@ export const ParticipantsManagement = () => {
                   autoComplete="new-password"
                   minLength={8}
                   maxLength={128}
-                  value={passwordForm.confirmPassword}
+                  value={passwordForm.confirmPassword} placeholder="Re-enter the new password"
                   onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                   className="w-full rounded-lg border border-slate-300 p-2.5"
                   required

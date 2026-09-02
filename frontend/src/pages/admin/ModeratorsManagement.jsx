@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminModalClose from '../../components/common/AdminModalClose';
 import toast from 'react-hot-toast';
-import { EyeIcon, EyeSlashIcon, KeyIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, KeyIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, UserPlusIcon } from '@icons';
 import PhoneInput from '../../components/common/PhoneInput';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
@@ -328,9 +328,9 @@ export const ModeratorsManagement = () => {
             <h3 id="reset-moderator-title" className="pr-10 text-lg font-bold text-slate-900">Reset Moderator Password</h3>
             <p className="mt-2 text-sm text-slate-500">Set a new password for <strong className="text-slate-700">{resetTarget.fullName}</strong>. Existing sessions will be signed out.</p>
             <form onSubmit={resetPassword} className="mt-5 space-y-4">
-              {[['newPassword', 'New password'], ['confirmPassword', 'Confirm new password']].map(([key, label]) => <label key={key} className="block text-xs font-bold uppercase text-slate-700">{label}<span className="relative mt-1 block"><input type={showResetPasswords[key] ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={128} required value={passwordForm[key]} onChange={(e) => setPasswordForm({ ...passwordForm, [key]: e.target.value })} className="w-full rounded-lg border border-slate-300 p-2.5 pr-11 text-sm font-normal normal-case" /><button type="button" aria-label={`${showResetPasswords[key] ? 'Hide' : 'Show'} ${label.toLowerCase()}`} onClick={() => setShowResetPasswords({ ...showResetPasswords, [key]: !showResetPasswords[key] })} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400">{showResetPasswords[key] ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></span></label>)}
+              {[['newPassword', 'New password', 'At least 8 characters'], ['confirmPassword', 'Confirm new password', 'Re-enter the new password']].map(([key, label, hint]) => <label key={key} className="block text-xs font-bold uppercase text-slate-700">{label}<span className="relative mt-1 block"><input type={showResetPasswords[key] ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={128} required value={passwordForm[key]} onChange={(e) => setPasswordForm({ ...passwordForm, [key]: e.target.value })} placeholder={hint} className="w-full rounded-lg border border-slate-300 p-2.5 pr-11 text-sm font-normal normal-case placeholder:text-slate-400" /><button type="button" aria-label={`${showResetPasswords[key] ? 'Hide' : 'Show'} ${label.toLowerCase()}`} onClick={() => setShowResetPasswords({ ...showResetPasswords, [key]: !showResetPasswords[key] })} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400">{showResetPasswords[key] ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}</button></span></label>)}
               <p className="text-xs text-slate-500">Use between 8 and 128 characters.</p>
-              <div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setResetTarget(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Resetting…' : 'Reset Password'}</button></div>
+              <div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setResetTarget(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Resetting…' : 'Reset Password'}</button></div>
             </form>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LockClosedIcon, EnvelopeIcon, ArrowRightIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon, EnvelopeIcon, ArrowRightIcon, EyeIcon, EyeSlashIcon } from '@icons';
 
 export const SignIn = () => {
   const [email, setEmail] = useState('');
@@ -112,7 +112,7 @@ export const SignIn = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 bg-[#1da156] hover:bg-black text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3 bg-[#15803d] hover:bg-black text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {submitting ? 'Signing In...' : 'Sign In to Portal'}
               <ArrowRightIcon className="w-4 h-4" />

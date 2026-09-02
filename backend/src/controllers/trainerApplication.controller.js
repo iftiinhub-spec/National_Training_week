@@ -23,7 +23,7 @@ export const applyAsTrainer = async (req, res, next) => {
     if (await User.exists({ email })) return errorResponse(res, 'An account with this email already exists.', 409);
     const user = await User.create({ fullName: req.body.name, email, passwordHash: req.body.password, role: 'trainer', isActive: false, accountStatus: 'pending', phone: req.body.phone });
     try {
-      const trainer = await Trainer.create({ name: req.body.name, email, phone: req.body.phone, title: req.body.title, organization: req.body.organization, biography: req.body.biography, expertise: expertiseList(req.body.expertise), photo: req.file ? `uploads/photo/${req.file.filename}` : null, user: user._id, accessStatus: 'pending', isActive: false });
+      const trainer = await Trainer.create({ name: req.body.name, email, phone: req.body.phone, title: req.body.title, organization: req.body.organization, portfolioUrl: req.body.portfolioUrl, linkedinUrl: req.body.linkedinUrl, biography: req.body.biography, expertise: expertiseList(req.body.expertise), photo: req.file ? `uploads/photo/${req.file.filename}` : null, user: user._id, accessStatus: 'pending', isActive: false });
       user.trainerProfile = trainer._id;
       await user.save({ validateBeforeSave: false });
       await sendTrainerApplicationReceivedEmail({ to: trainer.email, trainerName: trainer.name });
@@ -82,7 +82,7 @@ export const updateTrainerProfile = async (req, res, next) => {
   try {
     const trainer = await ownTrainer(req.user);
     if (!trainer) return errorResponse(res, 'Approved trainer profile not found.', 403);
-    const allowed = ['title', 'name', 'phone', 'organization', 'biography'];
+    const allowed = ['title', 'name', 'phone', 'organization', 'portfolioUrl', 'linkedinUrl', 'biography'];
     allowed.forEach((field) => { if (req.body[field] !== undefined) trainer[field] = req.body[field]; });
     if (req.body.expertise !== undefined) trainer.expertise = expertiseList(req.body.expertise);
     if (req.file) trainer.photo = `uploads/photo/${req.file.filename}`;

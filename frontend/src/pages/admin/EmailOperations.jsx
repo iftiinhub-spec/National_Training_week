@@ -5,7 +5,7 @@ import {
   ChartBarIcon, ExclamationTriangleIcon, KeyIcon, CalendarDaysIcon, CheckCircleIcon,
   XCircleIcon, TicketIcon, BellAlertIcon, UserPlusIcon, ClipboardDocumentCheckIcon,
   CheckBadgeIcon, MegaphoneIcon,
-} from '@heroicons/react/24/outline';
+} from '@icons';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 

@@ -8,6 +8,8 @@ import {
   optionalObjectIdQueries,
   qrCheckinValidation,
   recordingValidation,
+  trainerProfileValidation,
+  trainerValidation,
   trainingValidation,
 } from '../src/middleware/validationRules.js';
 import { escapeRegex } from '../src/utils/search.js';
@@ -31,7 +33,7 @@ test('regex search input is treated as literal text', () => {
 
 test('QR check-in rejects malformed IDs and tokens', async () => {
   const errors = await runRules(qrCheckinValidation, { trainingId: 'bad', sessionToken: 'bad' });
-  assert.deepEqual(errors.map(({ path }) => path).sort(), ['sessionToken', 'trainingId']);
+  assert.deepEqual([...new Set(errors.map(({ path }) => path))].sort(), ['code', 'sessionToken', 'trainingId']);
 });
 
 test('feedback only accepts ratings from one to five', async () => {
@@ -92,6 +94,21 @@ test('valid training payload passes boundary validation', async () => {
     startTime: '09:00', endTime: '11:00', capacity: 100,
   });
   assert.deepEqual(errors, []);
+});
+
+test('trainer links accept HTTPS portfolio and LinkedIn profile URLs', async () => {
+  const base = { name: 'Amina Mohamed', email: 'amina@example.com' };
+  const valid = await runRules(trainerValidation, {
+    ...base,
+    portfolioUrl: 'https://amina.example.com',
+    linkedinUrl: 'https://www.linkedin.com/in/amina-mohamed',
+  });
+  const invalid = await runRules(trainerProfileValidation, {
+    portfolioUrl: 'http://amina.example.com',
+    linkedinUrl: 'https://example.com/amina',
+  });
+  assert.deepEqual(valid, []);
+  assert.deepEqual([...new Set(invalid.map(({ path }) => path))].sort(), ['linkedinUrl', 'portfolioUrl']);
 });
 
 test('training validation accepts multiple unique trainer IDs', async () => {

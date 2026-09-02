@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
-import { QrCodeIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { QrCodeIcon, XMarkIcon } from '@icons';
 
 export const QRScanModal = ({ isOpen, onClose, onSuccess }) => {
   const [trainingId, setTrainingId] = useState('');

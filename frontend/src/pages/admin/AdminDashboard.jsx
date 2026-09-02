@@ -12,7 +12,7 @@ import {
   CalendarDaysIcon,
   ChartBarIcon,
   ArrowRightIcon,
-} from '@heroicons/react/24/outline';
+} from '@icons';
 
 export const AdminDashboard = () => {
   const { isDark } = useTheme();

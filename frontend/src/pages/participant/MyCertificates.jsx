@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import toast from 'react-hot-toast';
-import { CheckBadgeIcon, ArrowDownTrayIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { CheckBadgeIcon, ArrowDownTrayIcon, ShieldCheckIcon } from '@icons';
 
 export const MyCertificates = () => {
   const [certificates, setCertificates] = useState([]);

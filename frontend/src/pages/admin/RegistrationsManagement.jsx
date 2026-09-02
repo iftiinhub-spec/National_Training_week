@@ -4,7 +4,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminProgramFilters from '../../components/admin/AdminProgramFilters';
 import toast from 'react-hot-toast';
-import { CheckIcon, PaperAirplaneIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PaperAirplaneIcon, TrashIcon, XMarkIcon } from '@icons';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import AdminModalClose from '../../components/common/AdminModalClose';
 

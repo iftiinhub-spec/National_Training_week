@@ -4,7 +4,7 @@ import api from '../../api/axios';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../context/AuthContext';
-import { AcademicCapIcon, CalendarIcon, CheckCircleIcon, ClockIcon, UserIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline';
+import { AcademicCapIcon, CalendarIcon, CheckCircleIcon, ClockIcon, UserIcon, WrenchScrewdriverIcon } from '@icons';
 import { formatTimeRange12 } from '../../utils/timeFormat';
 
 export const ModeratorDashboard = () => {

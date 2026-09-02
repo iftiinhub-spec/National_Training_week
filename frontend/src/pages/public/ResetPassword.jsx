@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeSlashIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeSlashIcon, LockClosedIcon } from '@icons';
 import api from '../../api/axios';
 
 export const ResetPassword = () => {
@@ -95,7 +95,7 @@ export const ResetPassword = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1da156] py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-black disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#15803d] py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-black disabled:opacity-50"
             >
               {submitting ? 'Resetting Password...' : 'Reset Password'}
               <ArrowRightIcon className="h-4 w-4" />

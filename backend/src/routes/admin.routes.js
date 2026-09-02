@@ -14,7 +14,7 @@ import { getTrainings, getTraining, createTraining, updateTraining, updateTraini
 import { getParticipants, getParticipant, toggleParticipantStatus, resetParticipantPassword, deleteParticipant, deleteParticipants, getModerators, getModerator, createModerator, updateModerator, toggleModeratorStatus, resetModeratorPassword, deleteModerator, deleteModerators } from '../controllers/admin/user.controller.js';
 import { getRegistrations, getRegistration, updateRegistrationStatus, approveFilteredRegistrations, emailFilteredRegistrations, assignParticipants, deleteRegistration, deleteRegistrations } from '../controllers/admin/registration.controller.js';
 import { getMeeting, createMeeting, updateMeeting, deleteMeeting, releaseMeeting, sendTrainerInvitation, sendParticipantInvitations, getCommunications } from '../controllers/admin/meeting.controller.js';
-import { openQRSession, closeQRSession, getAttendance, updateAttendance, createManualAttendance } from '../controllers/admin/attendance.controller.js';
+import { openQRSession, closeQRSession, currentQRCode, getAttendance, updateAttendance, createManualAttendance } from '../controllers/admin/attendance.controller.js';
 import { getTrainingFeedback } from '../controllers/admin/feedback.controller.js';
 import { generateCertificate, bulkGenerateCertificates, getCertificateJob, getCertificates, revokeCertificate } from '../controllers/admin/certificate.controller.js';
 import { getRecordings, getRecording, createRecording, updateRecording, togglePublish, deleteRecording, restoreRecording } from '../controllers/admin/recording.controller.js';
@@ -67,6 +67,7 @@ router.get('/trainings/:trainingId/communications', getCommunications);
 // Attendance
 router.post('/trainings/:trainingId/qr-session/open', openQRSession);
 router.post('/trainings/:trainingId/qr-session/close', closeQRSession);
+router.get('/trainings/:trainingId/qr-session/current', idParam('trainingId', 'training ID'), validate, currentQRCode);
 router.get('/trainings/:trainingId/attendance', getAttendance);
 router.patch('/trainings/:trainingId/attendance/:attendanceId', idParam('trainingId', 'training ID'), idParam('attendanceId', 'attendance ID'), attendanceValidation, validate, updateAttendance);
 router.post('/trainings/:trainingId/attendance/manual', idParam('trainingId', 'training ID'), manualAttendanceValidation, validate, createManualAttendance);

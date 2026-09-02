@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -9,23 +9,22 @@ import {
   VideoCameraIcon,
   PaperAirplaneIcon,
   QrCodeIcon,
-  UserGroupIcon,
-  ChatBubbleLeftEllipsisIcon,
+  LinkIcon,
   ArrowLeftIcon,
   EnvelopeIcon,
   CheckCircleIcon,
-} from '@heroicons/react/24/outline';
+  MagnifyingGlassIcon,
+} from '@icons';
 
 export const SessionOperation = () => {
   const confirmAction = useConfirmDialog();
   const { trainingId } = useParams();
   const [training, setTraining] = useState(null);
   const [meeting, setMeeting] = useState(null);
-  const [participants, setParticipants] = useState([]);
   const [attendance, setAttendance] = useState([]);
-  const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('meeting');
+  const [attendanceSearch, setAttendanceSearch] = useState('');
   const [completing, setCompleting] = useState(false);
 
   // Meeting Form
@@ -40,15 +39,16 @@ export const SessionOperation = () => {
   // QR Session State
   const [qrSession, setQrSession] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [checkUrl, setCheckUrl] = useState('');
+  const [qrFullscreen, setQrFullscreen] = useState(false);
+  const [rotateSeconds, setRotateSeconds] = useState(30);
 
   const fetchSessionData = useCallback(async () => {
     try {
-      const [trRes, meetRes, partRes, attRes, fbRes] = await Promise.all([
+      const [trRes, meetRes, attRes] = await Promise.all([
         api.get(`/moderator/trainings/${trainingId}`),
         api.get(`/moderator/trainings/${trainingId}/meeting`).catch(() => ({ success: false })),
-        api.get(`/moderator/trainings/${trainingId}/participants`).catch(() => ({ success: false })),
         api.get(`/moderator/trainings/${trainingId}/attendance`).catch(() => ({ success: false })),
-        api.get(`/moderator/trainings/${trainingId}/feedback`).catch(() => ({ success: false })),
       ]);
 
       if (trRes.success) setTraining(trRes.data.training);
@@ -62,9 +62,7 @@ export const SessionOperation = () => {
           notes: meetRes.data.meeting.notes || '',
         });
       }
-      if (partRes.success) setParticipants(partRes.data.registrations || []);
       if (attRes.success) setAttendance(attRes.data.records || []);
-      if (fbRes.success) setFeedback(fbRes.data);
     } catch (err) {
       toast.error('Failed to load session data.');
     } finally {
@@ -123,6 +121,8 @@ export const SessionOperation = () => {
       if (res.success) {
         setQrSession(res.data.session);
         setQrDataUrl(res.data.qrDataUrl);
+        setCheckUrl(res.data.checkUrl || '');
+        setRotateSeconds(res.data.rotateSeconds || 30);
         toast.success('QR Attendance session opened!');
       }
     } catch (err) {
@@ -137,12 +137,61 @@ export const SessionOperation = () => {
       if (res.success) {
         setQrSession(null);
         setQrDataUrl('');
+        setCheckUrl('');
+        setQrFullscreen(false);
         toast.success('QR Session closed.');
       }
     } catch (err) {
       toast.error(err.message || 'Failed to close QR session.');
     }
   };
+
+  // The displayed code rotates, so the screen has to keep pulling the current
+  // one. Without this the QR on screen would stop working after one step.
+  useEffect(() => {
+    if (!qrSession) return undefined;
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const res = await api.get(`/moderator/trainings/${trainingId}/qr-session/current`);
+        if (!cancelled && res.success) {
+          setQrDataUrl(res.data.qrDataUrl);
+          setCheckUrl(res.data.checkUrl || '');
+          setRotateSeconds(res.data.rotateSeconds || 30);
+        }
+      } catch {
+        // A failed refresh is not fatal; the next tick tries again.
+      }
+    };
+    const id = setInterval(refresh, Math.max(5, (rotateSeconds || 30) - 3) * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [qrSession, trainingId, rotateSeconds]);
+
+  useEffect(() => {
+    if (!qrFullscreen) return undefined;
+    const onKey = (event) => { if (event.key === 'Escape') setQrFullscreen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [qrFullscreen]);
+
+  const copyCheckUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(checkUrl);
+      toast.success('Check-in link copied.');
+    } catch {
+      toast.error('Could not copy. Select the link and copy it manually.');
+    }
+  };
+
+  // Roster filtered by the moderator's search so a participant can be found
+  // quickly when marking attendance manually.
+  const visibleAttendance = useMemo(() => {
+    const term = attendanceSearch.trim().toLowerCase();
+    if (!term) return attendance;
+    return attendance.filter((rec) =>
+      `${rec.participant?.fullName || ''} ${rec.participant?.email || ''}`.toLowerCase().includes(term)
+    );
+  }, [attendance, attendanceSearch]);
 
   // Update Manual Attendance
   const handleUpdateAttendance = async (attendanceId, newStatus) => {
@@ -170,6 +219,8 @@ export const SessionOperation = () => {
         setTraining(res.data.training);
         setQrSession(null);
         setQrDataUrl('');
+        setCheckUrl('');
+        setQrFullscreen(false);
         toast.success(res.message || 'Training completed and certificate delivery queued.');
         fetchSessionData();
       }
@@ -219,8 +270,6 @@ export const SessionOperation = () => {
           { id: 'meeting', name: 'Meeting Details', icon: VideoCameraIcon },
           { id: 'invitations', name: 'Invitations & Communications', icon: PaperAirplaneIcon },
           { id: 'attendance', name: 'QR & Manual Attendance', icon: QrCodeIcon },
-          { id: 'participants', name: 'Approved Participants', icon: UserGroupIcon },
-          { id: 'feedback', name: 'Session Evaluations', icon: ChatBubbleLeftEllipsisIcon },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -396,57 +445,93 @@ export const SessionOperation = () => {
       {activeTab === 'attendance' && (
         <div className="space-y-6">
           
-          {/* QR Session Controls */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Live check-in */}
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+            <div className="flex flex-col gap-4 border-b border-slate-200 p-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <QrCodeIcon className="w-5 h-5 text-[#1a6b3c]" />
-                  Live Session QR Attendance Scanner
+                <h3 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                  <QrCodeIcon className="h-5 w-5 text-[#1a6b3c]" />
+                  Live check-in
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Open a time-limited QR session to allow participants to check in live.
-                </p>
+                <p className="mt-1 text-xs text-slate-500">Participants scan this code to mark themselves present.</p>
               </div>
 
-              {training.status === 'completed' ? (
-                <span className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600">Attendance locked</span>
-              ) : qrSession ? (
-                <button
-                  onClick={handleCloseQR}
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl"
-                >
-                  Close Active QR Session
-                </button>
-              ) : (
-                <button
-                  onClick={handleOpenQR}
-                  className="px-5 py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold text-xs rounded-xl shadow-xs"
-                >
-                  Launch Live QR Session
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {training.status === 'completed' ? (
+                  <span className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600">Attendance locked</span>
+                ) : qrSession ? (
+                  <>
+                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-[#1a6b3c]">
+                      <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#1a6b3c]" />
+                      Live
+                    </span>
+                    <button type="button" onClick={handleCloseQR} className="min-h-11 rounded-xl px-4 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-50">
+                      Close session
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" onClick={handleOpenQR} className="min-h-11 rounded-xl bg-[#1a6b3c] px-5 text-xs font-bold text-white shadow-xs transition-colors hover:bg-[#124d2a]">
+                    Start check-in
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Display Active QR Code & Token */}
-            {qrSession && qrDataUrl && (
-              <div className="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-6 text-center space-y-4 animate-in fade-in">
-                <span className="text-xs uppercase font-bold text-[#1a6b3c]">ACTIVE QR ATTENDANCE SESSION</span>
-                <div className="bg-white p-4 inline-block rounded-xl shadow-md mx-auto">
-                  <img src={qrDataUrl} alt="QR Code" className="w-48 h-48 mx-auto" />
-                </div>
-                <div className="space-y-1 text-xs">
-                  <p className="font-bold text-slate-700">Training ID: <span className="font-mono text-slate-900 bg-white px-2 py-0.5 rounded">{trainingId}</span></p>
-                  <p className="font-bold text-slate-700">Session Token: <span className="font-mono text-slate-900 bg-white px-2 py-0.5 rounded">{qrSession.sessionToken}</span></p>
+            {qrSession && qrDataUrl ? (
+              <div className="p-6">
+                <div className="mx-auto flex flex-col items-center justify-center gap-7 sm:flex-row sm:items-center">
+                  {/* The quiet zone must stay light in both themes or scanners struggle to lock on. */}
+                  <div className="shrink-0 rounded-2xl border border-slate-200 p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+                    <img src={qrDataUrl} alt="Check-in code for this session" className="h-60 w-60" />
+                  </div>
+
+                  <div className="text-center sm:text-left">
+                    <p className="text-lg font-bold text-slate-900">Check-in is active</p>
+                    <p className="mt-1 max-w-sm text-sm leading-6 text-slate-500">Keep this screen visible while participants scan the current code.</p>
+
+                    <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                      {checkUrl && (
+                        <button type="button" onClick={copyCheckUrl} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100">
+                          <LinkIcon className="h-5 w-5" />
+                          Copy link
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setQrFullscreen(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white transition-colors hover:bg-[#124d2a]">
+                        <QrCodeIcon className="h-5 w-5" />
+                        Show fullscreen
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
+            ) : (
+              <p className="p-6 text-xs text-slate-500">
+                {training.status === 'completed'
+                  ? 'This session is complete, so check-in is closed.'
+                  : 'Start check-in to display a scannable code for this session.'}
+              </p>
             )}
           </div>
 
           {/* Attendance Table */}
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">Session Attendance Roster</h3>
-            
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-lg font-bold text-slate-900">Session Attendance Roster</h3>
+              {attendance.length > 0 && (
+                <div className="relative w-full sm:max-w-xs">
+                  <MagnifyingGlassIcon aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="search"
+                    value={attendanceSearch}
+                    onChange={(e) => setAttendanceSearch(e.target.value)}
+                    aria-label="Search participants by name or email"
+                    placeholder="Search participants..."
+                    className="min-h-11 w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15"
+                  />
+                </div>
+              )}
+            </div>
+
             {attendance.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -460,7 +545,7 @@ export const SessionOperation = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {attendance.map((rec) => (
+                    {visibleAttendance.map((rec) => (
                       <tr key={rec._id} className="hover:bg-slate-50">
                         <td className="p-3 font-bold text-slate-900">{rec.participant?.fullName}</td>
                         <td className="p-3 text-slate-500">{rec.participant?.email}</td>
@@ -483,6 +568,9 @@ export const SessionOperation = () => {
                     ))}
                   </tbody>
                 </table>
+                {visibleAttendance.length === 0 && (
+                  <div className="p-6 text-center text-slate-500 text-xs">No participant matches &ldquo;{attendanceSearch}&rdquo;.</div>
+                )}
               </div>
             ) : (
               <div className="p-6 text-center text-slate-500 text-xs">No attendance records generated yet.</div>
@@ -492,64 +580,25 @@ export const SessionOperation = () => {
         </div>
       )}
 
-      {/* TAB 4: PARTICIPANTS LIST */}
-      {activeTab === 'participants' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
-          <h3 className="text-lg font-bold text-slate-900">Enrolled Participants Roster</h3>
-          {participants.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 uppercase text-slate-500 font-bold">
-                  <tr>
-                    <th className="p-3">Full Name</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Type</th>
-                    <th className="p-3">Organization</th>
-                    <th className="p-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {participants.map((reg) => (
-                    <tr key={reg._id}>
-                      <td className="p-3 font-bold text-slate-900">{reg.participant?.fullName}</td>
-                      <td className="p-3 text-slate-500">{reg.participant?.email}</td>
-                      <td className="p-3 capitalize">{reg.participant?.participantType?.replace(/_/g, ' ')}</td>
-                      <td className="p-3">{reg.participant?.organization || '—'}</td>
-                      <td className="p-3"><StatusBadge status={reg.status} type="registration" /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-6 text-center text-slate-500 text-xs">No participant registrations yet.</div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 5: SESSION FEEDBACK */}
-      {activeTab === 'feedback' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
-          <h3 className="text-lg font-bold text-slate-900">Participant Feedback & Ratings</h3>
-          {feedback && feedback.feedback?.length > 0 ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl text-center text-xs font-bold text-slate-700">
-                <div>Content Avg: {feedback.stats?.avgContent} ★</div>
-                <div>Trainer Avg: {feedback.stats?.avgTrainer} ★</div>
-                <div>Org Avg: {feedback.stats?.avgOrganization} ★</div>
-              </div>
-              <div className="space-y-3">
-                {feedback.feedback.map((fb) => (
-                  <div key={fb._id} className="p-4 rounded-xl border border-slate-100 bg-slate-50 space-y-1">
-                    <span className="font-bold text-slate-900 text-xs">{fb.participant?.fullName}</span>
-                    {fb.comments && <p className="text-xs text-slate-600 italic">"{fb.comments}"</p>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="p-6 text-center text-slate-500 text-xs">No evaluation feedback submitted yet.</div>
-          )}
+      {qrFullscreen && qrDataUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Fullscreen check-in code"
+          onClick={() => setQrFullscreen(false)}
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-6 p-6"
+          style={{ backgroundColor: '#ffffff' }}
+        >
+          <p className="text-center text-2xl font-black text-slate-900 sm:text-3xl">{training.title}</p>
+          <img src={qrDataUrl} alt="Check-in code for this session" className="h-[min(70vh,70vw)] w-[min(70vh,70vw)]" />
+          <p className="text-center text-sm font-semibold text-slate-600">Scan to check in</p>
+          <button
+            type="button"
+            onClick={() => setQrFullscreen(false)}
+            className="min-h-11 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100"
+          >
+            Close
+          </button>
         </div>
       )}
 

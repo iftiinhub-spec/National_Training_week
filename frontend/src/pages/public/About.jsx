@@ -3,7 +3,7 @@ import {
   AcademicCapIcon, BookOpenIcon, BriefcaseIcon, BuildingLibraryIcon, CheckCircleIcon,
   CodeBracketIcon, EnvelopeIcon, GlobeAltIcon, HeartIcon, LightBulbIcon,
   MapPinIcon, UserGroupIcon, VideoCameraIcon,
-} from '@heroicons/react/24/outline';
+} from '@icons';
 import { useCurrentEvent } from '../../context/EventContext';
 import PublicPageHeader from '../../components/common/PublicPageHeader';
 
@@ -37,7 +37,7 @@ const COMMITTEES = ['Program and speakers', 'Registration and certification', 'M
 
 const SectionHeading = ({ eyebrow, children }) => (
   <div className="mb-12 text-center">
-    <p className="mb-2 text-xs font-bold uppercase tracking-[.2em] text-[#1da156]">{eyebrow}</p>
+    <p className="mb-2 text-sm font-bold text-[#1da156]">{eyebrow}</p>
     <h2 className="inline-block text-3xl font-black text-black sm:text-4xl">{children}<span className="mx-auto mt-3 block h-1 w-16 rounded-full bg-[#1da156]" /></h2>
   </div>
 );
@@ -63,7 +63,7 @@ export const About = () => {
               <div className="flex flex-wrap gap-3 pt-2">{(event ? [dates, 'Online delivery', `${days.length || 'Multiple'} program days`] : ['Annual program', 'Online delivery', 'Open national participation']).map((tag) => <span key={tag} className="rounded-full border border-[#1da156] bg-white px-4 py-1.5 text-xs font-bold text-[#1da156]">{tag}</span>)}</div>
             </div>
             <div className="space-y-4 rounded-2xl border border-black/10 bg-white p-8 shadow-sm">
-              <h3 className="flex items-center gap-2 text-base font-black uppercase tracking-wide text-[#1da156]"><AcademicCapIcon className="h-5 w-5" /> Core Objectives</h3>
+              <h3 className="flex items-center gap-2 text-base font-black text-[#1da156]"><AcademicCapIcon className="h-5 w-5" /> Core objectives</h3>
               <ul className="space-y-3">{OBJECTIVES.map((objective) => <li key={objective} className="flex items-start gap-3 text-sm text-black/80"><CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-[#1da156]" /><span>{objective}</span></li>)}</ul>
             </div>
           </div>
@@ -73,8 +73,8 @@ export const About = () => {
       <section className="border-y border-black/10 bg-white py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-8">
           <SectionHeading eyebrow="Audience Scope">Target Participant Groups</SectionHeading>
-          <div className="flex flex-wrap items-stretch justify-center gap-6">
-            {AUDIENCE.map(({ Icon, role, text }) => <article key={role} className="group w-full rounded-2xl border border-black/10 bg-white p-8 text-center transition-all hover:border-[#1da156] hover:shadow-lg sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)]"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-black/5 transition-colors group-hover:bg-[#1da156]"><Icon className="h-7 w-7 text-[#1da156] transition-colors group-hover:text-white" /></div><h3 className="mb-2 text-sm font-bold text-black transition-colors group-hover:text-[#1da156]">{role}</h3><p className="text-sm leading-6 text-black/60">{text}</p></article>)}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {AUDIENCE.map(({ Icon, role, text }) => <article key={role} className="group rounded-2xl border border-black/10 bg-white p-8 text-center transition-all hover:border-[#1da156] hover:shadow-lg"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-black/5 transition-colors group-hover:bg-[#1da156]"><Icon className="h-7 w-7 text-[#1da156] transition-colors group-hover:text-white" /></div><h3 className="mb-2 text-sm font-bold text-black transition-colors group-hover:text-[#1da156]">{role}</h3><p className="text-sm leading-6 text-black/60">{text}</p></article>)}
           </div>
         </div>
       </section>
@@ -88,13 +88,13 @@ export const About = () => {
         </div>
       </section>
 
-      <section className="bg-[#1da156] py-20 text-white">
+      <section className="bg-[#15803d] py-20 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-8">
-          <div className="mb-10 text-center"><p className="mb-2 text-xs font-bold uppercase tracking-[.2em] text-white/70">About the Organizer</p><h2 className="inline-block text-3xl font-black text-white sm:text-4xl">Hormuud University<span className="mx-auto mt-3 block h-1 w-16 rounded-full bg-white" /></h2></div>
+          <div className="mb-10 text-center"><p className="mb-2 text-sm font-bold text-white">About the organizer</p><h2 className="inline-block text-3xl font-black text-white sm:text-4xl">Hormuud University<span className="mx-auto mt-3 block h-1 w-16 rounded-full bg-white" /></h2></div>
           <div className="mx-auto max-w-4xl text-center">
-            <p className="text-sm leading-7 text-white/90">Hormuud University is a leading national institution of higher learning advancing workforce development and capacity building across engineering, technology, computer science, and digital management—connecting Somali youth, professionals, and scholars to the global knowledge economy.</p>
-            <div className="mt-8 rounded-2xl border border-white/20 bg-white/10 p-6 text-left"><h3 className="text-sm font-black text-white">Organizing Committee</h3><p className="mt-2 text-xs leading-6 text-white/80">An Organizing Committee under the Office of the Rector coordinates the event through dedicated teams.</p><ul className="mt-4 flex flex-wrap gap-2">{COMMITTEES.map((committee) => <li key={committee} className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white">{committee}</li>)}</ul></div>
-            <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3"><div className="flex items-center gap-2 text-sm font-medium text-white/80"><MapPinIcon className="h-4 w-4 shrink-0 text-white" /><span>Daru Shura Campus, Villa Baidoa, Wadajir, Mogadishu, Somalia</span></div><div className="flex items-center gap-2 text-sm font-medium text-white/80"><EnvelopeIcon className="h-4 w-4 shrink-0 text-white" /><a href="mailto:info@ntw.hu.edu.so" className="hover:text-white hover:underline">info@ntw.hu.edu.so</a></div><div className="flex items-center gap-2 text-sm font-medium text-white/80"><GlobeAltIcon className="h-4 w-4 shrink-0 text-white" /><a href="https://www.ntw.hu.edu.so" className="hover:text-white hover:underline">www.ntw.hu.edu.so</a></div></div>
+            <p className="text-sm leading-7 text-white">Hormuud University is a leading national institution of higher learning advancing workforce development and capacity building across engineering, technology, computer science, and digital management. It connects Somali youth, professionals, and scholars to the global knowledge economy.</p>
+            <div className="mt-8 rounded-2xl border border-white/20 bg-black/10 p-6 text-left"><h3 className="text-sm font-black text-white">Organizing Committee</h3><p className="mt-2 text-xs leading-6 text-white">An Organizing Committee under the Office of the Rector coordinates the event through dedicated teams.</p><ul className="mt-4 flex flex-wrap gap-2">{COMMITTEES.map((committee) => <li key={committee} className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white">{committee}</li>)}</ul></div>
+            <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3"><div className="flex items-center gap-2 text-sm font-medium text-white"><MapPinIcon className="h-4 w-4 shrink-0 text-white" /><span>Daru Shura Campus, Villa Baidoa, Wadajir, Mogadishu, Somalia</span></div><div className="flex items-center gap-2 text-sm font-medium text-white"><EnvelopeIcon className="h-4 w-4 shrink-0 text-white" /><a href="mailto:info@ntw.hu.edu.so" className="hover:text-white hover:underline">info@ntw.hu.edu.so</a></div><div className="flex items-center gap-2 text-sm font-medium text-white"><GlobeAltIcon className="h-4 w-4 shrink-0 text-white" /><a href="https://www.ntw.hu.edu.so" className="hover:text-white hover:underline">www.ntw.hu.edu.so</a></div></div>
           </div>
         </div>
       </section>

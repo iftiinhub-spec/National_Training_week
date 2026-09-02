@@ -5,8 +5,8 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import toast from 'react-hot-toast';
 import {
-  DocumentTextIcon, ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon, FunnelIcon,
-} from '@heroicons/react/24/outline';
+  DocumentTextIcon, ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon,
+} from '@icons';
 
 const formatSize = (bytes) => {
   if (!bytes) return '';
