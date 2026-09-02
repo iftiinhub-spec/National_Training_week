@@ -8,6 +8,7 @@ import {
 } from '@icons';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 const number = (value) => Number(value || 0).toLocaleString();
 const categoryMeta = {
@@ -56,8 +57,8 @@ export default function EmailOperations() {
     <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div><p className="text-xs font-bold uppercase tracking-widest text-[#1a6b3c]">Operations</p><h1 className="mt-1 text-2xl font-black text-slate-950">Email delivery</h1><p className="mt-1 text-sm text-slate-500">A controlled queue protects the provider limit and keeps every message visible.</p></div>
       <div className="flex flex-wrap gap-2">
-        <button onClick={load} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700"><ArrowPathIcon className="h-4 w-4" />Refresh</button>
-        {paused ? <button disabled={working || summary?.deliveryDisabled} onClick={() => action('/admin/email-operations/resume', {}, 'Email delivery resumed.')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#1a6b3c] px-4 text-sm font-bold text-white disabled:opacity-50"><PlayIcon className="h-4 w-4" />Resume delivery</button> : <button disabled={working} onClick={() => action('/admin/email-operations/pause', {}, 'Email delivery paused.')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white disabled:opacity-50"><PauseIcon className="h-4 w-4" />Pause delivery</button>}
+        <button onClick={load} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60">{loading ? <ButtonSpinner /> : <ArrowPathIcon className="h-4 w-4" />}{loading ? 'Refreshing…' : 'Refresh'}</button>
+        {paused ? <button disabled={working || summary?.deliveryDisabled} onClick={() => action('/admin/email-operations/resume', {}, 'Email delivery resumed.')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#1a6b3c] px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{working ? <ButtonSpinner /> : <PlayIcon className="h-4 w-4" />}{working ? 'Resuming…' : 'Resume delivery'}</button> : <button disabled={working} onClick={() => action('/admin/email-operations/pause', {}, 'Email delivery paused.')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{working ? <ButtonSpinner /> : <PauseIcon className="h-4 w-4" />}{working ? 'Pausing…' : 'Pause delivery'}</button>}
       </div>
     </header>
 

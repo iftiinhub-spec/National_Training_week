@@ -16,6 +16,7 @@ import {
   FunnelIcon,
 } from '@icons';
 import { formatTimeRange12 } from '../../utils/timeFormat';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 const getSessionStart = (meeting) => {
   if (!meeting?.sessionDate || !meeting?.sessionStartTime) return null;
@@ -39,6 +40,8 @@ export const MyRegistrations = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
+  // One registration row is acted on at a time, so `<id>:<action>` identifies the busy control.
+  const [busy, setBusy] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState('');
   const [selectedDay, setSelectedDay] = useState('');
@@ -112,6 +115,7 @@ export const MyRegistrations = () => {
   const filtersActive = Boolean(selectedEvent || selectedDay);
 
   const handleViewMeeting = async (regId) => {
+    setBusy(`${regId}:meeting`);
     try {
       const res = await api.get(`/participant/registrations/${regId}`);
       if (res.success && res.data) {
@@ -128,19 +132,24 @@ export const MyRegistrations = () => {
       }
     } catch (err) {
       toast.error(err.message || 'Failed to fetch meeting info.');
+    } finally {
+      setBusy('');
     }
   };
 
   const handleCancel = async (regId) => {
     if (!await confirmAction({ title: 'Cancel registration?', message: 'You will lose your place in this session. You may only register again if registration is still open and capacity remains.', confirmLabel: 'Cancel registration' })) return;
+    setBusy(`${regId}:cancel`);
     try {
       const res = await api.patch(`/participant/registrations/${regId}/cancel`);
       if (res.success) {
         toast.success('Registration cancelled.');
-        fetchRegistrations();
+        await fetchRegistrations();
       }
     } catch (err) {
       toast.error(err.message || 'Failed to cancel registration.');
+    } finally {
+      setBusy('');
     }
   };
 
@@ -263,19 +272,22 @@ export const MyRegistrations = () => {
                   {reg.status === 'approved' && (
                     <button
                       onClick={() => handleViewMeeting(reg._id)}
-                      className="px-4 py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-1.5"
+                      disabled={busy.startsWith(`${reg._id}:`)}
+                      className="px-4 py-2.5 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <VideoCameraIcon className="w-4 h-4" />
-                      <span>View Online Meeting</span>
+                      {busy === `${reg._id}:meeting` ? <ButtonSpinner size="xs" /> : <VideoCameraIcon className="w-4 h-4" />}
+                      <span>{busy === `${reg._id}:meeting` ? 'Opening…' : 'View Online Meeting'}</span>
                     </button>
                   )}
 
                   {['pending', 'approved'].includes(reg.status) && !reg.attended && (
                     <button
                       onClick={() => handleCancel(reg._id)}
-                      className="px-3.5 py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 font-semibold rounded-xl text-xs transition-colors"
+                      disabled={busy.startsWith(`${reg._id}:`)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 font-semibold rounded-xl text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Cancel
+                      {busy === `${reg._id}:cancel` && <ButtonSpinner size="xs" />}
+                      {busy === `${reg._id}:cancel` ? 'Cancelling…' : 'Cancel'}
                     </button>
                   )}
                 </div>
@@ -292,7 +304,7 @@ export const MyRegistrations = () => {
                 disabled={loadingMore}
                 className="mt-2 rounded-lg border border-slate-300 bg-white px-5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
-                {loadingMore ? 'Loading...' : 'Load more'}
+                {loadingMore ? <><ButtonSpinner /> Loading...</> : 'Load more'}
               </button>
             </div>
           )}

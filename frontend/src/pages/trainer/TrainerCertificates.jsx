@@ -4,6 +4,7 @@ import { ArrowDownTrayIcon, CheckBadgeIcon, ShieldCheckIcon } from '@icons';
 import api from '../../api/axios';
 import EmptyState from '../../components/common/EmptyState';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export default function TrainerCertificates() {
   const [certificates, setCertificates] = useState([]);
@@ -54,7 +55,7 @@ export default function TrainerCertificates() {
         <h2 className="mt-1 text-lg font-bold leading-snug text-slate-950">{certificate.training?.title}</h2>
         <p className="mt-2 text-sm text-slate-500">{certificate.training?.event?.name || 'National Training Week'}</p>
         <p className="mt-4 text-xs text-slate-400">Issued {new Date(certificate.issuedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-        <button type="button" onClick={() => download(certificate)} disabled={downloading === certificate._id} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-4 text-sm font-bold text-white transition hover:bg-[#124d2a] disabled:cursor-wait disabled:opacity-60"><ArrowDownTrayIcon className="h-5 w-5" />{downloading === certificate._id ? 'Preparing PDF...' : 'Download certificate'}</button>
+        <button type="button" onClick={() => download(certificate)} disabled={downloading === certificate._id} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-4 text-sm font-bold text-white transition hover:bg-[#124d2a] disabled:cursor-wait disabled:opacity-60">{downloading === certificate._id ? <ButtonSpinner /> : <ArrowDownTrayIcon className="h-5 w-5" />}{downloading === certificate._id ? 'Preparing PDF...' : 'Download certificate'}</button>
       </article>)}
     </div> : <EmptyState icon={CheckBadgeIcon} title="No certificates yet" message="A Certificate of Appreciation will appear here automatically after one of your assigned sessions is marked completed." />}
   </div>;

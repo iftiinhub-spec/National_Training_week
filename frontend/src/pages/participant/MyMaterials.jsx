@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import {
   DocumentTextIcon, ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon,
 } from '@icons';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 const formatSize = (bytes) => {
   if (!bytes) return '';
@@ -267,7 +268,7 @@ export const MyMaterials = () => {
                         className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#1a6b3c] px-3.5 py-2 text-xs font-bold text-white disabled:opacity-50"
                       >
                         <ArrowDownTrayIcon className="h-4 w-4" />
-                        {downloading === material._id ? 'Downloading...' : 'Download'}
+                        {downloading === material._id ? <><ButtonSpinner /> Downloading...</> : 'Download'}
                       </button>
                     ) : (
                       <a

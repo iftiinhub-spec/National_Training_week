@@ -123,7 +123,9 @@
 }
 
 .dark [class~="bg-emerald-50"],
-.dark [class~="bg-emerald-100"] {
+.dark [class~="bg-emerald-100"],
+.dark [class*="bg-emerald-50/"],
+.dark [class*="bg-emerald-100/"] {
   background-color: #123426 !important;
 }
 
@@ -230,6 +232,15 @@
 .dark [class~="border-slate-200"],
 .dark [class~="border-slate-300"] {
   border-color: #3a3a3a !important;
+}
+
+/* Tinted panel borders. Emerald 200/300 stay pale enough to glare against a
+   #121212 card, so dark mode gets the muted brand edge instead. */
+.dark [class~="border-emerald-200"],
+.dark [class~="border-emerald-300"],
+.dark [class*="border-emerald-200/"],
+.dark [class*="border-emerald-300/"] {
+  border-color: #1f5c3d !important;
 }
 
 .dark input:not([type='checkbox']):not([type='radio']),

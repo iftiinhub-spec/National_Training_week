@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { ArrowPathIcon, CalendarDaysIcon, PlusIcon, PencilIcon, TrashIcon } from '@icons';
 import StatusBadge from '../../components/common/StatusBadge';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 // The server sends `phase` with every event: what is happening right now, worked out from the
 // dates. This screen only colours it — it never works out a date rule of its own, so it cannot
@@ -59,6 +60,10 @@ export const EventsManagement = () => {
   const [eventForm, setEventForm] = useState(emptyEventForm);
   const [useCutOff, setUseCutOff] = useState(false);
   const [dayTheme, setDayTheme] = useState('');
+  const [savingEvent, setSavingEvent] = useState(false);
+  const [savingDay, setSavingDay] = useState(false);
+  // One event card is acted on at a time, so `<id>:<action>` identifies the busy control.
+  const [busy, setBusy] = useState('');
 
   const fetchEventsAndDays = async () => {
     try {
@@ -97,6 +102,7 @@ export const EventsManagement = () => {
     }
     // An empty cut-off means "no event-wide cut-off": each session then closes on its own day.
     const payload = { ...eventForm, registrationDeadline: useCutOff ? eventForm.registrationDeadline : '' };
+    setSavingEvent(true);
     try {
       const res = editingEvent
         ? await api.put(`/admin/events/${editingEvent._id}`, payload)
@@ -104,23 +110,28 @@ export const EventsManagement = () => {
       toast.success(res?.message || 'Event saved.');
       setShowEventModal(false);
       setEditingEvent(null);
-      fetchEventsAndDays();
+      await fetchEventsAndDays();
     } catch (err) {
       toast.error(err.message || 'Could not save the event.');
+    } finally {
+      setSavingEvent(false);
     }
   };
 
   const handleDaySubmit = async (e) => {
     e.preventDefault();
     if (!selectedEventForDay || !editingDay) return;
+    setSavingDay(true);
     try {
       await api.put(`/admin/events/${selectedEventForDay._id}/days/${editingDay._id}`, { theme: dayTheme });
       toast.success('Day theme saved.');
       setShowDayModal(false);
       setEditingDay(null);
-      fetchEventsAndDays();
+      await fetchEventsAndDays();
     } catch (err) {
       toast.error(err.message || 'Could not save the day theme.');
+    } finally {
+      setSavingDay(false);
     }
   };
 
@@ -156,12 +167,15 @@ export const EventsManagement = () => {
       confirmLabel: 'Delete everything',
       tone: 'danger',
     })) return;
+    setBusy(`${id}:delete`);
     try {
       await api.delete(`/admin/events/${id}`);
       toast.success('Event deleted.');
-      fetchEventsAndDays();
+      await fetchEventsAndDays();
     } catch (err) {
       toast.error(err.message || 'Could not delete the event.');
+    } finally {
+      setBusy('');
     }
   };
 
@@ -175,12 +189,15 @@ export const EventsManagement = () => {
   // Days come from the event's date range. This button is only needed for older events that were
   // built before days were generated, or after a date range is changed outside this screen.
   const handleRebuildDays = async (event) => {
+    setBusy(`${event._id}:rebuild`);
     try {
       const res = await api.post(`/admin/events/${event._id}/days/regenerate`, {});
       toast.success(res?.message || 'Days rebuilt.');
-      fetchEventsAndDays();
+      await fetchEventsAndDays();
     } catch (err) {
       toast.error(err.message || 'Could not rebuild the days.');
+    } finally {
+      setBusy('');
     }
   };
 
@@ -237,23 +254,27 @@ export const EventsManagement = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => handleRebuildDays(ev)}
+                    disabled={busy.startsWith(`${ev._id}:`)}
                     title="Rebuild the day list from the event dates"
-                    className="flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-600 hover:border-[#1a6b3c] hover:text-[#1a6b3c]"
+                    className="flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-600 hover:border-[#1a6b3c] hover:text-[#1a6b3c] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <ArrowPathIcon className="w-3.5 h-3.5" />
-                    <span>Rebuild days</span>
+                    {busy === `${ev._id}:rebuild` ? <ButtonSpinner size="xs" /> : <ArrowPathIcon className="w-3.5 h-3.5" />}
+                    <span>{busy === `${ev._id}:rebuild` ? 'Rebuilding…' : 'Rebuild days'}</span>
                   </button>
                   <button
                     onClick={() => handleEditEvent(ev)}
-                    className="min-h-10 min-w-10 rounded-lg p-2 text-slate-600 hover:bg-emerald-50 hover:text-[#1a6b3c]"
+                    disabled={busy.startsWith(`${ev._id}:`)}
+                    className="min-h-10 min-w-10 rounded-lg p-2 text-slate-600 hover:bg-emerald-50 hover:text-[#1a6b3c] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <PencilIcon className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteEvent(ev._id)}
-                    className="p-2 text-slate-600 hover:text-rose-600 rounded-lg hover:bg-rose-50"
+                    disabled={busy.startsWith(`${ev._id}:`)}
+                    aria-label={`Delete ${ev.name}`}
+                    className="p-2 text-slate-600 hover:text-rose-600 rounded-lg hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <TrashIcon className="w-4 h-4" />
+                    {busy === `${ev._id}:delete` ? <ButtonSpinner /> : <TrashIcon className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -450,15 +471,18 @@ export const EventsManagement = () => {
                 <button
                   type="button"
                   onClick={() => setShowEventModal(false)}
-                  className="px-4 py-2 text-slate-600 rounded-lg hover:bg-slate-100"
+                  disabled={savingEvent}
+                  className="px-4 py-2 text-slate-600 rounded-lg hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs"
+                  disabled={savingEvent}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2 bg-[#1a6b3c] text-white font-bold rounded-lg shadow-xs disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Save event
+                  {savingEvent && <ButtonSpinner />}
+                  {savingEvent ? 'Saving…' : 'Save event'}
                 </button>
               </div>
             </form>
@@ -497,15 +521,18 @@ export const EventsManagement = () => {
                 <button
                   type="button"
                   onClick={() => setShowDayModal(false)}
-                  className="px-4 py-2 text-slate-600 rounded-lg hover:bg-slate-100"
+                  disabled={savingDay}
+                  className="px-4 py-2 text-slate-600 rounded-lg hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#155289] text-white font-bold rounded-lg shadow-xs"
+                  disabled={savingDay}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2 bg-[#155289] text-white font-bold rounded-lg shadow-xs disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Save theme
+                  {savingDay && <ButtonSpinner />}
+                  {savingDay ? 'Saving…' : 'Save theme'}
                 </button>
               </div>
             </form>

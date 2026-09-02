@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import { QrCodeIcon, XMarkIcon } from '@icons';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const QRScanModal = ({ isOpen, onClose, onSuccess }) => {
   const [trainingId, setTrainingId] = useState('');
@@ -88,7 +89,7 @@ export const QRScanModal = ({ isOpen, onClose, onSuccess }) => {
             disabled={submitting}
             className="w-full py-3 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold text-xs rounded-xl shadow transition-colors disabled:opacity-50"
           >
-            {submitting ? 'Verifying Check-In...' : 'Confirm Attendance Check-In'}
+            {submitting ? <><ButtonSpinner /> Verifying Check-In...</> : 'Confirm Attendance Check-In'}
           </button>
         </form>
 

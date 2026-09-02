@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LockClosedIcon, EnvelopeIcon, ArrowRightIcon, EyeIcon, EyeSlashIcon } from '@icons';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const SignIn = () => {
   const [email, setEmail] = useState('');
@@ -114,7 +115,7 @@ export const SignIn = () => {
               disabled={submitting}
               className="w-full py-3 bg-[#15803d] hover:bg-black text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {submitting ? 'Signing In...' : 'Sign In to Portal'}
+              {submitting ? <><ButtonSpinner /> Signing In...</> : 'Sign In to Portal'}
               <ArrowRightIcon className="w-4 h-4" />
             </button>
           </form>

@@ -4,6 +4,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import toast from 'react-hot-toast';
 import { ChatBubbleLeftEllipsisIcon } from '@icons';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const MyFeedback = () => {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -189,7 +190,7 @@ export const MyFeedback = () => {
               disabled={submitting}
               className="w-full py-3 bg-[#1a6b3c] hover:bg-[#124d2a] text-white font-bold text-xs rounded-xl shadow transition-colors disabled:opacity-50"
             >
-              {submitting ? 'Submitting...' : 'Submit Evaluation'}
+              {submitting ? <><ButtonSpinner /> Submitting...</> : 'Submit Evaluation'}
             </button>
           </form>
         </div>

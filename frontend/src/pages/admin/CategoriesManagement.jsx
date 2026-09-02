@@ -4,6 +4,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { MagnifyingGlassIcon, PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from '@icons';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const CategoriesManagement = () => {
   const confirmAction = useConfirmDialog();
@@ -13,6 +14,7 @@ export const CategoriesManagement = () => {
   const [description, setDescription] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState('');
   const [search, setSearch] = useState('');
   const normalizedSearch = search.trim().toLowerCase();
   const filteredCategories = categories.filter((category) => (
@@ -70,12 +72,15 @@ export const CategoriesManagement = () => {
 
   const handleDelete = async (id) => {
     if (!await confirmAction({ title: 'Delete category?', message: 'This category will be permanently removed. Categories connected to training sessions may not be deletable.', confirmLabel: 'Delete category' })) return;
+    setDeletingId(id);
     try {
       await api.delete(`/admin/categories/${id}`);
       toast.success('Category deleted');
-      fetchCategories();
+      await fetchCategories();
     } catch (err) {
       toast.error(err.message || 'Delete failed');
+    } finally {
+      setDeletingId('');
     }
   };
 
@@ -132,7 +137,7 @@ export const CategoriesManagement = () => {
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#124d2a] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {editingCategory ? <PencilIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />}
-              {submitting ? 'Saving…' : editingCategory ? 'Update Category' : 'Add Category'}
+              {submitting ? <><ButtonSpinner /> Saving…</> : editingCategory ? 'Update Category' : 'Add Category'}
             </button>
           </form>
       </section>
@@ -161,7 +166,7 @@ export const CategoriesManagement = () => {
                     <td className="max-w-2xl px-6 py-4 leading-6 text-slate-500">{cat.description || 'No description provided.'}</td>
                     <td className="px-6 py-4"><div className="flex justify-end gap-2">
                       <button type="button" onClick={() => handleEdit(cat)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-[#1a6b3c]/30 hover:bg-emerald-50 hover:text-[#1a6b3c]" aria-label={`Edit ${cat.name}`}><PencilIcon className="h-4 w-4" /></button>
-                      <button type="button" onClick={() => handleDelete(cat._id)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600" aria-label={`Delete ${cat.name}`}><TrashIcon className="h-4 w-4" /></button>
+                      <button type="button" onClick={() => handleDelete(cat._id)} disabled={deletingId === cat._id} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60" aria-label={`Delete ${cat.name}`}>{deletingId === cat._id ? <ButtonSpinner /> : <TrashIcon className="h-4 w-4" />}</button>
                     </div></td>
                   </tr>
                 )) : (

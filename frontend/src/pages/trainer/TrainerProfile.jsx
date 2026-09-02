@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { CameraIcon, CheckIcon, PencilIcon, UserCircleIcon, XMarkIcon } from '@icons';
 import api from '../../api/axios';
 import PhoneInput from '../../components/common/PhoneInput';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 const TITLES = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.', 'Eng.'];
 const photoUrl = (path) => path ? (path.startsWith('http') ? path : `/${path.replace(/^\//, '')}`) : null;
@@ -44,7 +45,7 @@ export default function TrainerProfile() {
         <label>LinkedIn profile<input type="url" className={field} value={form.linkedinUrl} onChange={(e) => update('linkedinUrl', e.target.value)} placeholder="https://www.linkedin.com/in/yourname" /></label>
         <label className="sm:col-span-2">Areas of expertise *<input className={field} value={form.expertise} onChange={(e) => update('expertise', e.target.value)} placeholder="e.g. Machine Learning, Cybersecurity" required /></label>
         <label className="sm:col-span-2">Professional biography *<textarea rows={5} className={field} value={form.biography} onChange={(e) => update('biography', e.target.value)} placeholder="Describe your experience, qualifications, and teaching background." required /></label>
-        <div className="flex justify-end gap-3 sm:col-span-2"><button type="button" onClick={cancel} className="rounded-lg px-5 py-2.5 text-sm font-semibold text-slate-600">Cancel</button><button disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#1a6b3c] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"><CheckIcon className="h-5 w-5" />{saving ? 'Saving...' : 'Save changes'}</button></div>
+        <div className="flex justify-end gap-3 sm:col-span-2"><button type="button" onClick={cancel} className="rounded-lg px-5 py-2.5 text-sm font-semibold text-slate-600">Cancel</button><button disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#1a6b3c] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60">{saving ? <ButtonSpinner /> : <CheckIcon className="h-5 w-5" />}{saving ? 'Saving...' : 'Save changes'}</button></div>
       </form>}
     </section>
   </div>;

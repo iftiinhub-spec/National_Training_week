@@ -4,11 +4,14 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { CheckIcon, TrashIcon } from '@icons';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const ContactMessages = () => {
   const confirmAction = useConfirmDialog();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Only one message is acted on at a time, so `<id>:<action>` identifies the busy button.
+  const [busy, setBusy] = useState('');
 
   const fetchMessages = async () => {
     try {
@@ -26,25 +29,31 @@ export const ContactMessages = () => {
   }, []);
 
   const handleMarkRead = async (id) => {
+    setBusy(`${id}:read`);
     try {
       const res = await api.patch(`/admin/contact-messages/${id}/read`);
       if (res.success) {
         toast.success('Marked as read.');
-        fetchMessages();
+        await fetchMessages();
       }
     } catch (err) {
       toast.error('Update failed');
+    } finally {
+      setBusy('');
     }
   };
 
   const handleDelete = async (id) => {
     if (!await confirmAction({ title: 'Delete contact message?', message: 'This message will be permanently removed and cannot be recovered.', confirmLabel: 'Delete message' })) return;
+    setBusy(`${id}:delete`);
     try {
       await api.delete(`/admin/contact-messages/${id}`);
       toast.success('Message deleted.');
-      fetchMessages();
+      await fetchMessages();
     } catch (err) {
       toast.error('Delete failed');
+    } finally {
+      setBusy('');
     }
   };
 
@@ -86,16 +95,18 @@ export const ContactMessages = () => {
               {!msg.isRead && (
                 <button
                   onClick={() => handleMarkRead(msg._id)}
-                  className="px-3 py-1 bg-emerald-600 text-white font-bold rounded hover:bg-emerald-700 flex items-center gap-1"
+                  disabled={busy.startsWith(`${msg._id}:`)}
+                  className="px-3 py-1 bg-emerald-600 text-white font-bold rounded hover:bg-emerald-700 flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <CheckIcon className="w-3.5 h-3.5" /> Mark Read
+                  {busy === `${msg._id}:read` ? <ButtonSpinner size="xs" /> : <CheckIcon className="w-3.5 h-3.5" />} {busy === `${msg._id}:read` ? 'Marking…' : 'Mark Read'}
                 </button>
               )}
               <button
                 onClick={() => handleDelete(msg._id)}
-                className="px-3 py-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-bold rounded flex items-center gap-1"
+                disabled={busy.startsWith(`${msg._id}:`)}
+                className="px-3 py-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-bold rounded flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <TrashIcon className="w-3.5 h-3.5" /> Delete
+                {busy === `${msg._id}:delete` ? <ButtonSpinner size="xs" /> : <TrashIcon className="w-3.5 h-3.5" />} {busy === `${msg._id}:delete` ? 'Deleting…' : 'Delete'}
               </button>
             </div>
           </div>

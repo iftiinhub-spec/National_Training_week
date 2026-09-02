@@ -11,6 +11,7 @@ import {
   CalendarIcon,
   UserIcon,
 } from '@icons';
+import ButtonSpinner from '../../components/common/ButtonSpinner';
 
 export const VerifyCertificate = () => {
   const [searchParams] = useSearchParams();
@@ -91,7 +92,7 @@ export const VerifyCertificate = () => {
               disabled={loading}
               className="px-6 py-3 bg-[#15803d] hover:bg-black text-white font-bold text-sm rounded-xl shadow transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? 'Verifying...' : 'Verify Certificate'}
+              {loading ? <><ButtonSpinner /> Verifying...</> : 'Verify Certificate'}
             </button>
           </form>
         </div>
