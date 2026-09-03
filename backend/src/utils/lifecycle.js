@@ -57,6 +57,25 @@ export const registrationClosesAt = (training, event) => earliest(
   toDate(event?.registrationDeadline),
 );
 
+// How long a completed session stays correctable. Sessions that finished before the field
+// existed fall back to the same rule computed from their completion time, so past sessions get
+// the window without a migration and the rule stays "30 days after the session ended" for all.
+export const CORRECTION_WINDOW_MS = Math.max(
+  60_000,
+  Number(process.env.ATTENDANCE_CORRECTION_WINDOW_MS) || 30 * 24 * 60 * 60_000,
+);
+
+export const attendanceCorrectionEndsAt = (training) => {
+  if (!training) return null;
+  if (training.attendanceCorrectionEndsAt) {
+    const stored = new Date(training.attendanceCorrectionEndsAt);
+    return Number.isFinite(stored.getTime()) ? stored : null;
+  }
+  const completedAt = training.completedAt ? new Date(training.completedAt) : null;
+  if (!completedAt || !Number.isFinite(completedAt.getTime())) return null;
+  return new Date(completedAt.getTime() + CORRECTION_WINDOW_MS);
+};
+
 export const sessionStartsAt = (training) => getTrainingDateTime(training?.date, training?.startTime);
 export const sessionEndsAt = (training) => getTrainingDateTime(training?.date, training?.endTime);
 

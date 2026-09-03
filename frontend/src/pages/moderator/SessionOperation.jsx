@@ -26,6 +26,11 @@ export const SessionOperation = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('meeting');
   const [attendanceSearch, setAttendanceSearch] = useState('');
+  // A completed session stays correctable while the review window is open, but the server
+  // requires a written reason for every change once the session has ended.
+  const [review, setReview] = useState({ open: false, endsAt: null });
+  const [pendingCorrection, setPendingCorrection] = useState(null);
+  const [correctionReason, setCorrectionReason] = useState('');
   const [completing, setCompleting] = useState(false);
   const [savingMeeting, setSavingMeeting] = useState(false);
   const [invitingTrainer, setInvitingTrainer] = useState(false);
@@ -69,7 +74,10 @@ export const SessionOperation = () => {
           notes: meetRes.data.meeting.notes || '',
         });
       }
-      if (attRes.success) setAttendance(attRes.data.records || []);
+      if (attRes.success) {
+        setAttendance(attRes.data.records || []);
+        setReview(attRes.data.review || { open: false, endsAt: null });
+      }
       if (qrRes.success) {
         setQrSession({ isOpen: true, expiresAt: qrRes.data.expiresAt });
         setQrDataUrl(qrRes.data.qrDataUrl);
@@ -202,11 +210,12 @@ export const SessionOperation = () => {
   }, [attendance, attendanceSearch]);
 
   // Update Manual Attendance
-  const handleUpdateAttendance = async (attendanceId, newStatus) => {
+  const handleUpdateAttendance = async (attendanceId, newStatus, reason = '') => {
     setUpdatingAttendanceId(attendanceId);
     try {
       const res = await api.patch(`/moderator/trainings/${trainingId}/attendance/${attendanceId}`, {
         status: newStatus,
+        ...(reason ? { correctionReason: reason } : {}),
       });
       if (res.success) {
         toast.success(`Status updated to ${newStatus.toUpperCase()}`);
@@ -217,6 +226,24 @@ export const SessionOperation = () => {
     } finally {
       setUpdatingAttendanceId('');
     }
+  };
+
+  // Before the session ends a change is routine. Afterwards it is an audited correction, so it
+  // collects a reason first rather than failing at the server with a validation error.
+  const requestAttendanceChange = (record, newStatus) => {
+    if (training?.status !== 'completed') return handleUpdateAttendance(record._id, newStatus);
+    setCorrectionReason('');
+    setPendingCorrection({ record, status: newStatus });
+    return undefined;
+  };
+
+  const submitCorrection = async (event) => {
+    event.preventDefault();
+    if (!pendingCorrection || correctionReason.trim().length < 5) return;
+    const { record, status } = pendingCorrection;
+    setPendingCorrection(null);
+    await handleUpdateAttendance(record._id, status, correctionReason.trim());
+    setCorrectionReason('');
   };
 
   const handleCompleteTraining = async () => {
@@ -534,6 +561,13 @@ export const SessionOperation = () => {
 
           {/* Attendance Table */}
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
+            {training.status === 'completed' && (
+              <div className={`rounded-xl border p-3 text-xs ${review.open ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+                {review.open
+                  ? <><strong>You can still correct attendance</strong> until {review.endsAt ? new Date(review.endsAt).toLocaleString() : 'the review closes'}. Certificates are issued when this window closes. Each change needs a short reason.</>
+                  : <><strong>Attendance is finalized.</strong> Contact an administrator if a record is still wrong.</>}
+              </div>
+            )}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-lg font-bold text-slate-900">Session Attendance Roster</h3>
               {attendance.length > 0 && (
@@ -574,8 +608,8 @@ export const SessionOperation = () => {
                           <div className="flex items-center gap-2">
                             <select
                               value={rec.status}
-                              onChange={(e) => handleUpdateAttendance(rec._id, e.target.value)}
-                              disabled={training.status === 'completed' || updatingAttendanceId === rec._id}
+                              onChange={(e) => requestAttendanceChange(rec, e.target.value)}
+                              disabled={(training.status === 'completed' && !review.open) || updatingAttendanceId === rec._id}
                               className="p-1 rounded border border-slate-300 text-xs font-semibold bg-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               <option value="present">Present</option>
@@ -599,6 +633,25 @@ export const SessionOperation = () => {
             )}
           </div>
 
+        </div>
+      )}
+
+      {pendingCorrection && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+          <section role="dialog" aria-modal="true" aria-labelledby="moderator-correction-title" className="relative w-full max-w-lg rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl">
+            <p className="text-xs font-bold uppercase tracking-[.14em] text-[#1a6b3c]">Audited correction</p>
+            <h2 id="moderator-correction-title" className="mt-1 pr-10 text-xl font-black text-slate-950">Change attendance to {pendingCorrection.status.replaceAll('_', ' ')}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Explain why <strong>{pendingCorrection.record.participant?.fullName || 'this participant'}</strong> needs this correction. The reason, your name, and the time are recorded.</p>
+            <form onSubmit={submitCorrection} className="mt-5">
+              <label className="block text-sm font-bold text-slate-700">Correction reason
+                <textarea autoFocus required minLength={5} maxLength={500} rows={4} value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} placeholder="For example: QR check-in failed; attendance verified in the session." className="mt-2 w-full resize-y rounded-xl border border-slate-300 p-3 text-sm font-normal leading-6 outline-none focus:border-[#1a6b3c] focus:ring-2 focus:ring-[#1a6b3c]/15" />
+              </label>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => setPendingCorrection(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
+                <button type="submit" disabled={correctionReason.trim().length < 5} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a6b3c] px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Save correction</button>
+              </div>
+            </form>
+          </section>
         </div>
       )}
 

@@ -82,6 +82,8 @@ const trainingSchema = new mongoose.Schema(
     attendanceReviewEndsAt: { type: Date, default: null },
     attendanceFinalizedAt: { type: Date, default: null },
     attendanceFinalizingAt: { type: Date, default: null },
+    // Corrections stay possible well past the review window; see completeTrainingSession.
+    attendanceCorrectionEndsAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
