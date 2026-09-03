@@ -5,7 +5,9 @@ import Training from '../../models/Training.js';
 import { randomUUID } from 'node:crypto';
 import { generateQRDataUrl } from '../../utils/qrGenerator.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
-import { sessionStartsAt, sessionEndsAt } from '../../utils/lifecycle.js';
+import { sessionStartsAt, sessionEndsAt, attendanceCorrectionEndsAt } from '../../utils/lifecycle.js';
+import Certificate from '../../models/Certificate.js';
+import { enqueueCertificateIssuance } from '../../services/completeTrainingSession.js';
 
 const checkAccess = async (trainingId, userId, role) => {
   if (role === 'admin') return true;
@@ -189,14 +191,38 @@ export const getAttendance = async (req, res, next) => {
       not_marked: records.filter((r) => r.status === 'not_marked').length,
     };
 
-    const training = await Training.findById(trainingId).select('status completedAt attendanceReviewEndsAt attendanceFinalizedAt attendanceLockedAt').lean();
+    const training = await Training.findById(trainingId).select('status completedAt attendanceReviewEndsAt attendanceFinalizedAt attendanceLockedAt attendanceCorrectionEndsAt').lean();
     const reviewOpen = training?.status === 'completed' && !training.attendanceFinalizedAt && training.attendanceReviewEndsAt && new Date(training.attendanceReviewEndsAt) > new Date();
+    const correctionEndsAt = attendanceCorrectionEndsAt(training);
+    const correctionOpen = training?.status === 'completed' && correctionEndsAt && correctionEndsAt > new Date();
     return successResponse(res, { records, stats, review: {
       open: Boolean(reviewOpen),
       endsAt: training?.attendanceReviewEndsAt || null,
       finalizedAt: training?.attendanceFinalizedAt || null,
+      correctionOpen: Boolean(correctionOpen),
+      correctionEndsAt: correctionEndsAt || null,
     } });
   } catch (err) { next(err); }
+};
+
+// A correction made after certificates have been issued has to carry its own consequence, since
+// the finalisation step that would normally act on it has already run. Marking someone present
+// re-queues issuance - the worker only issues for participants who are present and have no
+// certificate yet, so this never duplicates. Marking them away from present revokes the
+// credential instead of leaving a certificate standing for a session they did not attend.
+const applyCertificateConsequence = async ({ training, record, status, previousStatus, correctionReason, actorId }) => {
+  if (status === 'present') {
+    await enqueueCertificateIssuance({ trainingId: training._id, requestedBy: actorId, restart: true });
+    return 'A certificate will be issued and emailed shortly.';
+  }
+  if (previousStatus !== 'present') return 'No certificate change was needed.';
+  const certificate = await Certificate.findOne({ participant: record.participant?._id || record.participant, training: training._id });
+  if (!certificate || certificate.isRevoked) return 'No active certificate needed revoking.';
+  certificate.isRevoked = true;
+  certificate.revokedAt = new Date();
+  certificate.revokedReason = `Attendance corrected to ${status}: ${correctionReason}`;
+  await certificate.save();
+  return 'Their certificate has been revoked.';
 };
 
 // PATCH /api/.../trainings/:trainingId/attendance/:attendanceId
@@ -210,11 +236,22 @@ export const updateAttendance = async (req, res, next) => {
     const allowed = ['present', 'absent', 'late', 'not_marked'];
     if (!allowed.includes(status)) return errorResponse(res, 'Invalid attendance status.', 400);
 
-    const training = await Training.findById(trainingId).select('status completedAt attendanceReviewEndsAt attendanceFinalizedAt');
+    const training = await Training.findById(trainingId).select('status completedAt attendanceReviewEndsAt attendanceFinalizedAt attendanceCorrectionEndsAt');
     if (!training) return errorResponse(res, 'Training not found.', 404);
     const completed = training.status === 'completed';
-    const reviewOpen = completed && !training.attendanceFinalizedAt && training.attendanceReviewEndsAt && training.attendanceReviewEndsAt > new Date();
-    if (completed && (!reviewOpen || req.user.role !== 'admin')) return errorResponse(res, reviewOpen ? 'Only an administrator can correct attendance during review.' : 'The six-hour attendance review is closed.', 400);
+    const now = new Date();
+    const reviewOpen = completed && !training.attendanceFinalizedAt && training.attendanceReviewEndsAt && training.attendanceReviewEndsAt > now;
+    // Sessions completed before this field existed derive the same window from completedAt.
+    const correctionEndsAt = attendanceCorrectionEndsAt(training);
+    const correctionOpen = completed && correctionEndsAt && correctionEndsAt > now;
+    if (completed && !reviewOpen && !correctionOpen) {
+      return errorResponse(res, 'The correction period for this session has closed. Contact the administrator if a record is still wrong.', 400);
+    }
+    // The moderator ran the session and knows who was there, so they may correct while the
+    // review is open. Once certificates are out, only an administrator can change a record.
+    if (completed && !reviewOpen && req.user.role !== 'admin') {
+      return errorResponse(res, 'The review window has closed. Only an administrator can correct attendance now.', 400);
+    }
     if (completed && status === 'not_marked') return errorResponse(res, 'Completed-session attendance must be present, absent, or late.', 400);
     if (completed && correctionReason.length < 5) return errorResponse(res, 'Enter a correction reason of at least 5 characters.', 400);
 
@@ -236,7 +273,15 @@ export const updateAttendance = async (req, res, next) => {
     const record = await current.save();
     await record.populate('participant', 'fullName email');
 
-    if (completed) return successResponse(res, { attendance: record }, `${record.participant?.fullName || 'Participant'} attendance corrected. Certificates will be processed when the six-hour review closes.`);
+    if (completed && training.attendanceFinalizedAt && previousStatus !== status) {
+      // Certificates for this session have already gone out, so this correction has to carry
+      // its own consequence rather than waiting for a finalisation that already happened.
+      const outcome = await applyCertificateConsequence({
+        training, record, status, previousStatus, correctionReason, actorId: req.user._id,
+      });
+      return successResponse(res, { attendance: record }, `${record.participant?.fullName || 'Participant'} attendance corrected. ${outcome}`);
+    }
+    if (completed) return successResponse(res, { attendance: record }, `${record.participant?.fullName || 'Participant'} attendance corrected. Certificates will be processed when the review window closes.`);
 
     return successResponse(res, { attendance: record }, 'Attendance updated.');
   } catch (err) { next(err); }

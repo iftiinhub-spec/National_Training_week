@@ -3,8 +3,13 @@ import CertificateIssuanceJob from '../models/CertificateIssuanceJob.js';
 import QRSession from '../models/QRSession.js';
 import Registration from '../models/Registration.js';
 import Training from '../models/Training.js';
+import { CORRECTION_WINDOW_MS } from '../utils/lifecycle.js';
 
 const reviewWindowMs = Math.max(60_000, Number(process.env.ATTENDANCE_REVIEW_WINDOW_MS) || 6 * 60 * 60_000);
+// The review window decides when certificates go out. The correction window decides how long
+// attendance can still be fixed afterwards - they are deliberately different lengths, so the
+// majority are not made to wait for the minority of late corrections.
+const correctionWindowMs = Math.max(reviewWindowMs, CORRECTION_WINDOW_MS);
 
 export const enqueueCertificateIssuance = async ({ trainingId, requestedBy, restart = false }) => {
   const initial = {
@@ -50,6 +55,7 @@ export const completeTrainingSession = async ({ trainingId, completedBy }) => {
     training.completedAt = completedAt;
     training.completedBy = completedBy;
     training.attendanceReviewEndsAt = new Date(completedAt.getTime() + reviewWindowMs);
+    training.attendanceCorrectionEndsAt = new Date(completedAt.getTime() + correctionWindowMs);
     training.attendanceFinalizedAt = null;
     training.attendanceLockedAt = null;
     await training.save();
