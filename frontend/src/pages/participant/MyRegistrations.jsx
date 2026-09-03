@@ -25,7 +25,9 @@ const toNairobiDateTime = (dateValue, timeValue) => {
 };
 
 const getSessionStart = (meeting) => toNairobiDateTime(meeting?.sessionDate, meeting?.sessionStartTime);
+const getSessionEnd = (meeting) => toNairobiDateTime(meeting?.sessionDate, meeting?.sessionEndTime);
 const getTrainingStart = (training) => toNairobiDateTime(training?.date, training?.startTime);
+const getTrainingEnd = (training) => toNairobiDateTime(training?.date, training?.endTime);
 
 const formatCountdown = (milliseconds) => {
   const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
@@ -126,6 +128,7 @@ export const MyRegistrations = () => {
             ...res.data.meeting,
             sessionDate: res.data.registration?.training?.date,
             sessionStartTime: res.data.registration?.training?.startTime,
+            sessionEndTime: res.data.registration?.training?.endTime,
           });
           setModalOpen(true);
         } else {
@@ -157,13 +160,20 @@ export const MyRegistrations = () => {
 
   // Derived once per render so the countdown panel and the join button never disagree.
   const meetingStart = selectedMeeting ? getSessionStart(selectedMeeting) : null;
+  const meetingEnd = selectedMeeting ? getSessionEnd(selectedMeeting) : null;
   const meetingRemaining = meetingStart ? meetingStart.getTime() - now : 0;
-  const meetingLive = Boolean(meetingStart) && meetingRemaining <= 0;
+  const meetingEnded = Boolean(meetingEnd) && now >= meetingEnd.getTime();
+  const meetingLive = Boolean(meetingStart) && meetingRemaining <= 0 && !meetingEnded;
   // Cancelling closes at the session start time. A session with no scheduled start stays
   // cancellable rather than being locked by a date the organisers have not set yet.
   const hasStarted = (training) => {
     const startsAt = getTrainingStart(training);
     return Boolean(startsAt) && now >= startsAt.getTime();
+  };
+  const hasEnded = (training) => {
+    if (['completed', 'cancelled'].includes(training?.status)) return true;
+    const endsAt = getTrainingEnd(training);
+    return Boolean(endsAt) && now >= endsAt.getTime();
   };
 
   if (loading) return <LoadingSpinner label="Loading your registered trainings..." />;
@@ -282,7 +292,7 @@ export const MyRegistrations = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  {reg.status === 'approved' && (
+                  {reg.status === 'approved' && !hasEnded(tr) && (
                     <button
                       onClick={() => handleViewMeeting(reg._id)}
                       disabled={busy.startsWith(`${reg._id}:`)}
@@ -355,7 +365,11 @@ export const MyRegistrations = () => {
                 <span className="font-bold text-slate-900 capitalize">{selectedMeeting.platform}</span>
               </div>
 
-              {meetingStart && (meetingLive ? (
+              {meetingEnded ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-600">This session has ended</span>
+                </div>
+              ) : meetingStart && (meetingLive ? (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
                   <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#1a6b3c]">
                     <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#1a6b3c]" />
@@ -370,7 +384,7 @@ export const MyRegistrations = () => {
                 </div>
               ))}
 
-              {selectedMeeting.notes && (
+              {selectedMeeting.notes && !meetingEnded && (
                 <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900">
                   <strong>Notes:</strong> {selectedMeeting.notes}
                 </div>
@@ -378,7 +392,7 @@ export const MyRegistrations = () => {
             </div>
 
             <div className="pt-2">
-              {meetingStart && !meetingLive ? (
+              {meetingEnded ? null : meetingStart && !meetingLive ? (
                 <button type="button" disabled aria-describedby="meeting-countdown" className="block w-full cursor-not-allowed rounded-xl bg-slate-200 py-3 text-center text-sm font-bold text-slate-500">
                   Launch &amp; Join Meeting Now
                 </button>
