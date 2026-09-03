@@ -18,11 +18,14 @@ import {
 import { formatTimeRange12 } from '../../utils/timeFormat';
 import ButtonSpinner from '../../components/common/ButtonSpinner';
 
-const getSessionStart = (meeting) => {
-  if (!meeting?.sessionDate || !meeting?.sessionStartTime) return null;
-  const value = new Date(`${String(meeting.sessionDate).slice(0, 10)}T${meeting.sessionStartTime}:00+03:00`);
+const toNairobiDateTime = (dateValue, timeValue) => {
+  if (!dateValue || !timeValue) return null;
+  const value = new Date(`${String(dateValue).slice(0, 10)}T${timeValue}:00+03:00`);
   return Number.isFinite(value.getTime()) ? value : null;
 };
+
+const getSessionStart = (meeting) => toNairobiDateTime(meeting?.sessionDate, meeting?.sessionStartTime);
+const getTrainingStart = (training) => toNairobiDateTime(training?.date, training?.startTime);
 
 const formatCountdown = (milliseconds) => {
   const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
@@ -51,8 +54,7 @@ export const MyRegistrations = () => {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    if (!modalOpen) return undefined;
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    const timer = window.setInterval(() => setNow(Date.now()), modalOpen ? 1000 : 30000);
     return () => window.clearInterval(timer);
   }, [modalOpen]);
 
@@ -151,6 +153,17 @@ export const MyRegistrations = () => {
     } finally {
       setBusy('');
     }
+  };
+
+  // Derived once per render so the countdown panel and the join button never disagree.
+  const meetingStart = selectedMeeting ? getSessionStart(selectedMeeting) : null;
+  const meetingRemaining = meetingStart ? meetingStart.getTime() - now : 0;
+  const meetingLive = Boolean(meetingStart) && meetingRemaining <= 0;
+  // Cancelling closes at the session start time. A session with no scheduled start stays
+  // cancellable rather than being locked by a date the organisers have not set yet.
+  const hasStarted = (training) => {
+    const startsAt = getTrainingStart(training);
+    return Boolean(startsAt) && now >= startsAt.getTime();
   };
 
   if (loading) return <LoadingSpinner label="Loading your registered trainings..." />;
@@ -280,7 +293,7 @@ export const MyRegistrations = () => {
                     </button>
                   )}
 
-                  {['pending', 'approved'].includes(reg.status) && !reg.attended && (
+                  {['pending', 'approved'].includes(reg.status) && !reg.attended && !hasStarted(tr) && (
                     <button
                       onClick={() => handleCancel(reg._id)}
                       disabled={busy.startsWith(`${reg._id}:`)}
@@ -342,31 +355,20 @@ export const MyRegistrations = () => {
                 <span className="font-bold text-slate-900 capitalize">{selectedMeeting.platform}</span>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-xs font-bold text-slate-500 uppercase">Meeting Joining Link</span>
-                <a
-                  href={selectedMeeting.meetingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block p-3 rounded-xl bg-blue-50 text-blue-700 font-mono text-xs break-all hover:underline"
-                >
-                  {selectedMeeting.meetingUrl}
-                </a>
-              </div>
-
-              {selectedMeeting.meetingId && (
-                <div className="flex justify-between p-3 bg-slate-50 rounded-xl text-xs">
-                  <span className="font-bold text-slate-500">Meeting ID:</span>
-                  <span className="font-mono font-bold text-slate-900">{selectedMeeting.meetingId}</span>
+              {meetingStart && (meetingLive ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+                  <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#1a6b3c]">
+                    <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#1a6b3c]" />
+                    Session is live now
+                  </span>
                 </div>
-              )}
-
-              {selectedMeeting.passcode && (
-                <div className="flex justify-between p-3 bg-slate-50 rounded-xl text-xs">
-                  <span className="font-bold text-slate-500">Passcode:</span>
-                  <span className="font-mono font-bold text-slate-900">{selectedMeeting.passcode}</span>
+              ) : (
+                <div id="meeting-countdown" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
+                  <span className="block text-xs font-bold uppercase tracking-wide text-amber-800">Session starts in</span>
+                  <span className="mt-1.5 block text-3xl font-black tabular-nums tracking-tight text-amber-900">{formatCountdown(meetingRemaining)}</span>
+                  <span className="mt-1.5 block text-xs text-amber-800">Joining opens automatically at the start time.</span>
                 </div>
-              )}
+              ))}
 
               {selectedMeeting.notes && (
                 <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900">
@@ -375,20 +377,16 @@ export const MyRegistrations = () => {
               )}
             </div>
 
-            <div className="pt-2 flex justify-end">
-              {(() => {
-                const sessionStart = getSessionStart(selectedMeeting);
-                const waiting = sessionStart && now < sessionStart.getTime();
-                return waiting ? (
-                  <button type="button" disabled className="w-full cursor-not-allowed rounded-xl bg-slate-200 py-3 text-center text-sm font-bold text-slate-500">
-                    Join available in {formatCountdown(sessionStart.getTime() - now)}
-                  </button>
-                ) : (
-                  <a href={selectedMeeting.meetingUrl} target="_blank" rel="noopener noreferrer" className="block w-full rounded-xl bg-[#1a6b3c] py-3 text-center text-sm font-bold text-white transition-colors hover:bg-[#124d2a]">
-                    Launch & Join Meeting Now
-                  </a>
-                );
-              })()}
+            <div className="pt-2">
+              {meetingStart && !meetingLive ? (
+                <button type="button" disabled aria-describedby="meeting-countdown" className="block w-full cursor-not-allowed rounded-xl bg-slate-200 py-3 text-center text-sm font-bold text-slate-500">
+                  Launch &amp; Join Meeting Now
+                </button>
+              ) : (
+                <a href={selectedMeeting.meetingUrl} target="_blank" rel="noopener noreferrer" className="block w-full rounded-xl bg-[#1a6b3c] py-3 text-center text-sm font-bold text-white transition-colors hover:bg-[#124d2a]">
+                  Launch &amp; Join Meeting Now
+                </a>
+              )}
             </div>
           </div>
         </div>
