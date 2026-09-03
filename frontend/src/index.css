@@ -401,6 +401,42 @@ button, a, input, select, textarea {
   background: #1da156;
 }
 
+/* Branded loading state. The logo carries the "working" signal instead of a text label, so the
+   animation has to read as deliberate motion rather than a stalled image. */
+@keyframes ntw-breathe {
+  0%, 100% { opacity: .5; transform: scale(.96); }
+  50%      { opacity: 1;  transform: scale(1); }
+}
+
+@keyframes ntw-track {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(320%); }
+}
+
+.ntw-loader-logo {
+  animation: ntw-breathe 1.6s ease-in-out infinite;
+}
+
+.ntw-loader-track {
+  overflow: hidden;
+  background: #d9e8df;
+}
+
+.dark .ntw-loader-track {
+  background: #24402f;
+}
+
+.ntw-loader-bar {
+  animation: ntw-track 1.35s cubic-bezier(.65, .05, .36, 1) infinite;
+}
+
+/* With motion reduced the animations are frozen globally, so make sure the mark is not left
+   sitting at its dimmed keyframe. */
+@media (prefers-reduced-motion: reduce) {
+  .ntw-loader-logo { opacity: 1; transform: none; }
+  .ntw-loader-bar { display: none; }
+}
+
 /* Shared micro-interactions and cards */
 .card-hover-lift {
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);

@@ -1,20 +1,25 @@
 import React from 'react';
 
-export const LoadingSpinner = ({ label = 'Loading...', size = 'md' }) => {
-  const sizeClasses = {
-    sm: 'w-5 h-5 border-2',
-    md: 'w-8 h-8 border-3',
-    lg: 'w-12 h-12 border-4',
-  };
+const LOGO_HEIGHT = { sm: 'h-8', md: 'h-12', lg: 'h-16' };
 
-  return (
-    <div className="flex flex-col items-center justify-center p-8 text-slate-500">
-      <div
-        className={`${sizeClasses[size] || sizeClasses.md} border-slate-200 border-t-[#1a6b3c] rounded-full animate-spin mb-3`}
-      ></div>
-      {label && <p className="text-sm font-medium text-slate-600">{label}</p>}
-    </div>
-  );
-};
+/**
+ * Full-page loading state. The brand mark replaces the old text label, and the label is kept as
+ * screen-reader text so the page still announces what is loading rather than going silent.
+ * The logo swaps to its light variant in dark mode through the global `img[src="/logo.png"]` rule.
+ */
+export const LoadingSpinner = ({ label = 'Loading…', size = 'md' }) => (
+  <div role="status" aria-live="polite" className="flex flex-col items-center justify-center p-10">
+    <img
+      src="/logo.png"
+      alt=""
+      aria-hidden="true"
+      className={`${LOGO_HEIGHT[size] || LOGO_HEIGHT.md} w-auto ntw-loader-logo`}
+    />
+    <span className="ntw-loader-track mt-5 block h-1 w-24 rounded-full">
+      <span className="ntw-loader-bar block h-full w-1/3 rounded-full bg-[#1a6b3c]" />
+    </span>
+    <span className="sr-only">{label}</span>
+  </div>
+);
 
 export default LoadingSpinner;
