@@ -5,7 +5,7 @@ import Meeting from '../../models/Meeting.js';
 import TrainingMaterial from '../../models/TrainingMaterial.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
-import { sessionPhase, registrationClosedReason } from '../../utils/lifecycle.js';
+import { sessionPhase, registrationClosedReason, sessionStartsAt } from '../../utils/lifecycle.js';
 
 // POST /api/participant/registrations
 export const registerForTraining = async (req, res, next) => {
@@ -210,6 +210,14 @@ export const cancelRegistration = async (req, res, next) => {
     if (!reg) return errorResponse(res, 'Registration not found.', 404);
     if (['cancelled', 'rejected'].includes(reg.status)) {
       return errorResponse(res, 'This registration is already cancelled or rejected.', 400);
+    }
+
+    // Cancelling is only meaningful before the session begins. Once it has started the seat is
+    // spent and attendance is being taken, so the registration is fixed from here on.
+    const training = await Training.findById(reg.training).select('date startTime').lean();
+    const startsAt = sessionStartsAt(training);
+    if (startsAt && Date.now() >= startsAt.getTime()) {
+      return errorResponse(res, 'This session has already started, so the registration can no longer be cancelled. Contact the organisers if you need help.', 400);
     }
 
     // Cancelling after attending would leave the participant marked present with no approved
