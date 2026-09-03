@@ -1,7 +1,7 @@
 import ApprovalEmailDigest from '../models/ApprovalEmailDigest.js';
 import { createHash } from 'node:crypto';
 import { enqueueEmail } from './emailQueue.js';
-import { emailButton, emailLayout, escapeHtml } from '../utils/email.js';
+import { emailButton, emailLayout, emailList, escapeHtml } from '../utils/email.js';
 
 const windowMs = Math.max(60_000, Number(process.env.APPROVAL_DIGEST_WINDOW_MS) || 30 * 60_000);
 const staleMs = 10 * 60_000;
@@ -36,13 +36,13 @@ export const queueApprovalDigest = async ({ to, participantName, trainingId, tra
 };
 
 const digestHtml = (digest) => {
-  const rows = digest.items.map((item) => `<tr><td style="padding:14px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#0f172a">${escapeHtml(item.title)}</strong><br><span style="color:#64748b;font-size:13px">${escapeHtml(dateLabel(item.date))}${item.startTime ? ` &middot; ${escapeHtml(timeLabel(item.startTime))}` : ''}</span></td></tr>`).join('');
+  const rows = digest.items.map((item) => ({ title: item.title, meta: `${dateLabel(item.date)}${item.startTime ? ` · ${timeLabel(item.startTime)}` : ''}` }));
   const count = digest.items.length;
   return emailLayout({
     eyebrow: 'Places confirmed',
     title: count === 1 ? 'Your registration is approved' : `${count} registrations approved`,
     preview: `You have ${count} approved training ${count === 1 ? 'session' : 'sessions'}.`,
-    body: `<p style="margin-top:0">Hello ${escapeHtml(digest.participantName || 'Participant')},</p><p>Your registration approval${count === 1 ? ' is' : 's are'} confirmed for the following ${count === 1 ? 'session' : 'sessions'}:</p><table role="presentation" style="width:100%;border-collapse:collapse;margin:12px 0 20px">${rows}</table><p>Meeting access will appear in your participant portal when it is released.</p>${emailButton('View my trainings', `${process.env.FRONTEND_URL}/portal/trainings`)}`,
+    body: `<p style="margin-top:0">Hello ${escapeHtml(digest.participantName || 'Participant')},</p><p>Your registration approval${count === 1 ? ' is' : 's are'} confirmed for the following ${count === 1 ? 'session' : 'sessions'}:</p>${emailList(rows)}<p>Meeting access will appear in your participant portal when it is released.</p>${emailButton('View my trainings', `${process.env.FRONTEND_URL}/portal/trainings`)}`,
   });
 };
 
