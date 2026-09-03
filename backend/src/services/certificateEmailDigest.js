@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import CertificateEmailDigest from '../models/CertificateEmailDigest.js';
 import { enqueueEmail } from './emailQueue.js';
-import { emailButton, emailLayout, escapeHtml } from '../utils/email.js';
+import { emailButton, emailLayout, emailList, escapeHtml } from '../utils/email.js';
 
 const windowMs = Math.max(60_000, Number(process.env.CERTIFICATE_DIGEST_WINDOW_MS) || 60 * 60_000);
 const staleMs = 10 * 60_000;
@@ -37,13 +37,13 @@ export const queueCertificateDigest = async ({ to, participantName, certificate,
 };
 
 const digestHtml = (digest) => {
-  const rows = digest.items.map((item) => `<tr><td style="padding:14px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#0f172a">${escapeHtml(item.trainingTitle)}</strong><br><span style="color:#64748b;font-size:13px">Certificate ID: ${escapeHtml(item.certificateId)}</span></td></tr>`).join('');
+  const rows = digest.items.map((item) => ({ title: item.trainingTitle, meta: `Certificate ID: ${item.certificateId}` }));
   const count = digest.items.length;
   return emailLayout({
     eyebrow: 'Verified achievements',
     title: count === 1 ? 'Your certificate is ready' : `${count} certificates are ready`,
     preview: `Your National Training Week ${count === 1 ? 'certificate is' : 'certificates are'} available.`,
-    body: `<p style="margin-top:0">Hello ${escapeHtml(digest.participantName || 'Participant')},</p><p>Your verified ${count === 1 ? 'certificate is' : 'certificates are'} now available in the participant portal.</p><table role="presentation" style="width:100%;border-collapse:collapse;margin:12px 0 20px">${rows}</table>${emailButton('View my certificates', `${process.env.FRONTEND_URL}/portal/certificates`)}<p>You can view and download every certificate from the portal at any time.</p>`,
+    body: `<p style="margin-top:0">Hello ${escapeHtml(digest.participantName || 'Participant')},</p><p>Your verified ${count === 1 ? 'certificate is' : 'certificates are'} now available in the participant portal.</p>${emailList(rows)}${emailButton('View my certificates', `${process.env.FRONTEND_URL}/portal/certificates`)}<p>You can view and download every certificate from the portal at any time.</p>`,
   });
 };
 

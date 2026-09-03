@@ -120,7 +120,7 @@ export const forgotPassword = async (req, res, next) => {
       category: 'password_reset',
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       subject: 'Reset your National Training Week password',
-      html: emailLayout({ eyebrow: 'Account security', title: 'Reset your password', preview: 'Your password reset link is valid for one hour', body: `<p style="margin-top:0">Hello ${user.fullName || 'Participant'},</p><p>We received a request to reset your password. This secure link expires in one hour.</p>${emailButton('Reset password', resetUrl)}<p>If you did not request this change, you can safely ignore this email. Your password will remain unchanged.</p>` }),
+      html: emailLayout({ sensitive: true, eyebrow: 'Account security', title: 'Reset your password', preview: 'Your password reset link is valid for one hour', body: `<p style="margin-top:0">Hello ${user.fullName || 'Participant'},</p><p>We received a request to reset your password. This secure link expires in one hour.</p>${emailButton('Reset password', resetUrl)}<p>If you did not request this change, you can safely ignore this email. Your password will remain unchanged.</p>` }),
     });
 
     return successResponse(res, null, 'If an account exists, a reset link has been sent.');
