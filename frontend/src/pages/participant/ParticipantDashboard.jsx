@@ -88,7 +88,7 @@ export const ParticipantDashboard = () => {
       {/* My Registrations Preview Section */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-900">My Trainings</h3>
+          <h3 className="text-lg font-bold text-slate-900">Upcoming Trainings</h3>
           <Link to="/portal/trainings" className="text-xs font-bold text-[#1a6b3c] hover:underline flex items-center gap-1">
             <span>View All</span>
             <ArrowRightIcon className="w-3.5 h-3.5" />
@@ -127,8 +127,17 @@ export const ParticipantDashboard = () => {
           </div>
         ) : (
           <div className="p-8 text-center bg-slate-50 rounded-xl text-slate-500 text-xs">
-            You haven't registered for any training sessions yet.{' '}
-            <Link to="/trainings" className="font-bold text-[#1a6b3c] underline">Browse sessions here</Link>
+            {stats?.totalRegistrations > 0 ? (
+              <>
+                You have no upcoming sessions.{' '}
+                <Link to="/portal/trainings" className="font-bold text-[#1a6b3c] underline">See all your trainings</Link>
+              </>
+            ) : (
+              <>
+                You haven't registered for any training sessions yet.{' '}
+                <Link to="/trainings" className="font-bold text-[#1a6b3c] underline">Browse sessions here</Link>
+              </>
+            )}
           </div>
         )}
       </div>

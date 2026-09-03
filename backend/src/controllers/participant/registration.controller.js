@@ -5,7 +5,7 @@ import Meeting from '../../models/Meeting.js';
 import TrainingMaterial from '../../models/TrainingMaterial.js';
 import { successResponse, errorResponse, getPagination, paginatedResponse } from '../../utils/apiResponse.js';
 import { sendRegistrationStatusEmail } from '../../utils/registrationEmail.js';
-import { sessionPhase, registrationClosedReason, sessionStartsAt } from '../../utils/lifecycle.js';
+import { sessionPhase, registrationClosedReason, sessionStartsAt, sessionEndsAt } from '../../utils/lifecycle.js';
 
 // POST /api/participant/registrations
 export const registerForTraining = async (req, res, next) => {
@@ -269,8 +269,8 @@ export const getParticipantDashboard = async (req, res, next) => {
       upcomingTrainings,
     ] = await Promise.all([
       Registration.find({ participant: participantId })
-        .populate('training', 'title date startTime status coverImage')
-        .sort({ registeredAt: -1 }).limit(5),
+        .populate('training', 'title date startTime endTime status coverImage')
+        .sort({ registeredAt: -1 }).limit(200),
       Attendance.find({ participant: participantId }).countDocuments(),
       (await import('../../models/Certificate.js')).default.countDocuments({ participant: participantId, isRevoked: false }),
       Training.find({ status: 'published', date: { $gte: new Date() } })
@@ -280,6 +280,19 @@ export const getParticipantDashboard = async (req, res, next) => {
         .sort({ date: 1 }).limit(6),
     ]);
 
+    // The dashboard answers "what is next", so a session that has finished drops off it. Ordering
+    // is by when the session runs rather than when it was booked, putting the soonest one first.
+    const now = new Date();
+    const upcomingRegistrations = myRegistrations
+      .filter(({ training }) => {
+        if (!training) return false;
+        if (['completed', 'cancelled'].includes(training.status)) return false;
+        const endsAt = sessionEndsAt(training);
+        return !endsAt || endsAt > now;
+      })
+      .sort((a, b) => (sessionStartsAt(a.training)?.getTime() ?? Infinity) - (sessionStartsAt(b.training)?.getTime() ?? Infinity))
+      .slice(0, 5);
+
     const stats = {
       totalRegistrations: await Registration.countDocuments({ participant: participantId }),
       approvedRegistrations: await Registration.countDocuments({ participant: participantId, status: 'approved' }),
@@ -287,6 +300,6 @@ export const getParticipantDashboard = async (req, res, next) => {
       totalCertificates: myCertificates,
     };
 
-    return successResponse(res, { stats, recentRegistrations: myRegistrations, upcomingTrainings });
+    return successResponse(res, { stats, recentRegistrations: upcomingRegistrations, upcomingTrainings });
   } catch (err) { next(err); }
 };
