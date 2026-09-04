@@ -111,6 +111,19 @@ export const updateRegistrationStatus = async (req, res, next) => {
     if (!reg) return errorResponse(res, 'Registration not found.', 404);
     if (reg.status === 'cancelled') return errorResponse(res, 'Cannot update a cancelled registration.', 400);
 
+    // Moving away from approved while the participant is already marked present would leave an
+    // attendance record with no approved place behind it - present in the roster and the totals,
+    // but ineligible for a certificate. The participant-facing cancel path already refuses this;
+    // the administrator path has to refuse it too, or the two disagree.
+    if (reg.status === 'approved' && status !== 'approved') {
+      const attended = await Attendance.findOne({
+        participant: reg.participant._id, training: reg.training._id, status: { $in: ['present', 'late'] },
+      }).select('status').lean();
+      if (attended) {
+        return errorResponse(res, `${reg.participant.fullName || 'This participant'} is already marked ${attended.status} for this session. Set their attendance to absent first, then change the registration.`, 400);
+      }
+    }
+
     const previousStatus = reg.status;
 
     // // Validate same-day exclusivity before persisting the approval.

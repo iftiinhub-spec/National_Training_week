@@ -65,15 +65,29 @@ export const generateCertificatePDF = async ({
       .text('THIS OFFICIAL CERTIFICATE IS PROUDLY PRESENTED TO', 100, 151, { width: width - 200, align: 'center', characterSpacing: 1.45 });
 
     const safeName = participantName || 'Participant Name';
-    const nameSize = safeName.length > 38 ? 28 : safeName.length > 26 ? 34 : 42;
     const nameX = 120;
     const nameWidth = width - 240;
+    // Size the name to the width it actually occupies. Character count is a poor proxy: an
+    // all-uppercase name is far wider than a mixed-case one of the same length, which is how a
+    // 21-character name ended up wrapping through the rule beneath it.
+    let nameSize = 42;
+    for (const candidate of [42, 36, 31, 27, 24, 21, 18]) {
+      nameSize = candidate;
+      doc.font('Times-Bold').fontSize(candidate);
+      if (doc.widthOfString(safeName) <= nameWidth) break;
+    }
     doc.fillColor(green).font('Times-Bold').fontSize(nameSize)
       .text(safeName, nameX, 184, { width: nameWidth, align: 'center' });
-    const measuredName = Math.min(doc.widthOfString(safeName), width - 300);
+    const nameHeight = doc.heightOfString(safeName, { width: nameWidth, align: 'center' });
+    // The rule follows the name down instead of sitting at a fixed y, so a name that still
+    // needs two lines is underlined beneath itself rather than through itself.
+    // Hold the original position for names that fit, so existing certificates are unchanged;
+    // only a name tall enough to reach it pushes the rule down.
+    const underlineY = Math.min(Math.max(250, 184 + nameHeight + 10), 264);
+    const measuredName = Math.min(doc.widthOfString(safeName), nameWidth, width - 300);
     const nameCenter = nameX + (nameWidth / 2);
-    doc.moveTo(nameCenter - (measuredName / 2), 250)
-      .lineTo(nameCenter + (measuredName / 2), 250)
+    doc.moveTo(nameCenter - (measuredName / 2), underlineY)
+      .lineTo(nameCenter + (measuredName / 2), underlineY)
       .lineWidth(1.2).stroke(brightGreen);
 
     doc.fillColor(black).font('Helvetica').fontSize(11.5)

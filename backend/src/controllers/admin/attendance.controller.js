@@ -176,7 +176,11 @@ export const getAttendance = async (req, res, next) => {
     const hasAccess = await checkAccess(trainingId, req.user._id, req.user.role);
     if (!hasAccess) return errorResponse(res, 'Access denied.', 403);
 
-    const records = await Attendance.find({ training: trainingId })
+    // Attendance rows are created on approval but are not removed if the registration is later
+    // cancelled or rejected, so the roster is scoped to currently-approved participants rather
+    // than to whatever attendance rows happen to exist.
+    const approvedIds = await Registration.find({ training: trainingId, status: 'approved' }).distinct('participant');
+    const records = await Attendance.find({ training: trainingId, participant: { $in: approvedIds } })
       .populate('participant', 'fullName email phone profilePhoto participantType')
       .populate('markedBy', 'fullName role')
       .populate('updatedBy', 'fullName role')
@@ -257,6 +261,12 @@ export const updateAttendance = async (req, res, next) => {
 
     const current = await Attendance.findOne({ _id: attendanceId, training: trainingId });
     if (!current) return errorResponse(res, 'Attendance record not found.', 404);
+    // Attendance only means something for an approved place. A cancelled or rejected
+    // registration must not be markable, or it produces attendance with no entitlement behind it.
+    const registration = await Registration.findOne({ participant: current.participant, training: trainingId }).select('status').lean();
+    if (!registration || registration.status !== 'approved') {
+      return errorResponse(res, `This participant's registration is ${registration ? registration.status : 'missing'}, so their attendance cannot be changed. Approve the registration first.`, 400);
+    }
     const changedAt = new Date();
     const previousStatus = current.status;
     current.status = status;
@@ -273,9 +283,9 @@ export const updateAttendance = async (req, res, next) => {
     const record = await current.save();
     await record.populate('participant', 'fullName email');
 
-    if (completed && training.attendanceFinalizedAt && previousStatus !== status) {
-      // Certificates for this session have already gone out, so this correction has to carry
-      // its own consequence rather than waiting for a finalisation that already happened.
+    if (completed && !reviewOpen && previousStatus !== status) {
+      // The review window is closed, so no finalisation step is coming to act on this change.
+      // The correction carries its own consequence instead.
       const outcome = await applyCertificateConsequence({
         training, record, status, previousStatus, correctionReason, actorId: req.user._id,
       });
